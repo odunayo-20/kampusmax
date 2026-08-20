@@ -169,6 +169,8 @@ export interface Product {
   tags?: string[];
   viewCount?: number;
   saveCount?: number;
+  rating?: number;
+  ratingCount?: number;
 }
 
 // ============================================================
@@ -367,3 +369,20 @@ export interface Wallet {
 
 // These match the original inline types so existing code doesn't break.
 // PaymentStatus is now exported as a named type above.
+
+// ============================================================
+// MARKETPLACE FILTERS
+// ============================================================
+
+export type SortOption = "recent" | "price_low" | "price_high" | "popular" | "rating";
+
+export interface MarketplaceFilters {
+  search: string;
+  categoryId: string;
+  campusId: string;
+  vendorId: string;
+  condition: ProductCondition | "";
+  minPrice: string;
+  maxPrice: string;
+  sort: SortOption;
+}

@@ -1,98 +1,207 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { SlidersHorizontal, X } from "lucide-react";
+import { useMarketplace } from "@/hooks/useMarketplace";
+import { useApp } from "@/lib/app-context";
+import { getCampuses } from "@/services/campus";
+import { getVendorById } from "@/services/users";
 import { SearchBar } from "@/components/shared";
-import { ProductCard, CategoryPill } from "@/components/marketplace";
 import { PageContainer } from "@/components/layout";
-import { getCategories } from "@/services/categories";
-import { getProducts, getProductsByCategory, searchProducts } from "@/services/products";
-import { cn } from "@/lib/utils";
-
-type SortOption = "recent" | "price_low" | "price_high";
+import {
+  ProductCard,
+  FilterDrawer,
+  FilterSidebar,
+  SortDropdown,
+  CategoryTabs,
+  ProductGrid,
+  ProductSkeleton,
+  EmptyMarketplaceState,
+} from "@/components/marketplace";
+import { Button } from "@/components/atoms/Button";
 
 function MarketplaceContent() {
   const searchParams = useSearchParams();
-  const initialCat = searchParams.get("category") || "";
+  const initialCategory = searchParams.get("category") || "";
+  const { selectedCampus } = useApp();
+  const campuses = useMemo(() => getCampuses(), []);
 
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState(initialCat);
-  const [sort, setSort] = useState<SortOption>("recent");
-  const categories = getCategories();
+  const {
+    filters,
+    updateFilter,
+    clearFilters,
+    setCategoryId,
+    categories,
+    filteredProducts,
+    displayedProducts,
+    hasMore,
+    loadMore,
+    activeFilterCount,
+    mobileFilterOpen,
+    setMobileFilterOpen,
+    totalCount,
+  } = useMarketplace(selectedCampus.id);
 
-  let filtered = activeCategory
-    ? getProductsByCategory(activeCategory)
-    : getProducts();
+  const hasFilters = activeFilterCount > 0 || filters.search !== "";
 
-  if (search) {
-    filtered = searchProducts(search);
-  }
-
-  filtered = [...filtered].sort((a, b) => {
-    if (sort === "price_low") return a.price - b.price;
-    if (sort === "price_high") return b.price - a.price;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const vendorCache = useMemo(() => {
+    const cache: Record<string, { name: string; verified: boolean }> = {};
+    filteredProducts.forEach((p) => {
+      if (!cache[p.vendorId]) {
+        const vendor = getVendorById(p.vendorId);
+        cache[p.vendorId] = {
+          name: vendor?.storeName || "Unknown",
+          verified: vendor?.verified || false,
+        };
+      }
+    });
+    return cache;
+  }, [filteredProducts]);
 
   return (
     <PageContainer className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-kampmax-text mb-3">Marketplace</h1>
-        <SearchBar value={search} onChange={setSearch} />
+        <SearchBar
+          value={filters.search}
+          onChange={(v) => updateFilter("search", v)}
+          onFilterClick={() => setMobileFilterOpen(true)}
+        />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
-        <button
-          onClick={() => setActiveCategory("")}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-            !activeCategory
-              ? "bg-kampmax-navy text-white"
-              : "bg-white text-kampmax-text border border-kampmax-border"
+      <CategoryTabs
+        categories={categories}
+        activeCategoryId={filters.categoryId}
+        onCategoryChange={setCategoryId}
+      />
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        <FilterSidebar
+          filters={filters}
+          onFilterChange={updateFilter}
+          onClear={clearFilters}
+          activeCount={activeFilterCount}
+          categories={categories}
+          campuses={campuses}
+        />
+
+        <div className="flex-1 min-w-0 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-kampmax-text-secondary">
+                {totalCount} {totalCount === 1 ? "product" : "products"}
+              </span>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 text-xs text-kampmax-blue hover:underline"
+                >
+                  <X className="w-3 h-3" />
+                  Clear filters
+                </button>
+              )}
+            </div>
+            <SortDropdown
+              value={filters.sort}
+              onChange={(v) => updateFilter("sort", v)}
+            />
+          </div>
+
+          {(filters.campusId || filters.vendorId || filters.condition || filters.minPrice || filters.maxPrice) && (
+            <div className="flex flex-wrap gap-2">
+              {filters.campusId && (
+                <FilterChip
+                  label={campuses.find((c) => c.id === filters.campusId)?.abbreviation || filters.campusId}
+                  onRemove={() => updateFilter("campusId", "")}
+                />
+              )}
+              {filters.vendorId && (
+                <FilterChip
+                  label={vendorCache[filters.vendorId]?.name || filters.vendorId}
+                  onRemove={() => updateFilter("vendorId", "")}
+                />
+              )}
+              {filters.condition && (
+                <FilterChip
+                  label={filters.condition}
+                  onRemove={() => updateFilter("condition", "")}
+                />
+              )}
+              {filters.minPrice && (
+                <FilterChip
+                  label={`Min: ₦${Number(filters.minPrice).toLocaleString()}`}
+                  onRemove={() => updateFilter("minPrice", "")}
+                />
+              )}
+              {filters.maxPrice && (
+                <FilterChip
+                  label={`Max: ₦${Number(filters.maxPrice).toLocaleString()}`}
+                  onRemove={() => updateFilter("maxPrice", "")}
+                />
+              )}
+            </div>
           )}
-        >
-          All
-        </button>
-        {categories.map((cat) => (
-          <CategoryPill
-            key={cat.id}
-            category={cat}
-            isActive={activeCategory === cat.id}
-          />
-        ))}
+
+          {filteredProducts.length > 0 ? (
+            <>
+              <ProductGrid>
+                {displayedProducts.map((product) => {
+                  const vendor = vendorCache[product.vendorId];
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      vendorName={vendor?.name}
+                      vendorVerified={vendor?.verified}
+                    />
+                  );
+                })}
+              </ProductGrid>
+
+              {hasMore && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    onClick={loadMore}
+                    variant="outline"
+                    className="border-kampmax-border"
+                  >
+                    Load more ({filteredProducts.length - displayedProducts.length} remaining)
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <EmptyMarketplaceState
+              hasFilters={hasFilters}
+              onClearFilters={clearFilters}
+            />
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-kampmax-text-secondary">
-          {filtered.length} products
-        </span>
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortOption)}
-          className="text-xs text-kampmax-text border border-kampmax-border rounded-md px-2 py-1 bg-white focus:outline-none focus:border-kampmax-blue"
-        >
-          <option value="recent">Most Recent</option>
-          <option value="price_low">Price: Low to High</option>
-          <option value="price_high">Price: High to Low</option>
-        </select>
-      </div>
-
-      {filtered.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3">
-          {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16">
-          <p className="text-lg mb-1">No results</p>
-          <p className="text-sm font-medium text-kampmax-text">No products found</p>
-          <p className="text-xs text-kampmax-text-secondary">
-            Try a different search or category
-          </p>
-        </div>
-      )}
+      <FilterDrawer
+        open={mobileFilterOpen}
+        onClose={() => setMobileFilterOpen(false)}
+        filters={filters}
+        onFilterChange={updateFilter}
+        onClear={clearFilters}
+        activeCount={activeFilterCount}
+        categories={categories}
+        campuses={campuses}
+      />
     </PageContainer>
+  );
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-1 bg-kampmax-blue/10 text-kampmax-blue text-xs font-medium rounded-full">
+      {label}
+      <button onClick={onRemove} className="hover:text-kampmax-navy">
+        <X className="w-3 h-3" />
+      </button>
+    </span>
   );
 }
 
@@ -102,10 +211,15 @@ export default function MarketplacePage() {
       fallback={
         <PageContainer className="space-y-4">
           <h1 className="text-xl font-bold text-kampmax-text">Marketplace</h1>
-          <div className="h-10 bg-kampmax-muted rounded-lg animate-pulse" />
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-kampmax-muted rounded-lg h-48 animate-pulse" />
+          <div className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+          <div className="flex gap-2 overflow-hidden">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-8 w-20 bg-gray-100 rounded-full animate-pulse shrink-0" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <ProductSkeleton key={i} />
             ))}
           </div>
         </PageContainer>

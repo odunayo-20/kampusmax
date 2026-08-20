@@ -111,6 +111,54 @@ export const vendors: Vendor[] = [
     campusId: "rugipo",
     specialties: ["Food", "Snacks", "Drinks"],
   },
+  {
+    id: "v4",
+    userId: "u6",
+    storeName: "IfeBookStore",
+    description:
+      "Textbooks and academic materials for all departments at OAU. New and used books at fair prices.",
+    rating: 4.5,
+    totalSales: 28,
+    verified: true,
+    campusId: "oau",
+    specialties: ["Textbooks", "Academic", "Stationery"],
+  },
+  {
+    id: "v5",
+    userId: "u7",
+    storeName: "OAU Merch Shop",
+    description:
+      "Official and custom OAU merchandise. T-shirts, hoodies, caps, and more. Show your purple pride!",
+    rating: 4.3,
+    totalSales: 18,
+    verified: false,
+    campusId: "oau",
+    specialties: ["Fashion", "Merchandise", "Accessories"],
+  },
+  {
+    id: "v6",
+    userId: "u8",
+    storeName: "UI Gadgets",
+    description:
+      "Quality gadgets and electronics for UI students. Phones, laptops, accessories. Trade-in available.",
+    rating: 4.7,
+    totalSales: 35,
+    verified: true,
+    campusId: "ui",
+    specialties: ["Electronics", "Phones", "Accessories"],
+  },
+  {
+    id: "v7",
+    userId: "u9",
+    storeName: "Lagos Campus Mall",
+    description:
+      "One-stop shop for UNILAG students. Electronics, fashion, food, and academic materials.",
+    rating: 4.4,
+    totalSales: 22,
+    verified: true,
+    campusId: "unilag",
+    specialties: ["Electronics", "Fashion", "Food"],
+  },
 ];
 
 export function getVendorByUserId(userId: string): Vendor | undefined {
