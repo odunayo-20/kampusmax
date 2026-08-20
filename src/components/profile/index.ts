@@ -1,2 +1,6 @@
-// Profile-specific components will be added as needed
-// Examples: ProfileHeader, ProfileMenu, VendorBanner
+export { SettingsGroup, SettingsRow, SettingsToggle } from "./SettingsGroup";
+export {
+  ProfileStatCard,
+  ProfileMenuGrid,
+  ProfileLoyaltyBadge,
+} from "./ProfileSection";

@@ -3,30 +3,63 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Settings, Package, MapPin, HelpCircle, LogOut,
-  ChevronRight, Store, CreditCard, Star, Bell
+  ChevronRight, LogOut, Store, Package, Heart, MapPin,
+  CreditCard, Wallet, Bell, Shield, HelpCircle,
+  Settings, Star, ChevronDown, Pencil, Clock,
 } from "lucide-react";
-import { Button, Avatar } from "@/components/ui";
-import { PageContainer } from "@/components/layout";
+import { Avatar } from "@/components/atoms/Avatar";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import {
+  ProfileStatCard,
+  ProfileMenuGrid,
+  ProfileLoyaltyBadge,
+} from "@/components/profile";
+import { SettingsGroup, SettingsRow } from "@/components/profile/SettingsGroup";
 import { getCurrentUser, getVendorByUserId } from "@/services/users";
+import { getOrdersByUser } from "@/services/orders";
 import { useAuth } from "@/lib/auth-context";
+import { useApp } from "@/lib/app-context";
+import { getWalletByUser } from "@/data/wallet";
+import { formatNaira } from "@/lib/utils";
+import { getLoyaltyProgram } from "@/services/profile";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { logout } = useAuth();
+  const { selectedCampus } = useApp();
   const currentUser = getCurrentUser();
   const vendor = getVendorByUserId(currentUser.id);
+  const orders = getOrdersByUser(currentUser.id);
+  const wallet = getWalletByUser(currentUser.id);
+  const loyalty = getLoyaltyProgram();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showVendorCard, setShowVendorCard] = useState(true);
 
-  const menuItems = [
-    { icon: Package, label: "My Orders", desc: "View order history", href: "/orders" },
-    { icon: MapPin, label: "Saved Locations", desc: "Campus pickup points", href: "#" },
-    { icon: Bell, label: "Notifications", desc: "Manage alerts", href: "/notifications" },
-    { icon: CreditCard, label: "Payment Methods", desc: "Manage cards & accounts", href: "#" },
-    { icon: Star, label: "Reviews", desc: "Your ratings & reviews", href: "#" },
-    { icon: HelpCircle, label: "Help & Support", desc: "FAQ and contact us", href: "#" },
-    { icon: Settings, label: "Settings", desc: "Account preferences", href: "#" },
-  ];
+  const activeOrders = orders.filter((o) =>
+    ["placed", "confirmed", "preparing", "ready", "out_for_delivery"].includes(o.status)
+  ).length;
+  const completedOrders = orders.filter((o) => o.status === "delivered").length;
+
+  const nextTier =
+    loyalty.tier === "bronze"
+      ? "silver"
+      : loyalty.tier === "silver"
+        ? "gold"
+        : loyalty.tier === "gold"
+          ? "platinum"
+          : undefined;
+  const nextTierThreshold =
+    loyalty.tier === "bronze"
+      ? 2000
+      : loyalty.tier === "silver"
+        ? 10000
+        : loyalty.tier === "gold"
+          ? 25000
+          : 0;
+  const progress = nextTier
+    ? Math.min((loyalty.lifetimePoints / nextTierThreshold) * 100, 100)
+    : 100;
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -36,41 +69,92 @@ export default function ProfilePage() {
 
   return (
     <PageContainer className="space-y-4">
-      <div className="bg-white rounded-lg border border-kampmax-border p-4">
-        <div className="flex items-center gap-3">
-          <Avatar name={currentUser.name} size="lg" />
-          <div className="flex-1">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-lg font-bold text-kampmax-text">
-                {currentUser.name}
-              </h1>
-              {currentUser.isVerified && (
-                <span className="text-[10px] bg-blue-50 text-kampmax-blue px-1.5 py-0.5 rounded font-medium">
-                  Verified
-                </span>
-              )}
+      <Breadcrumbs items={[{ label: "Profile" }]} />
+
+      {/* Profile Header */}
+      <div className="bg-white rounded-xl border border-kampmax-border overflow-hidden">
+        <div className="h-24 bg-gradient-to-r from-kampmax-navy to-kampmax-blue" />
+        <div className="px-4 pb-4 -mt-8">
+          <div className="flex items-end gap-3 mb-3">
+            <div className="relative">
+              <Avatar name={currentUser.name} size="lg" className="ring-4 ring-white" />
+              <button
+                onClick={() => router.push("/profile/edit")}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-kampmax-blue text-white flex items-center justify-center ring-2 ring-white"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
             </div>
-            <p className="text-xs text-kampmax-text-secondary">
-              {currentUser.department} · {currentUser.level}
+            <div className="flex-1 pt-6">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-lg font-bold text-kampmax-text">
+                  {currentUser.name}
+                </h1>
+                {currentUser.isVerified && (
+                  <span className="text-[10px] bg-blue-50 text-kampmax-blue px-1.5 py-0.5 rounded font-medium">
+                    Verified
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-kampmax-text-secondary">
+                {currentUser.department} &middot; {currentUser.level}
+              </p>
+              <p className="text-xs text-kampmax-text-secondary">
+                {selectedCampus.name}
+              </p>
+            </div>
+          </div>
+          {currentUser.bio && (
+            <p className="text-xs text-kampmax-text-secondary mb-3 line-clamp-2">
+              {currentUser.bio}
             </p>
-            <p className="text-xs text-kampmax-text-secondary mt-0.5">
-              {currentUser.email}
-            </p>
+          )}
+          <div className="flex items-center gap-1 text-[11px] text-kampmax-text-secondary">
+            <Clock className="h-3 w-3" />
+            <span>Joined {new Date(currentUser.joinedDate).toLocaleDateString("en-NG", { month: "short", year: "numeric" })}</span>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full mt-3"
-          onClick={() => {}}
-        >
-          Edit Profile
-        </Button>
       </div>
 
-      {vendor && (
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-2">
+        <ProfileStatCard
+          icon={<Package className="h-5 w-5" />}
+          label="Orders"
+          value={orders.length}
+          onClick={() => router.push("/orders")}
+        />
+        <ProfileStatCard
+          icon={<Heart className="h-5 w-5" />}
+          label="Wishlist"
+          value={12}
+          onClick={() => router.push("/profile/wishlist")}
+        />
+        <ProfileStatCard
+          icon={<Wallet className="h-5 w-5" />}
+          label="Wallet"
+          value={wallet ? formatNaira(wallet.balance) : "₦0"}
+          onClick={() => router.push("/profile/wallet")}
+        />
+        <ProfileStatCard
+          icon={<Star className="h-5 w-5" />}
+          label="Points"
+          value={loyalty.points.toLocaleString()}
+        />
+      </div>
+
+      {/* Loyalty */}
+      <ProfileLoyaltyBadge
+        tier={loyalty.tier}
+        points={loyalty.points}
+        nextTier={nextTier}
+        progress={progress}
+      />
+
+      {/* Vendor Card */}
+      {vendor && showVendorCard && (
         <div
-          className="bg-kampmax-navy rounded-lg p-4 cursor-pointer"
+          className="bg-kampmax-navy rounded-xl p-4 cursor-pointer"
           onClick={() => router.push("/profile/vendor")}
         >
           <div className="flex items-center gap-3">
@@ -82,37 +166,148 @@ export default function ProfilePage() {
                 {vendor.storeName}
               </h3>
               <p className="text-xs text-white/70">
-                ⭐ {vendor.rating} · {vendor.totalSales} sales
+                ⭐ {vendor.rating} &middot; {vendor.totalSales} sales
               </p>
             </div>
-            <ChevronRight className="h-5 w-5 text-white/70" />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowVendorCard(false);
+              }}
+              className="text-white/50 hover:text-white text-xs"
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-kampmax-border divide-y divide-kampmax-border">
-        {menuItems.map((item) => (
-          <button
-            key={item.label}
-            className="w-full flex items-center gap-3 p-4 text-left hover:bg-kampmax-muted transition-colors"
-            onClick={() => {
-              if (item.href !== "#") router.push(item.href);
-            }}
-          >
-            <item.icon className="h-5 w-5 text-kampmax-text-secondary flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-kampmax-text">{item.label}</p>
-              <p className="text-xs text-kampmax-text-secondary">{item.desc}</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />
-          </button>
-        ))}
-      </div>
+      {/* Quick Actions Grid */}
+      <ProfileMenuGrid
+        columns={3}
+        items={[
+          {
+            icon: <Package className="h-5 w-5" />,
+            label: "Orders",
+            onClick: () => router.push("/orders"),
+          },
+          {
+            icon: <Heart className="h-5 w-5" />,
+            label: "Wishlist",
+            onClick: () => router.push("/profile/wishlist"),
+          },
+          {
+            icon: <Wallet className="h-5 w-5" />,
+            label: "Wallet",
+            onClick: () => router.push("/profile/wallet"),
+            badge: activeOrders > 0 ? activeOrders : undefined,
+          },
+          {
+            icon: <MapPin className="h-5 w-5" />,
+            label: "Addresses",
+            onClick: () => router.push("/profile/addresses"),
+          },
+          {
+            icon: <CreditCard className="h-5 w-5" />,
+            label: "Payments",
+            onClick: () => router.push("/profile/payment-methods"),
+          },
+          {
+            icon: <Bell className="h-5 w-5" />,
+            label: "Notifications",
+            onClick: () => router.push("/notifications"),
+          },
+          {
+            icon: <Shield className="h-5 w-5" />,
+            label: "Security",
+            onClick: () => router.push("/profile/settings/security"),
+          },
+          {
+            icon: <HelpCircle className="h-5 w-5" />,
+            label: "Help",
+            onClick: () => router.push("/profile/help"),
+          },
+          {
+            icon: <Settings className="h-5 w-5" />,
+            label: "Settings",
+            onClick: () => router.push("/profile/settings"),
+          },
+        ]}
+      />
 
+      {/* Account Menu */}
+      <SettingsGroup title="Account">
+        <SettingsRow
+          icon={<Pencil className="h-5 w-5" />}
+          label="Edit Profile"
+          description="Name, photo, bio, campus info"
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/edit")}
+        />
+        <SettingsRow
+          icon={<MapPin className="h-5 w-5" />}
+          label="Saved Addresses"
+          description={`${3} saved locations`}
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/addresses")}
+        />
+        <SettingsRow
+          icon={<CreditCard className="h-5 w-5" />}
+          label="Payment Methods"
+          description={`${3} saved methods`}
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/payment-methods")}
+        />
+        <SettingsRow
+          icon={<Wallet className="h-5 w-5" />}
+          label="Kampmax Wallet"
+          description={wallet ? `Balance: ${formatNaira(wallet.balance)}` : "No wallet"}
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/wallet")}
+        />
+      </SettingsGroup>
+
+      {/* Settings Menu */}
+      <SettingsGroup title="Settings">
+        <SettingsRow
+          icon={<Bell className="h-5 w-5" />}
+          label="Notification Settings"
+          description="Manage alerts and preferences"
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/settings/notifications")}
+        />
+        <SettingsRow
+          icon={<Shield className="h-5 w-5" />}
+          label="Privacy Settings"
+          description="Control your visibility"
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/settings/privacy")}
+        />
+        <SettingsRow
+          icon={<Lock className="h-5 w-5" />}
+          label="Security Settings"
+          description="Password, 2FA, sessions"
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/settings/security")}
+        />
+      </SettingsGroup>
+
+      {/* Help */}
+      <SettingsGroup>
+        <SettingsRow
+          icon={<HelpCircle className="h-5 w-5" />}
+          label="Help & Support"
+          description="FAQ, contact us, report a problem"
+          action={<ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/profile/help")}
+        />
+      </SettingsGroup>
+
+      {/* Logout */}
       <button
         onClick={handleLogout}
         disabled={loggingOut}
-        className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-kampmax-error hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-medium text-kampmax-error hover:bg-red-50 rounded-xl border border-red-200 transition-colors disabled:opacity-50"
       >
         {loggingOut ? (
           <span className="flex items-center gap-2">
@@ -126,6 +321,19 @@ export default function ProfilePage() {
           </>
         )}
       </button>
+
+      <p className="text-center text-[11px] text-kampmax-text-secondary pb-4">
+        Kampmax v1.0 &middot; Campus Marketplace
+      </p>
     </PageContainer>
+  );
+}
+
+function Lock(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
   );
 }

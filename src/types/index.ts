@@ -482,3 +482,56 @@ export interface CheckoutSummary {
   loyaltyPointsUsed: number;
   loyaltyPointsEarned: number;
 }
+
+// ============================================================
+// PROFILE & SETTINGS
+// ============================================================
+
+export interface SavedAddress {
+  id: string;
+  label: string;
+  address: string;
+  campusId: string;
+  isDefault: boolean;
+  contactName: string;
+  contactPhone: string;
+  notes?: string;
+}
+
+export interface SavedPaymentMethod {
+  id: string;
+  type: "card" | "bank_account" | "wallet";
+  label: string;
+  last4: string;
+  brand?: string;
+  bankName?: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPreferences {
+  orderUpdates: boolean;
+  messages: boolean;
+  promotions: boolean;
+  community: boolean;
+  system: boolean;
+  emailDigest: boolean;
+  pushEnabled: boolean;
+}
+
+export interface PrivacySettings {
+  showProfileToStudents: boolean;
+  showPhoneToVendors: boolean;
+  showEmailToVendors: boolean;
+  allowDirectMessages: boolean;
+  showOnlineStatus: boolean;
+  showOrderHistory: boolean;
+}
+
+export interface SecuritySettings {
+  twoFactorEnabled: boolean;
+  twoFactorMethod: "sms" | "email";
+  lastPasswordChange: string;
+  activeSessions: number;
+  loginNotifications: boolean;
+}
