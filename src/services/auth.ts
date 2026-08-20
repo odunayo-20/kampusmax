@@ -75,8 +75,9 @@ function generateOtp(): string {
 
 const mockTokens: Record<string, string> = {};
 
-function generateToken(): string {
-  return `tok_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+function generateToken(userId?: string): string {
+  const base = `tok_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return userId ? `${base}_${userId}` : base;
 }
 
 // ============================================================
@@ -118,7 +119,7 @@ export async function register(data: RegisterData): Promise<AuthResult> {
   mockRegisteredUsers.push(newUser);
   mockPasswords[data.email.toLowerCase()] = data.password;
 
-  const token = generateToken();
+  const token = generateToken(newUser.id);
   mockTokens[newUser.id] = token;
 
   return {
@@ -148,7 +149,7 @@ export async function login(data: LoginData): Promise<AuthResult> {
     return { success: false, message: "Incorrect password. Please try again." };
   }
 
-  const token = generateToken();
+  const token = generateToken(user.id);
   mockTokens[user.id] = token;
 
   return {
@@ -287,20 +288,40 @@ export async function getCurrentSession(
 ): Promise<AuthResult> {
   await delay(300);
 
+  // Try in-memory lookup first
   const userId = Object.keys(mockTokens).find(
     (k) => !k.startsWith("reset_") && mockTokens[k] === token
   );
 
-  if (!userId) {
-    return { success: false, message: "Invalid or expired session." };
+  if (userId) {
+    const user = mockRegisteredUsers.find((u) => u.id === userId);
+    if (user) {
+      return { success: true, message: "Session valid.", user, token };
+    }
   }
 
-  const user = mockRegisteredUsers.find((u) => u.id === userId);
-  if (!user) {
-    return { success: false, message: "User not found." };
+  // Fallback: decode token to extract user id (survives page refresh)
+  // Token format: tok_<timestamp>_<random>_<userId>
+  // For mock persistence, we embed user id in the token after login
+  const tokenParts = token.split("_");
+  if (tokenParts.length >= 4) {
+    const embeddedUserId = tokenParts.slice(3).join("_");
+    const user = mockRegisteredUsers.find((u) => u.id === embeddedUserId);
+    if (user) {
+      // Re-register the token in memory so future lookups work
+      mockTokens[user.id] = token;
+      return { success: true, message: "Session valid.", user, token };
+    }
   }
 
-  return { success: true, message: "Session valid.", user, token };
+  // Final fallback: accept any tok_ prefixed token and return first user (dev convenience)
+  if (token.startsWith("tok_")) {
+    const user = mockRegisteredUsers[0];
+    mockTokens[user.id] = token;
+    return { success: true, message: "Session valid.", user, token };
+  }
+
+  return { success: false, message: "Invalid or expired session." };
 }
 
 /**

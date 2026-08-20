@@ -535,3 +535,110 @@ export interface SecuritySettings {
   activeSessions: number;
   loginNotifications: boolean;
 }
+
+// ============================================================
+// VENDOR DASHBOARD
+// ============================================================
+
+export type VendorProductStatus = "active" | "draft" | "sold_out" | "archived";
+
+export interface VendorProduct {
+  id: string;
+  vendorId: string;
+  title: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  categoryId: string;
+  campusId: string;
+  images: string[];
+  condition: ProductCondition;
+  status: VendorProductStatus;
+  stock: number;
+  soldCount: number;
+  allowDelivery: boolean;
+  allowPickup: boolean;
+  deliveryFee?: number;
+  location?: string;
+  tags?: string[];
+  viewCount: number;
+  saveCount: number;
+  rating: number;
+  ratingCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorOrder {
+  id: string;
+  buyerId: string;
+  buyerName: string;
+  buyerPhone: string;
+  items: { productTitle: string; quantity: number; unitPrice: number }[];
+  subtotal: number;
+  platformFee: number;
+  vendorEarning: number;
+  status: OrderStatus;
+  deliveryMethod: DeliveryMethod;
+  deliveryAddress?: string;
+  pickupLocation?: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  createdAt: string;
+  notes?: string;
+}
+
+export interface VendorEarningsSummary {
+  totalRevenue: number;
+  totalEarning: number;
+  platformFees: number;
+  pendingPayout: number;
+  thisMonth: number;
+  lastMonth: number;
+  growth: number;
+  orderCount: number;
+}
+
+export interface VendorDailyEarning {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface VendorCustomer {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  totalOrders: number;
+  totalSpent: number;
+  lastOrderDate: string;
+  campusId: string;
+}
+
+export interface StoreProfile {
+  vendorId: string;
+  storeName: string;
+  description: string;
+  coverImage?: string;
+  logoImage?: string;
+  specialties: string[];
+  responseTime: string;
+  operatingHours: string;
+  returnPolicy: string;
+  campusId: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface StoreSettings {
+  acceptOrders: boolean;
+  autoConfirm: boolean;
+  notifyOnOrder: boolean;
+  notifyOnMessage: boolean;
+  showSoldItems: boolean;
+  allowPreOrder: boolean;
+  minOrderAmount: number;
+}
