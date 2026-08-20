@@ -8,10 +8,7 @@ import {
   ArrowLeft, Heart, Share2, MapPin, Star, MessageCircle,
   ShieldCheck, Truck, Store as StoreIcon, ChevronRight, Minus, Plus, ShoppingCart
 } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
-import { PriceTag } from "@/components/atoms/PriceTag";
-import { ConditionBadge, Badge } from "@/components/atoms/Badge";
-import { Avatar } from "@/components/atoms/Avatar";
+import { Button, PriceTag, ConditionBadge, Badge, Avatar } from "@/components/ui";
 import { useCart } from "@/lib/cart-context";
 import { getProductById, getProductsByCategory } from "@/services/products";
 import { getVendorById } from "@/services/users";

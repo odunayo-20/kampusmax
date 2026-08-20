@@ -2,9 +2,8 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { SearchBar } from "@/components/molecules/SearchBar";
-import { ProductCard } from "@/components/molecules/ProductCard";
-import { CategoryPill } from "@/components/molecules/CategoryCard";
+import { SearchBar } from "@/components/shared";
+import { ProductCard, CategoryPill } from "@/components/marketplace";
 import { getCategories } from "@/services/categories";
 import { getProducts, getProductsByCategory, searchProducts } from "@/services/products";
 import { cn } from "@/lib/utils";

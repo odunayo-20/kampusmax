@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Store, Users, MessageCircle, ArrowRight, ChevronRight } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
+import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 const slides = [

@@ -6,7 +6,7 @@ import {
   ArrowLeft, MapPin, Truck, Store as StoreIcon, CreditCard,
   Building2, CheckCircle2
 } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
+import { Button } from "@/components/ui";
 import { useCart } from "@/lib/cart-context";
 import { formatNaira, generateOrderId } from "@/lib/utils";
 import { cn } from "@/lib/utils";

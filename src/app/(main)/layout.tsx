@@ -1,5 +1,4 @@
-import { BottomNav } from "@/components/organisms/BottomNav";
-import { TopBar } from "@/components/organisms/TopBar";
+import { BottomNav, TopBar } from "@/components/layout";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (

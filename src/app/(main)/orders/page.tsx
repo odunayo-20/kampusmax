@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { OrderCard } from "@/components/molecules/OrderCard";
+import { OrderCard } from "@/components/shared";
 import { getOrdersByUser } from "@/services/orders";
 import { getCurrentUser } from "@/services/users";
 

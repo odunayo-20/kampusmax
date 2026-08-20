@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingBag } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
-import { CartItemCard } from "@/components/molecules/CartItemCard";
+import { Button } from "@/components/ui";
+import { CartItemCard } from "@/components/shared";
 import { useCart } from "@/lib/cart-context";
 import { formatNaira } from "@/lib/utils";
 

@@ -5,8 +5,7 @@ import {
   Settings, Package, MapPin, HelpCircle, LogOut,
   ChevronRight, Store, CreditCard, Star, Bell
 } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
-import { Avatar } from "@/components/atoms/Avatar";
+import { Button, Avatar } from "@/components/ui";
 import { getCurrentUser, getVendorByUserId } from "@/services/users";
 import { cn } from "@/lib/utils";
 

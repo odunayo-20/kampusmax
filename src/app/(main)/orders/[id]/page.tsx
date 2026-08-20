@@ -7,9 +7,7 @@ import {
   ArrowLeft, CheckCircle2, Clock, Package,
   MapPin, MessageCircle, Home
 } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
-import { OrderStatusBadge } from "@/components/atoms/Badge";
-import { Avatar } from "@/components/atoms/Avatar";
+import { Button, OrderStatusBadge, Avatar } from "@/components/ui";
 import { formatNaira, formatDate, cn } from "@/lib/utils";
 import { getOrderById } from "@/services/orders";
 import { getVendorById } from "@/services/users";

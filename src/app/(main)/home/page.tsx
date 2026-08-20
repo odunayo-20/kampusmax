@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { Search, ChevronRight, TrendingUp, Star } from "lucide-react";
-import { ProductCard } from "@/components/molecules/ProductCard";
-import { CategoryCard } from "@/components/molecules/CategoryCard";
-import { Button } from "@/components/atoms/Button";
-import { Avatar } from "@/components/atoms/Avatar";
+import { ProductCard, CategoryCard } from "@/components/marketplace";
+import { Button, Avatar } from "@/components/ui";
 import { useApp } from "@/lib/app-context";
 import { getFeaturedProducts, getRecentProducts } from "@/services/products";
 import { getCategories } from "@/services/categories";

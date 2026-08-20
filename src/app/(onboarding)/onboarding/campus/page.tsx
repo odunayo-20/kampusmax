@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Check, MapPin } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
+import { Button } from "@/components/ui";
 import { getCampuses } from "@/services/campus";
 import { useApp } from "@/lib/app-context";
 import { cn } from "@/lib/utils";

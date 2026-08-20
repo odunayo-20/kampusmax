@@ -1,6 +1,12 @@
+// ============================================================
+// CORE SCALAR TYPES
+// ============================================================
+
 export type UserRole = "student" | "vendor" | "admin";
 
 export type ProductCondition = "New" | "Used" | "Fair";
+
+export type ProductStatus = "available" | "sold" | "removed";
 
 export type OrderStatus =
   | "placed"
@@ -14,6 +20,34 @@ export type DeliveryMethod = "campus_pickup" | "meetup" | "delivery";
 
 export type PaymentMethod = "paystack" | "bank_transfer";
 
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+
+export type NotificationType =
+  | "order_update"
+  | "message"
+  | "promotion"
+  | "community"
+  | "system";
+
+export type PostType = "discussion" | "question" | "event" | "marketplace";
+
+export type ReviewTarget = "vendor" | "product";
+
+export type WalletTransactionType =
+  | "deposit"
+  | "withdrawal"
+  | "payment"
+  | "refund"
+  | "transfer";
+
+export type WalletTransactionStatus = "pending" | "completed" | "failed";
+
+export type ConversationType = "direct" | "vendor_chat";
+
+// ============================================================
+// CAMPUS
+// ============================================================
+
 export interface Campus {
   id: string;
   name: string;
@@ -22,6 +56,10 @@ export interface Campus {
   departments: string[];
   imageUrl?: string;
 }
+
+// ============================================================
+// USER & VENDOR
+// ============================================================
 
 export interface User {
   id: string;
@@ -48,7 +86,14 @@ export interface Vendor {
   verified: boolean;
   campusId: string;
   specialties: string[];
+  coverImage?: string;
+  responseTime?: string;
+  joinDate?: string;
 }
+
+// ============================================================
+// PRODUCT & CATEGORY
+// ============================================================
 
 export interface Category {
   id: string;
@@ -68,15 +113,31 @@ export interface Product {
   campusId: string;
   images: string[];
   condition: ProductCondition;
-  status: "available" | "sold" | "removed";
+  status: ProductStatus;
   createdAt: string;
   location?: string;
   tags?: string[];
+  viewCount?: number;
+  saveCount?: number;
 }
+
+// ============================================================
+// CART
+// ============================================================
 
 export interface CartItem {
   product: Product;
   quantity: number;
+}
+
+// ============================================================
+// ORDER & ORDER ITEM
+// ============================================================
+
+export interface OrderItem {
+  product: Product;
+  quantity: number;
+  unitPrice: number;
 }
 
 export interface Order {
@@ -89,7 +150,170 @@ export interface Order {
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: string;
   paymentMethod: PaymentMethod;
-  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  paymentStatus: PaymentStatus;
   createdAt: string;
   estimatedDelivery?: string;
+  notes?: string;
 }
+
+// ============================================================
+// PAYMENT
+// ============================================================
+
+export interface Payment {
+  id: string;
+  orderId: string;
+  userId: string;
+  amount: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  reference: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+// ============================================================
+// NOTIFICATION
+// ============================================================
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  actionUrl?: string;
+  imageUrl?: string;
+}
+
+// ============================================================
+// CONVERSATION & MESSAGE
+// ============================================================
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  createdAt: string;
+  read: boolean;
+  imageUrl?: string;
+}
+
+export interface Conversation {
+  id: string;
+  type: ConversationType;
+  participants: string[];
+  lastMessage?: Message;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+  productId?: string;
+  vendorId?: string;
+}
+
+// ============================================================
+// CAMPUS POST & COMMENT
+// ============================================================
+
+export interface Comment {
+  id: string;
+  postId: string;
+  userId: string;
+  text: string;
+  createdAt: string;
+  likes: number;
+  isLiked?: boolean;
+}
+
+export interface CampusPost {
+  id: string;
+  userId: string;
+  campusId: string;
+  type: PostType;
+  title: string;
+  content: string;
+  images?: string[];
+  tags?: string[];
+  likes: number;
+  commentCount: number;
+  isLiked?: boolean;
+  createdAt: string;
+  productId?: string;
+  eventId?: string;
+}
+
+// ============================================================
+// EVENT
+// ============================================================
+
+export interface CampusEvent {
+  id: string;
+  campusId: string;
+  title: string;
+  description: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  organizerId: string;
+  imageUrl?: string;
+  attendees: string[];
+  maxAttendees?: number;
+  isVirtual: boolean;
+  meetingLink?: string;
+  tags?: string[];
+  createdAt: string;
+}
+
+// ============================================================
+// REVIEW
+// ============================================================
+
+export interface Review {
+  id: string;
+  targetId: string;
+  target: ReviewTarget;
+  userId: string;
+  rating: number;
+  comment: string;
+  images?: string[];
+  createdAt: string;
+  vendorId?: string;
+  productId?: string;
+}
+
+// ============================================================
+// WALLET & WALLET TRANSACTION
+// ============================================================
+
+export interface WalletTransaction {
+  id: string;
+  walletId: string;
+  type: WalletTransactionType;
+  amount: number;
+  status: WalletTransactionStatus;
+  description: string;
+  reference?: string;
+  createdAt: string;
+  completedAt?: string;
+  orderId?: string;
+}
+
+export interface Wallet {
+  id: string;
+  userId: string;
+  balance: number;
+  currency: string;
+  isActive: boolean;
+  createdAt: string;
+  transactions: WalletTransaction[];
+}
+
+// ============================================================
+// RE-EXPORT OF INLINE TYPES (backward compat aliases)
+// ============================================================
+
+// These match the original inline types so existing code doesn't break.
+// PaymentStatus is now exported as a named type above.
