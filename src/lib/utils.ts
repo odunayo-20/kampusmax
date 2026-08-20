@@ -268,6 +268,8 @@ export function getDeliveryLabel(method: string): string {
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   paystack: "Paystack",
   bank_transfer: "Bank Transfer",
+  wallet: "Kampmax Wallet",
+  cod: "Cash on Pickup",
 };
 
 export function getPaymentLabel(method: string): string {

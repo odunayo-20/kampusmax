@@ -18,7 +18,7 @@ export type OrderStatus =
 
 export type DeliveryMethod = "campus_pickup" | "meetup" | "delivery";
 
-export type PaymentMethod = "paystack" | "bank_transfer";
+export type PaymentMethod = "paystack" | "bank_transfer" | "wallet" | "cod";
 
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 
@@ -386,4 +386,82 @@ export interface MarketplaceFilters {
   minPrice: string;
   maxPrice: string;
   sort: SortOption;
+}
+
+// ============================================================
+// PROMO CODE
+// ============================================================
+
+export interface PromoCode {
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  maxDiscount?: number;
+  minOrderAmount?: number;
+  description: string;
+  expiresAt: string;
+}
+
+// ============================================================
+// LOYALTY
+// ============================================================
+
+export type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
+
+export interface LoyaltyProgram {
+  points: number;
+  tier: LoyaltyTier;
+  pointsToNairaRate: number; // e.g. 1 point = ₦1
+  lifetimePoints: number;
+}
+
+// ============================================================
+// CHECKOUT
+// ============================================================
+
+export type PickupLocation =
+  | "main_gate"
+  | "library"
+  | "student_union"
+  | "engineering_block"
+  | "science_block";
+
+export const PICKUP_LOCATION_LABELS: Record<PickupLocation, string> = {
+  main_gate: "Main Gate",
+  library: "University Library",
+  student_union: "Student Union Building",
+  engineering_block: "Engineering Block",
+  science_block: "Science Block",
+};
+
+export interface CheckoutFormData {
+  deliveryMethod: DeliveryMethod;
+  pickupLocation: PickupLocation;
+  deliveryAddress: string;
+  campusId: string;
+  paymentMethod: PaymentMethod;
+  promoCode: string;
+  loyaltyPointsToUse: number;
+  notes: string;
+}
+
+export interface CheckoutValidation {
+  deliveryAddress?: string;
+  pickupLocation?: string;
+  promoCode?: string;
+  loyaltyPoints?: string;
+  paymentMethod?: string;
+}
+
+export interface CheckoutSummary {
+  itemsSubtotal: number;
+  platformFee: number;
+  deliveryFee: number;
+  discountAmount: number;
+  loyaltyDiscount: number;
+  finalTotal: number;
+  itemCount: number;
+  appliedPromo: PromoCode | null;
+  loyaltyPointsUsed: number;
+  loyaltyPointsEarned: number;
 }

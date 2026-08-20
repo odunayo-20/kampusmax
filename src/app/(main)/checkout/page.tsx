@@ -1,183 +1,161 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft, Truck, Store as StoreIcon, CreditCard,
-  Building2, CheckCircle2
-} from "lucide-react";
-import { Button } from "@/components/ui";
-import { PageContainer } from "@/components/layout";
+import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { useCheckout } from "@/hooks/useCheckout";
 import { useCart } from "@/lib/cart-context";
-import { formatNaira, generateOrderId, cn } from "@/lib/utils";
-import { DeliveryMethod, PaymentMethod } from "@/types";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { Button } from "@/components/atoms/Button";
+import {
+  DeliverySection,
+  DeliveryMethodSection,
+  VendorOrderGroup,
+  PromoCodeSection,
+  LoyaltyPointsSection,
+  PaymentMethodSection,
+  OrderSummarySection,
+  ConfirmationSection,
+} from "@/components/checkout";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, summary, clearCart } = useCart();
+  const { items } = useCart();
+  const activeItems = useMemo(
+    () => items.filter((i) => !i.savedForLater),
+    [items]
+  );
 
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("campus_pickup");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paystack");
-  const [address, setAddress] = useState("");
-  const [isPlacing, setIsPlacing] = useState(false);
+  const {
+    form,
+    errors,
+    isPlacing,
+    checkoutSummary,
+    vendorGroupsResolved,
+    walletBalance,
+    loyaltyPoints,
+    maxLoyaltyPoints,
+    useAllPoints,
+    appliedPromo,
+    promoError,
+    setField,
+    applyPromoCode,
+    removePromoCode,
+    setLoyaltyPointsToUse,
+    toggleUseAllPoints,
+    placeOrder,
+  } = useCheckout();
 
-  const deliveryFee = deliveryMethod === "delivery" ? 500 : 0;
-  const grandTotal = summary.itemsSubtotal + deliveryFee;
-
-  function handlePlaceOrder() {
-    setIsPlacing(true);
-    setTimeout(() => {
-      clearCart();
-      const orderId = generateOrderId();
-      router.push(`/orders/${orderId}`);
-    }, 1500);
+  async function handlePlaceOrder() {
+    const success = await placeOrder();
+    if (success) {
+      router.push("/orders");
+    }
   }
 
-  const activeItems = items.filter((i) => !i.savedForLater);
-
+  // Empty cart guard
   if (activeItems.length === 0 && !isPlacing) {
     return (
-      <PageContainer className="text-center py-16">
-        <p className="text-sm text-kampmax-text-secondary mb-4">
-          Your cart is empty. Add items before checking out.
-        </p>
-        <Button onClick={() => router.push("/marketplace")} variant="primary">
-          Browse Marketplace
-        </Button>
+      <PageContainer narrow>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+            <ShoppingBag className="w-8 h-8 text-gray-300" />
+          </div>
+          <h2 className="text-lg font-semibold text-kampmax-text mb-1">
+            Your cart is empty
+          </h2>
+          <p className="text-sm text-kampmax-text-secondary max-w-xs mb-6">
+            Add some items to your cart before checking out.
+          </p>
+          <Button
+            onClick={() => router.push("/marketplace")}
+            className="bg-kampmax-navy text-white hover:bg-kampmax-navy/90"
+          >
+            Browse Marketplace
+          </Button>
+        </div>
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer className="space-y-4">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="text-xl font-bold text-kampmax-text">Checkout</h1>
+    <PageContainer narrow>
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-kampmax-text" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-kampmax-text">Checkout</h1>
+            <p className="text-xs text-kampmax-text-secondary">
+              {checkoutSummary.itemCount} {checkoutSummary.itemCount === 1 ? "item" : "items"}
+              {vendorGroupsResolved.length > 1 &&
+                ` from ${vendorGroupsResolved.length} vendors`}
+            </p>
+          </div>
+        </div>
+
+        {/* 1. Delivery Method */}
+        <DeliveryMethodSection
+          form={form}
+          errors={errors}
+          onFieldChange={setField}
+        />
+
+        {/* 2. Delivery Details (address / campus / pickup) */}
+        <DeliverySection
+          form={form}
+          errors={errors}
+          onFieldChange={setField}
+        />
+
+        {/* 3. Vendor/Order Grouping */}
+        <VendorOrderGroup groups={vendorGroupsResolved} />
+
+        {/* 4. Promo Code */}
+        <PromoCodeSection
+          appliedPromo={appliedPromo}
+          promoError={promoError}
+          promoCode={form.promoCode}
+          onPromoCodeChange={(v) => setField("promoCode", v)}
+          onApply={applyPromoCode}
+          onRemove={removePromoCode}
+        />
+
+        {/* 5. Loyalty Points */}
+        <LoyaltyPointsSection
+          availablePoints={loyaltyPoints}
+          maxPoints={maxLoyaltyPoints}
+          pointsToUse={form.loyaltyPointsToUse}
+          useAllPoints={useAllPoints}
+          onPointsChange={setLoyaltyPointsToUse}
+          onToggleAll={toggleUseAllPoints}
+        />
+
+        {/* 6. Payment Method */}
+        <PaymentMethodSection
+          form={form}
+          errors={errors}
+          walletBalance={walletBalance}
+          finalTotal={checkoutSummary.finalTotal}
+          onFieldChange={setField}
+        />
+
+        {/* 7. Order Summary */}
+        <OrderSummarySection summary={checkoutSummary} />
+
+        {/* 8. Confirmation */}
+        <ConfirmationSection
+          finalTotal={checkoutSummary.finalTotal}
+          isPlacing={isPlacing}
+          paymentMethod={form.paymentMethod}
+          onPlaceOrder={handlePlaceOrder}
+        />
       </div>
-
-      <section className="bg-white rounded-lg border border-kampmax-border p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-kampmax-text flex items-center gap-2">
-          <Truck className="h-4 w-4 text-kampmax-blue" />
-          Delivery Method
-        </h3>
-        <div className="space-y-2">
-          {([
-            { id: "campus_pickup" as const, label: "Campus Pickup", desc: "Pick up at campus location", icon: StoreIcon, price: "Free" },
-            { id: "delivery" as const, label: "Hostel Delivery", desc: "Delivered to your hostel", icon: Truck, price: "₦500" },
-          ]).map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setDeliveryMethod(opt.id)}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
-                deliveryMethod === opt.id
-                  ? "border-kampmax-blue bg-blue-50 ring-1 ring-kampmax-blue"
-                  : "border-kampmax-border"
-              )}
-            >
-              <opt.icon className="h-5 w-5 text-kampmax-blue flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-kampmax-text">{opt.label}</p>
-                <p className="text-xs text-kampmax-text-secondary">{opt.desc}</p>
-              </div>
-              <span className="text-sm font-medium text-kampmax-navy">{opt.price}</span>
-            </button>
-          ))}
-        </div>
-
-        {deliveryMethod === "delivery" && (
-          <div className="pt-2">
-            <label className="text-xs text-kampmax-text-secondary mb-1 block">
-              Delivery Address
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Room 12, Block B, RUGIPO Hostel"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full h-10 px-3 text-sm border border-kampmax-border rounded-lg focus:outline-none focus:border-kampmax-blue"
-            />
-          </div>
-        )}
-      </section>
-
-      <section className="bg-white rounded-lg border border-kampmax-border p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-kampmax-text flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-kampmax-blue" />
-          Payment Method
-        </h3>
-        <div className="space-y-2">
-          {([
-            { id: "paystack" as const, label: "Paystack", desc: "Card, Bank Transfer, USSD" },
-            { id: "bank_transfer" as const, label: "Direct Bank Transfer", desc: "Pay to Kampmax account" },
-          ]).map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setPaymentMethod(opt.id)}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
-                paymentMethod === opt.id
-                  ? "border-kampmax-blue bg-blue-50 ring-1 ring-kampmax-blue"
-                  : "border-kampmax-border"
-              )}
-            >
-              <Building2 className="h-5 w-5 text-kampmax-blue flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-kampmax-text">{opt.label}</p>
-                <p className="text-xs text-kampmax-text-secondary">{opt.desc}</p>
-              </div>
-              {paymentMethod === opt.id && (
-                <CheckCircle2 className="h-5 w-5 text-kampmax-blue" />
-              )}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="bg-white rounded-lg border border-kampmax-border p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-kampmax-text">Order Summary</h3>
-        <div className="space-y-2">
-          {activeItems.map((item) => (
-            <div key={item.product.id} className="flex justify-between text-sm">
-              <span className="text-kampmax-text-secondary">
-                {item.quantity}x {item.product.title}
-              </span>
-              <span className="text-kampmax-text font-medium">
-                {formatNaira(item.product.price * item.quantity)}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-kampmax-border pt-2 space-y-1">
-          <div className="flex justify-between text-sm">
-            <span className="text-kampmax-text-secondary">Delivery</span>
-            <span className="text-kampmax-text">
-              {deliveryFee > 0 ? formatNaira(deliveryFee) : "Free"}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="font-semibold text-kampmax-text">Total</span>
-            <span className="font-bold text-kampmax-navy text-lg">
-              {formatNaira(grandTotal)}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <Button
-        onClick={handlePlaceOrder}
-        disabled={isPlacing}
-        variant="primary"
-        size="lg"
-        className="w-full"
-      >
-        {isPlacing ? "Placing Order..." : `Place Order — ${formatNaira(grandTotal)}`}
-      </Button>
     </PageContainer>
   );
 }
