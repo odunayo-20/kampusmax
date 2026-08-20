@@ -1,0 +1,84 @@
+"use client";
+
+import { MessageCircle, RotateCcw, Star, XCircle } from "lucide-react";
+import { Order } from "@/types";
+import { cn } from "@/lib/utils";
+
+interface OrderActionsProps {
+  order: Order;
+  onCancel: () => void;
+  onReorder: () => void;
+  onReview: () => void;
+  onContactVendor: () => void;
+}
+
+export function OrderActions({
+  order,
+  onCancel,
+  onReorder,
+  onReview,
+  onContactVendor,
+}: OrderActionsProps) {
+  const isActive =
+    order.status !== "delivered" && order.status !== "cancelled";
+  const canCancel = order.status === "placed" || order.status === "confirmed";
+  const isDelivered = order.status === "delivered";
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {/* Contact vendor — always available */}
+      <button
+        onClick={onContactVendor}
+        className={cn(
+          "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
+          "border-kampmax-border bg-white text-kampmax-text hover:bg-kampmax-muted"
+        )}
+      >
+        <MessageCircle className="w-3.5 h-3.5" />
+        Contact Vendor
+      </button>
+
+      {/* Cancel — only for placed/confirmed */}
+      {canCancel && (
+        <button
+          onClick={onCancel}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
+            "border-red-200 bg-white text-kampmax-error hover:bg-red-50"
+          )}
+        >
+          <XCircle className="w-3.5 h-3.5" />
+          Cancel Order
+        </button>
+      )}
+
+      {/* Reorder — delivered or cancelled */}
+      {!isActive && (
+        <button
+          onClick={onReorder}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
+            "border-kampmax-border bg-white text-kampmax-text hover:bg-kampmax-muted"
+          )}
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Reorder
+        </button>
+      )}
+
+      {/* Review — delivered only */}
+      {isDelivered && (
+        <button
+          onClick={onReview}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
+            "border-kampmax-gold/30 bg-white text-kampmax-gold hover:bg-amber-50"
+          )}
+        >
+          <Star className="w-3.5 h-3.5" />
+          Review
+        </button>
+      )}
+    </div>
+  );
+}

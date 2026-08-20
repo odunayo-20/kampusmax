@@ -145,6 +145,7 @@ export const ORDER_STATUS_STEPS: OrderStatus[] = [
   "confirmed",
   "preparing",
   "ready",
+  "out_for_delivery",
   "delivered",
 ];
 
@@ -154,6 +155,7 @@ export function getOrderStatusLabel(status: OrderStatus): string {
     confirmed: "Confirmed",
     preparing: "Preparing",
     ready: "Ready for Pickup",
+    out_for_delivery: "Out for Delivery",
     delivered: "Delivered",
     cancelled: "Cancelled",
   };

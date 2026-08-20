@@ -13,6 +13,7 @@ export type OrderStatus =
   | "confirmed"
   | "preparing"
   | "ready"
+  | "out_for_delivery"
   | "delivered"
   | "cancelled";
 
@@ -198,15 +199,31 @@ export interface Order {
   buyerId: string;
   vendorId: string;
   items: CartItem[];
+  subtotal: number;
+  platformFee: number;
+  deliveryFee: number;
+  discountAmount: number;
   total: number;
   status: OrderStatus;
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: string;
+  pickupLocation?: string;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   createdAt: string;
+  updatedAt?: string;
   estimatedDelivery?: string;
+  deliveredAt?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
   notes?: string;
+  timeline: OrderTimelineEntry[];
+}
+
+export interface OrderTimelineEntry {
+  status: OrderStatus;
+  timestamp: string;
+  message: string;
 }
 
 // ============================================================

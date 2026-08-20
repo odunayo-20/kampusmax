@@ -25,7 +25,14 @@ export {
   getVendorsByCampus,
   getTopVendorsByCampus,
 } from "./users";
-export { getOrders, getOrderById, getOrdersByUser } from "./orders";
+export {
+  getOrders,
+  getOrderById,
+  getOrdersByUser,
+  getActiveOrders,
+  getCompletedOrders,
+  getCancelledOrders,
+} from "./orders";
 export {
   getNotifications,
   getUnreadNotificationCount,

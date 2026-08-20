@@ -61,6 +61,7 @@ const orderStatusStyles: Record<string, string> = {
   confirmed: "bg-indigo-50 text-indigo-600 border border-indigo-200",
   preparing: "bg-amber-50 text-kampmax-warning border border-amber-200",
   ready: "bg-purple-50 text-purple-600 border border-purple-200",
+  out_for_delivery: "bg-orange-50 text-orange-600 border border-orange-200",
   delivered: "bg-green-50 text-kampmax-success border border-green-200",
   cancelled: "bg-red-50 text-kampmax-error border border-red-200",
 };
@@ -70,6 +71,7 @@ const orderStatusLabels: Record<string, string> = {
   confirmed: "Confirmed",
   preparing: "Preparing",
   ready: "Ready for Pickup",
+  out_for_delivery: "Out for Delivery",
   delivered: "Delivered",
   cancelled: "Cancelled",
 };
