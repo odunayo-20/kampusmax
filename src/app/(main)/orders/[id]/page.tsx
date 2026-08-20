@@ -2,12 +2,12 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   ArrowLeft, CheckCircle2, Clock, Package,
   MapPin, MessageCircle, Home
 } from "lucide-react";
 import { Button, OrderStatusBadge, Avatar } from "@/components/ui";
+import { PageContainer, Breadcrumbs } from "@/components/layout";
 import { formatNaira, formatDate, cn } from "@/lib/utils";
 import { getOrderById } from "@/services/orders";
 import { getVendorById } from "@/services/users";
@@ -22,12 +22,6 @@ const statusSteps = [
 
 const statusOrder = ["placed", "confirmed", "preparing", "ready", "delivered"];
 
-const deliveryMethodLabels: Record<string, string> = {
-  campus_pickup: "Campus Pickup",
-  meetup: "Campus Meetup",
-  delivery: "Hostel Delivery",
-};
-
 export default function OrderTrackingPage({
   params,
 }: {
@@ -40,55 +34,61 @@ export default function OrderTrackingPage({
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-kampmax-bg">
-        <div className="px-4 py-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.back()}
-              className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-xl font-bold text-kampmax-text">Order Not Found</h1>
-          </div>
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">🔍</p>
-            <p className="text-sm font-medium text-kampmax-text mb-1">
-              Order #{id} not found
-            </p>
-            <p className="text-xs text-kampmax-text-secondary mb-6">
-              This order may have been removed or the ID is incorrect.
-            </p>
-            <Button onClick={() => router.push("/orders")} variant="primary">
-              View All Orders
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentIdx = statusOrder.indexOf(order.status);
-
-  return (
-    <div className="min-h-screen bg-kampmax-bg">
-      <div className="px-4 py-4 space-y-4">
-        <div className="flex items-center gap-3">
+      <PageContainer>
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => router.back()}
             className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-kampmax-text">Order #{order.id}</h1>
-            <p className="text-xs text-kampmax-text-secondary">
-              Placed {formatDate(new Date(order.createdAt))}
-            </p>
-          </div>
-          <OrderStatusBadge status={order.status} />
+          <h1 className="text-xl font-bold text-kampmax-text">Order Not Found</h1>
         </div>
+        <div className="text-center py-16">
+          <p className="text-4xl mb-3">Order not found</p>
+          <p className="text-sm font-medium text-kampmax-text mb-1">
+            Order #{id} not found
+          </p>
+          <p className="text-xs text-kampmax-text-secondary mb-6">
+            This order may have been removed or the ID is incorrect.
+          </p>
+          <Button onClick={() => router.push("/orders")} variant="primary">
+            View All Orders
+          </Button>
+        </div>
+      </PageContainer>
+    );
+  }
 
+  const currentIdx = statusOrder.indexOf(order.status);
+
+  return (
+    <PageContainer>
+      <Breadcrumbs
+        items={[
+          { label: "Orders", href: "/orders" },
+          { label: `#${order.id}` },
+        ]}
+        className="mb-4"
+      />
+
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={() => router.back()}
+          className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-kampmax-text">Order #{order.id}</h1>
+          <p className="text-xs text-kampmax-text-secondary">
+            Placed {formatDate(new Date(order.createdAt))}
+          </p>
+        </div>
+        <OrderStatusBadge status={order.status} />
+      </div>
+
+      <div className="space-y-4">
         <section className="bg-white rounded-lg border border-kampmax-border p-4">
           <div className="space-y-0">
             {statusSteps.map((step, idx) => {
@@ -197,7 +197,7 @@ export default function OrderTrackingPage({
                   {vendor.storeName}
                 </p>
                 <p className="text-xs text-kampmax-text-secondary">
-                  ⭐ {vendor.rating} · {vendor.totalSales} sales
+                  {vendor.rating} · {vendor.totalSales} sales
                 </p>
               </div>
               <Button variant="outline" size="sm">
@@ -218,6 +218,6 @@ export default function OrderTrackingPage({
           Back to Home
         </Button>
       </div>
-    </div>
+    </PageContainer>
   );
 }

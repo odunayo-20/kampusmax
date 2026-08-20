@@ -7,6 +7,7 @@ import {
   ChevronRight, Store, CreditCard, Star, Bell
 } from "lucide-react";
 import { Button, Avatar } from "@/components/ui";
+import { PageContainer } from "@/components/layout";
 import { getCurrentUser, getVendorByUserId } from "@/services/users";
 import { useAuth } from "@/lib/auth-context";
 
@@ -34,7 +35,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="px-4 py-4 space-y-4">
+    <PageContainer className="space-y-4">
       <div className="bg-white rounded-lg border border-kampmax-border p-4">
         <div className="flex items-center gap-3">
           <Avatar name={currentUser.name} size="lg" />
@@ -125,6 +126,6 @@ export default function ProfilePage() {
           </>
         )}
       </button>
-    </div>
+    </PageContainer>
   );
 }

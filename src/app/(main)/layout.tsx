@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BottomNav, TopBar } from "@/components/layout";
+import { MobileHeader } from "@/components/layout/MobileHeader";
+import { DesktopNavigation } from "@/components/layout/DesktopNavigation";
+import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { useAuth } from "@/lib/auth-context";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -29,9 +31,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-kampmax-bg">
-      <TopBar />
-      <main className="max-w-lg mx-auto pb-16">{children}</main>
-      <BottomNav />
+      <MobileHeader />
+      <DesktopNavigation />
+      <main className="pb-20 lg:pb-6">{children}</main>
+      <BottomNavigation />
     </div>
   );
 }

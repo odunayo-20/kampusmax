@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SearchBar } from "@/components/shared";
 import { ProductCard, CategoryPill } from "@/components/marketplace";
+import { PageContainer } from "@/components/layout";
 import { getCategories } from "@/services/categories";
 import { getProducts, getProductsByCategory, searchProducts } from "@/services/products";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,7 @@ function MarketplaceContent() {
   });
 
   return (
-    <div className="px-4 py-4 space-y-4">
+    <PageContainer className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-kampmax-text mb-3">Marketplace</h1>
         <SearchBar value={search} onChange={setSearch} />
@@ -71,8 +72,8 @@ function MarketplaceContent() {
           className="text-xs text-kampmax-text border border-kampmax-border rounded-md px-2 py-1 bg-white focus:outline-none focus:border-kampmax-blue"
         >
           <option value="recent">Most Recent</option>
-          <option value="price_low">Price: Low → High</option>
-          <option value="price_high">Price: High → Low</option>
+          <option value="price_low">Price: Low to High</option>
+          <option value="price_high">Price: High to Low</option>
         </select>
       </div>
 
@@ -84,14 +85,14 @@ function MarketplaceContent() {
         </div>
       ) : (
         <div className="text-center py-16">
-          <p className="text-lg mb-1">📦</p>
+          <p className="text-lg mb-1">No results</p>
           <p className="text-sm font-medium text-kampmax-text">No products found</p>
           <p className="text-xs text-kampmax-text-secondary">
             Try a different search or category
           </p>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -99,7 +100,7 @@ export default function MarketplacePage() {
   return (
     <Suspense
       fallback={
-        <div className="px-4 py-4 space-y-4">
+        <PageContainer className="space-y-4">
           <h1 className="text-xl font-bold text-kampmax-text">Marketplace</h1>
           <div className="h-10 bg-kampmax-muted rounded-lg animate-pulse" />
           <div className="grid grid-cols-2 gap-3">
@@ -107,7 +108,7 @@ export default function MarketplacePage() {
               <div key={i} className="bg-kampmax-muted rounded-lg h-48 animate-pulse" />
             ))}
           </div>
-        </div>
+        </PageContainer>
       }
     >
       <MarketplaceContent />

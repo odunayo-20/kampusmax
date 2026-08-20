@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Search, ChevronRight, TrendingUp, Star } from "lucide-react";
+import { Search, TrendingUp, Star } from "lucide-react";
 import { ProductCard, CategoryCard } from "@/components/marketplace";
-import { Button, Avatar } from "@/components/ui";
+import { Avatar } from "@/components/ui";
+import { PageContainer, SectionHeader } from "@/components/layout";
 import { useApp } from "@/lib/app-context";
 import { getFeaturedProducts, getRecentProducts } from "@/services/products";
 import { getCategories } from "@/services/categories";
 import { getTopVendors } from "@/services/users";
-import { formatNaira } from "@/lib/utils";
 
 export default function HomePage() {
   const { selectedCampus } = useApp();
@@ -18,10 +18,10 @@ export default function HomePage() {
   const topVendors = getTopVendors();
 
   return (
-    <div className="px-4 py-4 space-y-6">
+    <PageContainer className="space-y-6">
       <div>
         <p className="text-sm text-kampmax-text-secondary">
-          Welcome back, Adebayo 👋
+          Welcome back, Adebayo
         </p>
         <h1 className="text-xl font-bold text-kampmax-text">
           {selectedCampus.abbreviation} Marketplace
@@ -36,15 +36,10 @@ export default function HomePage() {
       </Link>
 
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-kampmax-text">Categories</h2>
-          <Link
-            href="/marketplace"
-            className="text-xs font-medium text-kampmax-blue flex items-center gap-0.5"
-          >
-            See all <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
+        <SectionHeader
+          title="Categories"
+          action={{ label: "See all", href: "/marketplace" }}
+        />
         <div className="grid grid-cols-4 gap-2">
           {categories.slice(0, 8).map((cat) => (
             <CategoryCard key={cat.id} category={cat} />
@@ -53,20 +48,11 @@ export default function HomePage() {
       </section>
 
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-kampmax-gold" />
-            <h2 className="text-base font-semibold text-kampmax-text">
-              Deals & Discounts
-            </h2>
-          </div>
-          <Link
-            href="/marketplace"
-            className="text-xs font-medium text-kampmax-blue flex items-center gap-0.5"
-          >
-            View all <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
+        <SectionHeader
+          title="Deals & Discounts"
+          icon={<TrendingUp className="h-4 w-4 text-kampmax-gold" />}
+          action={{ label: "View all", href: "/marketplace" }}
+        />
         <div className="grid grid-cols-2 gap-3">
           {featured.map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -75,17 +61,10 @@ export default function HomePage() {
       </section>
 
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-kampmax-text">
-            Recently Added
-          </h2>
-          <Link
-            href="/marketplace"
-            className="text-xs font-medium text-kampmax-blue flex items-center gap-0.5"
-          >
-            View all <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
+        <SectionHeader
+          title="Recently Added"
+          action={{ label: "View all", href: "/marketplace" }}
+        />
         <div className="grid grid-cols-2 gap-3">
           {recent.slice(0, 4).map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -94,14 +73,10 @@ export default function HomePage() {
       </section>
 
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Star className="h-4 w-4 text-kampmax-gold" />
-            <h2 className="text-base font-semibold text-kampmax-text">
-              Top Vendors
-            </h2>
-          </div>
-        </div>
+        <SectionHeader
+          title="Top Vendors"
+          icon={<Star className="h-4 w-4 text-kampmax-gold" />}
+        />
         <div className="space-y-2">
           {topVendors.map((vendor) => (
             <Link
@@ -122,14 +97,13 @@ export default function HomePage() {
                   )}
                 </div>
                 <p className="text-xs text-kampmax-text-secondary">
-                  ⭐ {vendor.rating} · {vendor.totalSales} sales
+                  {vendor.rating} · {vendor.totalSales} sales
                 </p>
               </div>
-              <ChevronRight className="h-4 w-4 text-kampmax-text-secondary" />
             </Link>
           ))}
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 }
