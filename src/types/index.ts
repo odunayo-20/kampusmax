@@ -270,6 +270,20 @@ export interface Message {
   createdAt: string;
   read: boolean;
   imageUrl?: string;
+  sharedProduct?: {
+    id: string;
+    title: string;
+    price: number;
+    image?: string;
+    condition: ProductCondition;
+    vendorName?: string;
+  };
+  sharedOrder?: {
+    id: string;
+    status: OrderStatus;
+    items: string;
+    total: number;
+  };
 }
 
 export interface Conversation {
@@ -282,6 +296,8 @@ export interface Conversation {
   updatedAt: string;
   productId?: string;
   vendorId?: string;
+  isPinned?: boolean;
+  isMuted?: boolean;
 }
 
 // ============================================================
