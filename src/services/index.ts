@@ -64,3 +64,13 @@ export {
   depositToWallet,
   payFromWallet,
 } from "./wallet";
+export {
+  register,
+  login,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
+  resendOtp,
+  getCurrentSession,
+  logout,
+} from "./auth";

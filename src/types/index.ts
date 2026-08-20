@@ -45,6 +45,56 @@ export type WalletTransactionStatus = "pending" | "completed" | "failed";
 export type ConversationType = "direct" | "vendor_chat";
 
 // ============================================================
+// AUTH
+// ============================================================
+
+export type AuthStatus = "authenticated" | "unauthenticated" | "loading";
+
+export type VerificationMethod = "email" | "sms";
+
+export interface RegisterData {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  campusId: string;
+  role: UserRole;
+  department?: string;
+  level?: string;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  campusId: string;
+  role: UserRole;
+  avatar: string;
+  isVerified: boolean;
+}
+
+export interface ForgotPasswordData {
+  email: string;
+}
+
+export interface ResetPasswordData {
+  token: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface VerifyOtpData {
+  email: string;
+  code: string;
+}
+
+// ============================================================
 // CAMPUS
 // ============================================================
 

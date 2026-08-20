@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Check, MapPin } from "lucide-react";
+import Link from "next/link";
+import { Search, Check, MapPin, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui";
 import { getCampuses } from "@/services/campus";
 import { useApp } from "@/lib/app-context";
@@ -10,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 export default function CampusSelectionPage() {
   const router = useRouter();
-  const { setSelectedCampus, setHasCompletedOnboarding } = useApp();
+  const { setSelectedCampus } = useApp();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const campuses = getCampuses();
@@ -26,14 +27,21 @@ export default function CampusSelectionPage() {
     const campus = campuses.find((c) => c.id === selectedId);
     if (campus) {
       setSelectedCampus(campus);
-      setHasCompletedOnboarding(true);
-      router.push("/home");
+      router.push(`/register?campus=${campus.id}`);
     }
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <div className="flex-1 flex flex-col px-6 pt-8">
+        <Link
+          href="/onboarding"
+          className="inline-flex items-center gap-1 text-sm text-kampmax-text-secondary hover:text-kampmax-text transition-colors mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Link>
+
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-kampmax-text mb-1">
             Select Your Campus
@@ -88,7 +96,7 @@ export default function CampusSelectionPage() {
           </div>
         </div>
 
-        <div className="pt-4 pb-6 border-t border-kampmax-border">
+        <div className="pt-4 pb-6 border-t border-kampmax-border space-y-2">
           <Button
             onClick={handleContinue}
             disabled={!selectedId}
@@ -98,6 +106,12 @@ export default function CampusSelectionPage() {
           >
             Continue
           </Button>
+          <Link
+            href="/login"
+            className="block text-center text-sm text-kampmax-text-secondary hover:text-kampmax-text transition-colors py-2"
+          >
+            Already have an account? Sign in
+          </Link>
         </div>
       </div>
     </div>

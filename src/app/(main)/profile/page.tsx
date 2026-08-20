@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Settings, Package, MapPin, HelpCircle, LogOut,
@@ -7,12 +8,14 @@ import {
 } from "lucide-react";
 import { Button, Avatar } from "@/components/ui";
 import { getCurrentUser, getVendorByUserId } from "@/services/users";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const currentUser = getCurrentUser();
   const vendor = getVendorByUserId(currentUser.id);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const menuItems = [
     { icon: Package, label: "My Orders", desc: "View order history", href: "/orders" },
@@ -23,6 +26,12 @@ export default function ProfilePage() {
     { icon: HelpCircle, label: "Help & Support", desc: "FAQ and contact us", href: "#" },
     { icon: Settings, label: "Settings", desc: "Account preferences", href: "#" },
   ];
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    await logout();
+    router.replace("/login");
+  }
 
   return (
     <div className="px-4 py-4 space-y-4">
@@ -99,9 +108,22 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      <button className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-kampmax-error hover:bg-red-50 rounded-lg transition-colors">
-        <LogOut className="h-4 w-4" />
-        Log Out
+      <button
+        onClick={handleLogout}
+        disabled={loggingOut}
+        className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-kampmax-error hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+      >
+        {loggingOut ? (
+          <span className="flex items-center gap-2">
+            <span className="h-4 w-4 border-2 border-kampmax-error/30 border-t-kampmax-error rounded-full animate-spin" />
+            Signing out...
+          </span>
+        ) : (
+          <>
+            <LogOut className="h-4 w-4" />
+            Log Out
+          </>
+        )}
       </button>
     </div>
   );
