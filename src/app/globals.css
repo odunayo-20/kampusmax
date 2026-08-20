@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ═══════════════════════════════════════════════════════
+   KAMPMAX DESIGN TOKENS
+   Brand: Deep Navy + Electric Blue + Warm Gold
+   ═══════════════════════════════════════════════════════ */
+
+@theme {
+  --color-kampmax-navy: #0B1F3A;
+  --color-kampmax-navy-light: #132D52;
+  --color-kampmax-blue: #1769FF;
+  --color-kampmax-blue-light: #4A8AFF;
+  --color-kampmax-blue-dark: #0D4FD9;
+  --color-kampmax-gold: #F5B942;
+  --color-kampmax-gold-light: #F8CC75;
+  --color-kampmax-gold-dark: #D49A20;
+  --color-kampmax-bg: #F8FAFC;
+  --color-kampmax-surface: #FFFFFF;
+  --color-kampmax-text: #111827;
+  --color-kampmax-text-secondary: #64748B;
+  --color-kampmax-border: #E2E8F0;
+  --color-kampmax-success: #16A34A;
+  --color-kampmax-error: #DC2626;
+  --color-kampmax-warning: #F59E0B;
+  --color-kampmax-info: #2563EB;
+  --color-kampmax-muted: #F1F5F9;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════════ */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-kampmax-bg);
+  color: var(--color-kampmax-text);
+  min-height: 100dvh;
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area for mobile */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
