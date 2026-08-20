@@ -9,6 +9,10 @@ export {
   getRecentProducts,
   searchProducts,
   getProductsByCampus,
+  getFeaturedProductsByCampus,
+  getPopularProductsByCampus,
+  getRecentProductsByCampus,
+  getRecommendedProductsByCampus,
 } from "./products";
 export {
   getCurrentUser,
@@ -18,6 +22,8 @@ export {
   getVendorById,
   getVendorByUserId,
   getTopVendors,
+  getVendorsByCampus,
+  getTopVendorsByCampus,
 } from "./users";
 export { getOrders, getOrderById, getOrdersByUser } from "./orders";
 export {

@@ -35,3 +35,13 @@ export function getVendorByUserId(userId: string): Vendor | undefined {
 export function getTopVendors(): Vendor[] {
   return [...mockVendors].sort((a, b) => b.rating - a.rating);
 }
+
+export function getVendorsByCampus(campusId: string): Vendor[] {
+  return mockVendors.filter((v) => v.campusId === campusId);
+}
+
+export function getTopVendorsByCampus(campusId: string): Vendor[] {
+  return mockVendors
+    .filter((v) => v.campusId === campusId)
+    .sort((a, b) => b.rating - a.rating);
+}
