@@ -1,100 +1,149 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
-import { Button } from "@/components/ui";
-import { CartItemCard } from "@/components/shared";
-import { PageContainer } from "@/components/layout";
+import { ArrowLeft, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
-import { formatNaira } from "@/lib/utils";
+import { useApp } from "@/lib/app-context";
+import { getVendorById } from "@/services/users";
+import { PageContainer } from "@/components/layout";
+import { Button } from "@/components/atoms/Button";
+import {
+  VendorGroup,
+  CartSummary,
+  SavedForLater,
+  EmptyCart,
+} from "@/components/cart";
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, updateQuantity, removeItem, total, itemCount } = useCart();
+  const { selectedCampus } = useApp();
+  const {
+    items,
+    savedItems,
+    vendorGroups,
+    summary,
+    updateQuantity,
+    removeItem,
+    saveForLater,
+    moveToCart,
+    removeSavedItem,
+    clearCart,
+  } = useCart();
 
-  const deliveryFee = 500;
-  const grandTotal = total + (items.length > 0 ? deliveryFee : 0);
+  const activeItems = useMemo(
+    () => items.filter((i) => !i.savedForLater),
+    [items]
+  );
+
+  const vendorNameCache = useMemo(() => {
+    const cache: Record<string, { name: string; verified: boolean }> = {};
+    vendorGroups.forEach((g) => {
+      const vendor = getVendorById(g.vendorId);
+      cache[g.vendorId] = {
+        name: vendor?.storeName || "Unknown Vendor",
+        verified: vendor?.verified || false,
+      };
+    });
+    // Also resolve saved items' vendors
+    savedItems.forEach((item) => {
+      if (!cache[item.product.vendorId]) {
+        const vendor = getVendorById(item.product.vendorId);
+        cache[item.product.vendorId] = {
+          name: vendor?.storeName || "Unknown Vendor",
+          verified: vendor?.verified || false,
+        };
+      }
+    });
+    return cache;
+  }, [vendorGroups, savedItems]);
 
   return (
     <PageContainer>
-      <div className="flex items-center gap-3 mb-4">
-        <button
-          onClick={() => router.back()}
-          className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-kampmax-text">Cart</h1>
-          <p className="text-xs text-kampmax-text-secondary">
-            {itemCount} {itemCount === 1 ? "item" : "items"}
-          </p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-kampmax-text" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-kampmax-text">Cart</h1>
+            <p className="text-xs text-kampmax-text-secondary">
+              {summary.itemCount} {summary.itemCount === 1 ? "item" : "items"}
+              {vendorGroups.length > 1 &&
+                ` from ${vendorGroups.length} vendors`}
+            </p>
+          </div>
         </div>
+
+        {activeItems.length > 0 && (
+          <button
+            onClick={clearCart}
+            className="flex items-center gap-1.5 text-xs text-kampmax-text-secondary hover:text-kampmax-error transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear cart
+          </button>
+        )}
       </div>
 
-      {items.length === 0 ? (
-        <div className="text-center py-20">
-          <ShoppingBag className="h-16 w-16 text-kampmax-border mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-kampmax-text mb-1">
-            Your cart is empty
-          </h2>
-          <p className="text-sm text-kampmax-text-secondary mb-6">
-            Browse the marketplace to find something you like
-          </p>
-          <Button
-            onClick={() => router.push("/marketplace")}
-            variant="primary"
-          >
-            Browse Marketplace
-          </Button>
-        </div>
+      {activeItems.length === 0 && savedItems.length === 0 ? (
+        <EmptyCart />
       ) : (
         <div className="space-y-6">
-          <div className="space-y-3">
-            {items.map((item) => (
-              <CartItemCard
-                key={item.product.id}
-                item={item}
-                onUpdateQuantity={updateQuantity}
-                onRemove={removeItem}
-              />
-            ))}
-          </div>
-
-          <div className="bg-white rounded-lg border border-kampmax-border p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-kampmax-text">
-              Order Summary
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-kampmax-text-secondary">Subtotal</span>
-                <span className="text-kampmax-text">{formatNaira(total)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-kampmax-text-secondary">Delivery (Campus Pickup)</span>
-                <span className="text-kampmax-text">Free</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-kampmax-text-secondary">Hostel Delivery</span>
-                <span className="text-kampmax-text">{formatNaira(deliveryFee)}</span>
-              </div>
-              <div className="border-t border-kampmax-border pt-2 flex justify-between">
-                <span className="font-semibold text-kampmax-text">Total</span>
-                <span className="font-bold text-kampmax-navy">
-                  {formatNaira(grandTotal)}
-                </span>
-              </div>
+          {vendorGroups.length > 0 && (
+            <div className="space-y-4">
+              {vendorGroups.map((group) => (
+                <VendorGroup
+                  key={group.vendorId}
+                  group={group}
+                  vendorName={
+                    vendorNameCache[group.vendorId]?.name || "Unknown Vendor"
+                  }
+                  vendorVerified={
+                    vendorNameCache[group.vendorId]?.verified
+                  }
+                  onUpdateQuantity={updateQuantity}
+                  onRemove={removeItem}
+                  onSaveForLater={saveForLater}
+                />
+              ))}
             </div>
-          </div>
+          )}
 
-          <Button
-            onClick={() => router.push("/checkout")}
-            variant="primary"
-            size="lg"
-            className="w-full"
-          >
-            Proceed to Checkout — {formatNaira(grandTotal)}
-          </Button>
+          {activeItems.length > 0 && (
+            <CartSummary summary={summary} />
+          )}
+
+          {activeItems.length > 0 && (
+            <Button
+              onClick={() => router.push("/checkout")}
+              className="w-full bg-kampmax-blue text-white hover:bg-kampmax-blue/90 h-12 text-base font-semibold"
+            >
+              Proceed to Checkout —{" "}
+              {summary.total.toLocaleString("en-NG", {
+                style: "currency",
+                currency: "NGN",
+              })}
+            </Button>
+          )}
+
+          {activeItems.length === 0 && savedItems.length > 0 && (
+            <div className="text-center py-6">
+              <p className="text-sm text-kampmax-text-secondary mb-4">
+                All items are saved for later. Move items to your cart to
+                checkout.
+              </p>
+            </div>
+          )}
+
+          <SavedForLater
+            items={savedItems}
+            onMoveToCart={moveToCart}
+            onRemove={removeSavedItem}
+          />
         </div>
       )}
     </PageContainer>

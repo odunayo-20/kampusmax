@@ -14,7 +14,7 @@ import { DeliveryMethod, PaymentMethod } from "@/types";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, total, clearCart } = useCart();
+  const { items, summary, clearCart } = useCart();
 
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("campus_pickup");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("paystack");
@@ -22,7 +22,7 @@ export default function CheckoutPage() {
   const [isPlacing, setIsPlacing] = useState(false);
 
   const deliveryFee = deliveryMethod === "delivery" ? 500 : 0;
-  const grandTotal = total + deliveryFee;
+  const grandTotal = summary.itemsSubtotal + deliveryFee;
 
   function handlePlaceOrder() {
     setIsPlacing(true);
@@ -33,7 +33,9 @@ export default function CheckoutPage() {
     }, 1500);
   }
 
-  if (items.length === 0 && !isPlacing) {
+  const activeItems = items.filter((i) => !i.savedForLater);
+
+  if (activeItems.length === 0 && !isPlacing) {
     return (
       <PageContainer className="text-center py-16">
         <p className="text-sm text-kampmax-text-secondary mb-4">
@@ -140,7 +142,7 @@ export default function CheckoutPage() {
       <section className="bg-white rounded-lg border border-kampmax-border p-4 space-y-3">
         <h3 className="text-sm font-semibold text-kampmax-text">Order Summary</h3>
         <div className="space-y-2">
-          {items.map((item) => (
+          {activeItems.map((item) => (
             <div key={item.product.id} className="flex justify-between text-sm">
               <span className="text-kampmax-text-secondary">
                 {item.quantity}x {item.product.title}

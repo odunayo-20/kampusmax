@@ -180,6 +180,7 @@ export interface Product {
 export interface CartItem {
   product: Product;
   quantity: number;
+  savedForLater?: boolean;
 }
 
 // ============================================================
