@@ -1,4 +1,4 @@
-import { CampusPost, Comment } from "@/types";
+import { CampusPost, Comment, SavedPost, ReportedPost, ReportReason, PollOption } from "@/types";
 import {
   campusPosts as mockPosts,
   comments as mockComments,
@@ -8,6 +8,9 @@ import {
   getPostsByUser as _getPostsByUser,
   getPostsByType as _getPostsByType,
 } from "@/data/posts";
+
+const savedPosts: SavedPost[] = [];
+const reportedPosts: ReportedPost[] = [];
 
 export function getCampusPosts(campusId: string): CampusPost[] {
   return _getCampusPosts(campusId);
@@ -63,7 +66,7 @@ export function addComment(
   return newComment;
 }
 
-export function togglePostLike(postId: string, userId: string): void {
+export function togglePostLike(postId: string): void {
   const post = mockPosts.find((p) => p.id === postId);
   if (post) {
     if (post.isLiked) {
@@ -74,4 +77,102 @@ export function togglePostLike(postId: string, userId: string): void {
       post.isLiked = true;
     }
   }
+}
+
+export function toggleCommentLike(commentId: string): void {
+  const comment = mockComments.find((c) => c.id === commentId);
+  if (comment) {
+    if (comment.isLiked) {
+      comment.likes--;
+      comment.isLiked = false;
+    } else {
+      comment.likes++;
+      comment.isLiked = true;
+    }
+  }
+}
+
+export function toggleSavePost(postId: string, userId: string): boolean {
+  const existing = savedPosts.find(
+    (s) => s.postId === postId && s.userId === userId
+  );
+  if (existing) {
+    savedPosts.splice(savedPosts.indexOf(existing), 1);
+    const post = mockPosts.find((p) => p.id === postId);
+    if (post) post.isSaved = false;
+    return false;
+  } else {
+    savedPosts.push({
+      id: `sp${savedPosts.length + 1}`,
+      userId,
+      postId,
+      savedAt: new Date().toISOString(),
+    });
+    const post = mockPosts.find((p) => p.id === postId);
+    if (post) post.isSaved = true;
+    return true;
+  }
+}
+
+export function reportPost(
+  postId: string,
+  userId: string,
+  reason: ReportReason,
+  details?: string
+): void {
+  reportedPosts.push({
+    id: `rp${reportedPosts.length + 1}`,
+    userId,
+    postId,
+    reason,
+    details,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export function votePoll(
+  postId: string,
+  optionId: string,
+  userId: string
+): void {
+  const post = mockPosts.find((p) => p.id === postId);
+  if (!post?.poll) return;
+
+  // Remove previous vote
+  post.poll.options.forEach((opt) => {
+    opt.votes = opt.votes.filter((v) => v !== userId);
+  });
+
+  // Add new vote
+  const option = post.poll.options.find((o) => o.id === optionId);
+  if (option && !option.votes.includes(userId)) {
+    option.votes.push(userId);
+  }
+
+  // Recalculate total
+  post.poll.totalVotes = post.poll.options.reduce(
+    (sum, opt) => sum + opt.votes.length,
+    0
+  );
+}
+
+export function deletePost(postId: string): boolean {
+  const idx = mockPosts.findIndex((p) => p.id === postId);
+  if (idx === -1) return false;
+  mockPosts.splice(idx, 1);
+  // Also remove comments
+  for (let i = mockComments.length - 1; i >= 0; i--) {
+    if (mockComments[i].postId === postId) mockComments.splice(i, 1);
+  }
+  return true;
+}
+
+export function deleteComment(commentId: string): boolean {
+  const idx = mockComments.findIndex((c) => c.id === commentId);
+  if (idx === -1) return false;
+  const postId = mockComments[idx].postId;
+  mockComments.splice(idx, 1);
+  const post = mockPosts.find((p) => p.id === postId);
+  if (post && post.commentCount > 0) post.commentCount--;
+  return true;
 }

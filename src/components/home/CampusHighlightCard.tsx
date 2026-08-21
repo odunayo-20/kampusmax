@@ -10,11 +10,15 @@ interface CampusHighlightCardProps {
   className?: string;
 }
 
-const typeConfig = {
+const typeConfig: Record<string, { label: string; color: string }> = {
   discussion: { label: "Discussion", color: "bg-blue-50 text-kampmax-blue" },
   question: { label: "Question", color: "bg-amber-50 text-kampmax-gold-dark" },
   event: { label: "Event", color: "bg-green-50 text-kampmax-success" },
   marketplace: { label: "Marketplace", color: "bg-purple-50 text-purple-600" },
+  poll: { label: "Poll", color: "bg-purple-50 text-purple-600" },
+  announcement: { label: "Announcement", color: "bg-red-50 text-red-600" },
+  lost_found: { label: "Lost & Found", color: "bg-orange-50 text-orange-600" },
+  image: { label: "Photo", color: "bg-pink-50 text-pink-600" },
 };
 
 export function CampusHighlightCard({ post, className }: CampusHighlightCardProps) {
@@ -23,7 +27,7 @@ export function CampusHighlightCard({ post, className }: CampusHighlightCardProp
 
   return (
     <Link
-      href={`/campus?post=${post.id}`}
+      href={`/community/${post.id}`}
       className={cn(
         "flex-shrink-0 w-[280px] bg-white rounded-lg border border-kampmax-border p-3",
         "hover:border-kampmax-blue/50 hover:shadow-sm transition-all duration-200",

@@ -202,7 +202,7 @@ export default function HomePage() {
           title="Campus Highlights"
           subtitle={`From ${selectedCampus.abbreviation} community`}
           icon={<Users className="h-4 w-4 text-kampmax-blue" />}
-          action={{ label: "View all", href: "/campus" }}
+          action={{ label: "View all", href: "/community" }}
         />
         {posts.length > 0 ? (
           <HorizontalScroll>
@@ -216,8 +216,8 @@ export default function HomePage() {
             title="No community posts yet"
             description="Be the first to share something with your campus community"
             action={
-              <Link href="/campus">
-                <Button variant="outline" size="sm">Go to Campus Feed</Button>
+              <Link href="/community">
+                <Button variant="outline" size="sm">Go to Community Feed</Button>
               </Link>
             }
           />
@@ -231,7 +231,7 @@ export default function HomePage() {
             title="Upcoming Events"
             subtitle={`At ${selectedCampus.abbreviation}`}
             icon={<Calendar className="h-4 w-4 text-kampmax-success" />}
-            action={{ label: "View all", href: "/campus" }}
+            action={{ label: "View all", href: "/community" }}
           />
           <HorizontalScroll>
             {events.map((event) => (

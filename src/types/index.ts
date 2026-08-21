@@ -30,7 +30,24 @@ export type NotificationType =
   | "community"
   | "system";
 
-export type PostType = "discussion" | "question" | "event" | "marketplace";
+export type PostType =
+  | "discussion"
+  | "question"
+  | "event"
+  | "marketplace"
+  | "poll"
+  | "announcement"
+  | "lost_found"
+  | "image";
+
+export type LostFoundStatus = "open" | "claimed" | "resolved";
+
+export type ReportReason =
+  | "spam"
+  | "inappropriate"
+  | "scam"
+  | "harassment"
+  | "other";
 
 export type ReviewTarget = "vendor" | "product";
 
@@ -326,9 +343,65 @@ export interface CampusPost {
   likes: number;
   commentCount: number;
   isLiked?: boolean;
+  isSaved?: boolean;
   createdAt: string;
   productId?: string;
   eventId?: string;
+  poll?: Poll;
+  announcement?: CampusAnnouncement;
+  lostFound?: LostFoundItem;
+}
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[];
+}
+
+export interface Poll {
+  id: string;
+  question: string;
+  options: PollOption[];
+  totalVotes: number;
+  endsAt: string;
+  isAnonymous: boolean;
+}
+
+export interface CampusAnnouncement {
+  id: string;
+  campusId: string;
+  title: string;
+  content: string;
+  authorId: string;
+  priority: "info" | "warning" | "urgent";
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface LostFoundItem {
+  id: string;
+  status: LostFoundStatus;
+  itemDescription: string;
+  location: string;
+  dateReported: string;
+  contactInfo: string;
+  imageUrl?: string;
+}
+
+export interface SavedPost {
+  id: string;
+  userId: string;
+  postId: string;
+  savedAt: string;
+}
+
+export interface ReportedPost {
+  id: string;
+  userId: string;
+  postId: string;
+  reason: ReportReason;
+  details?: string;
+  createdAt: string;
 }
 
 // ============================================================

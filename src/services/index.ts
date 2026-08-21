@@ -69,6 +69,12 @@ export {
   createPost,
   addComment,
   togglePostLike,
+  toggleCommentLike,
+  toggleSavePost,
+  reportPost,
+  votePoll,
+  deletePost,
+  deleteComment,
 } from "./posts";
 export {
   getWallet,
