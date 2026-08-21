@@ -5,14 +5,17 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowLeft, Heart, Share2, MapPin, Star, MessageCircle,
-  ShieldCheck, Truck, Store as StoreIcon, ChevronRight, Minus, Plus, ShoppingCart
+  ArrowLeft, Heart, Share2, MapPin, MessageCircle,
+  ShieldCheck, Truck, Store as StoreIcon, ChevronRight, Minus, Plus, ShoppingCart, PenSquare
 } from "lucide-react";
 import { Button, PriceTag, ConditionBadge, Avatar } from "@/components/ui";
 import { PageContainer, Breadcrumbs } from "@/components/layout";
 import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth-context";
 import { getProductById, getProductsByCategory } from "@/services/products";
 import { getVendorById } from "@/services/users";
+import { getReviewsByProduct, getReviewSummary, hasUserReviewedProduct } from "@/services/reviews";
+import { ReviewList, ReviewForm, StarRatingDisplay } from "@/components/reviews";
 import { formatNaira, cn } from "@/lib/utils";
 
 export default function ProductDetailPage({
@@ -23,8 +26,11 @@ export default function ProductDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const { addItem, itemCount } = useCart();
+  const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [liked, setLiked] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRefresh, setReviewRefresh] = useState(0);
 
   const product = getProductById(id);
   if (!product) {
@@ -42,6 +48,9 @@ export default function ProductDetailPage({
   const similar = getProductsByCategory(product.categoryId)
     .filter((p) => p.id !== product.id)
     .slice(0, 4);
+  const productReviews = getReviewsByProduct(product.id);
+  const reviewSummary = getReviewSummary(product.id, "product");
+  const hasReviewed = user ? hasUserReviewedProduct(user.id, product.id) : false;
 
   function handleAddToCart() {
     if (product) addItem(product, quantity);
@@ -157,6 +166,48 @@ export default function ProductDetailPage({
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-semibold text-kampmax-text">Reviews</h3>
+              {reviewSummary.totalReviews > 0 && (
+                <StarRatingDisplay
+                  rating={reviewSummary.averageRating}
+                  count={reviewSummary.totalReviews}
+                  size="sm"
+                />
+              )}
+            </div>
+            {user && !hasReviewed && (
+              <button
+                onClick={() => setShowReviewForm(true)}
+                className="flex items-center gap-1 text-xs font-medium text-kampmax-blue hover:text-kampmax-blue-dark transition-colors"
+              >
+                <PenSquare className="h-3.5 w-3.5" />
+                Write Review
+              </button>
+            )}
+          </div>
+
+          <ReviewList
+            key={reviewRefresh}
+            reviews={productReviews}
+            summary={reviewSummary}
+            onRefresh={() => setReviewRefresh((n) => n + 1)}
+          />
+        </section>
+
+        <ReviewForm
+          isOpen={showReviewForm}
+          onClose={() => setShowReviewForm(false)}
+          targetId={product.id}
+          target="product"
+          vendorId={product.vendorId}
+          productId={product.id}
+          onSuccess={() => setReviewRefresh((n) => n + 1)}
+        />
 
         {similar.length > 0 && (
           <section>

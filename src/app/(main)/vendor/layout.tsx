@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
   LayoutDashboard, Package, Plus, ShoppingCart, Users, DollarSign,
-  Wallet, Store, Settings, ArrowLeft, Menu, X, AlertTriangle,
+  Wallet, Store, Settings, ArrowLeft, Menu, X, AlertTriangle, Star,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ const navItems = [
   { href: "/vendor/customers", label: "Customers", icon: Users },
   { href: "/vendor/earnings", label: "Earnings", icon: DollarSign },
   { href: "/vendor/wallet", label: "Wallet", icon: Wallet },
+  { href: "/vendor/reviews", label: "Reviews", icon: Star },
   { href: "/vendor/store", label: "Store Profile", icon: Store },
   { href: "/vendor/store/settings", label: "Store Settings", icon: Settings },
 ];

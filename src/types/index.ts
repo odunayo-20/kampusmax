@@ -449,17 +449,68 @@ export interface CampusEvent {
 // REVIEW
 // ============================================================
 
+export type ReviewSortOption = "recent" | "highest" | "lowest" | "helpful" | "with_images";
+
+export type ReviewReportReason =
+  | "spam"
+  | "fake"
+  | "inappropriate"
+  | "offensive"
+  | "irrelevant"
+  | "other";
+
+export interface ReviewImage {
+  id: string;
+  url: string;
+  alt?: string;
+}
+
+export interface ReviewVendorResponse {
+  text: string;
+  createdAt: string;
+}
+
 export interface Review {
   id: string;
   targetId: string;
   target: ReviewTarget;
   userId: string;
   rating: number;
+  title?: string;
   comment: string;
-  images?: string[];
+  images?: ReviewImage[];
+  verifiedPurchase: boolean;
+  helpfulCount: number;
+  helpfulBy?: string[];
+  reportedBy?: string[];
+  vendorResponse?: ReviewVendorResponse;
   createdAt: string;
+  updatedAt?: string;
   vendorId?: string;
   productId?: string;
+  orderId?: string;
+}
+
+export interface ReviewSummary {
+  averageRating: number;
+  totalReviews: number;
+  breakdown: {
+    5: number;
+    4: number;
+    3: number;
+    2: number;
+    1: number;
+  };
+  recommendPercentage: number;
+}
+
+export interface ReviewReport {
+  id: string;
+  reviewId: string;
+  userId: string;
+  reason: ReviewReportReason;
+  details?: string;
+  createdAt: string;
 }
 
 // ============================================================

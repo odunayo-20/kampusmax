@@ -55,7 +55,15 @@ export {
   getReviewsByProduct,
   getReviewsByUser,
   getAverageRating,
+  getReviewSummary,
+  getAllReviews,
+  sortReviews,
   addReview,
+  toggleHelpful,
+  hasUserReviewedProduct,
+  hasUserReviewedVendor,
+  reportReview,
+  hasUserReportedReview,
 } from "./reviews";
 export {
   getEvents,
