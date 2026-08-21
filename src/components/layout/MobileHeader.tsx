@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Bell, ShoppingCart } from "lucide-react";
+import { MapPin, Bell, ShoppingCart, Search } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
@@ -25,6 +25,16 @@ export function MobileHeader() {
         </Link>
 
         <div className="flex items-center gap-0.5">
+          <Link
+            href="/search"
+            className={cn(
+              "relative h-8 w-8 flex items-center justify-center rounded-lg",
+              "hover:bg-kampmax-muted transition-colors"
+            )}
+          >
+            <Search className="h-[18px] w-[18px] text-kampmax-text-secondary" />
+          </Link>
+
           <div className="flex items-center gap-1 text-xs text-kampmax-text-secondary mr-1.5">
             <MapPin className="h-3.5 w-3.5 text-kampmax-blue" />
             <span className="font-medium">{selectedCampus.abbreviation}</span>

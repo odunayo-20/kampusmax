@@ -806,3 +806,53 @@ export interface StoreSettings {
   allowPreOrder: boolean;
   minOrderAmount: number;
 }
+
+// ============================================================
+// GLOBAL SEARCH
+// ============================================================
+
+export type SearchEntityType = "product" | "vendor" | "category" | "post" | "event";
+
+export type SearchFilterType = "all" | SearchEntityType;
+
+export interface SearchResultItem {
+  id: string;
+  type: SearchEntityType;
+  title: string;
+  subtitle: string;
+  description?: string;
+  image?: string;
+  url: string;
+  rating?: number;
+  price?: number;
+  campusId?: string;
+  tags?: string[];
+}
+
+export interface SearchSuggestion {
+  text: string;
+  type: "query" | "entity";
+  entityType?: SearchEntityType;
+  entityId?: string;
+}
+
+export interface SearchResults {
+  query: string;
+  results: SearchResultItem[];
+  totalCount: number;
+  suggestions: SearchSuggestion[];
+}
+
+export interface SearchFilters {
+  type: SearchFilterType;
+  campusId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: "relevance" | "recent" | "popular" | "price_low" | "price_high";
+}
+
+export interface TrendingSearch {
+  query: string;
+  count: number;
+  category?: string;
+}

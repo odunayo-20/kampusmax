@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Store, GraduationCap, MessageCircle,
-  MapPin, Bell, ShoppingCart, ChevronDown
+  MapPin, Bell, ShoppingCart, ChevronDown, Search
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useApp } from "@/lib/app-context";
@@ -66,7 +66,18 @@ export function DesktopNavigation() {
         </div>
 
         {/* Right: Campus + Actions + Profile */}
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+          <Link
+            href="/search"
+            className={cn(
+              "h-9 w-9 flex items-center justify-center rounded-lg transition-colors",
+              "hover:bg-kampmax-muted",
+              isActive("/search") && "bg-kampmax-blue/10 text-kampmax-blue"
+            )}
+          >
+            <Search className="h-[18px] w-[18px]" />
+          </Link>
+
           <div className="flex items-center gap-1.5 text-sm text-kampmax-text-secondary mr-2 px-2 py-1 rounded-md bg-kampmax-muted">
             <MapPin className="h-3.5 w-3.5 text-kampmax-blue" />
             <span className="font-medium text-kampmax-text">{selectedCampus.abbreviation}</span>

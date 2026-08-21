@@ -105,3 +105,12 @@ export {
   getCurrentSession,
   logout,
 } from "./auth";
+export {
+  search,
+  getSuggestions,
+  getTrendingSearches,
+  getRecentSearches,
+  addRecentSearch,
+  removeRecentSearch,
+  clearRecentSearches,
+} from "./search";
