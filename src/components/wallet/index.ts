@@ -1,2 +1,6 @@
-// Wallet-specific components will be added as needed
-// Examples: WalletBalance, TransactionCard, DepositForm
+export { BalanceCard } from "./BalanceCard";
+export { WalletStats } from "./WalletStats";
+export { TransactionItem } from "./TransactionItem";
+export { TransactionDetail } from "./TransactionDetail";
+export { FundingModal } from "./FundingModal";
+export { WithdrawModal } from "./WithdrawModal";

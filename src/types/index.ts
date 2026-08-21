@@ -67,10 +67,15 @@ export type WalletTransactionType =
   | "deposit"
   | "withdrawal"
   | "payment"
+  | "purchase"
   | "refund"
-  | "transfer";
+  | "transfer"
+  | "vendor_payout"
+  | "loyalty_reward";
 
-export type WalletTransactionStatus = "pending" | "completed" | "failed";
+export type WalletTransactionStatus = "pending" | "processing" | "completed" | "failed" | "cancelled";
+
+export type WalletTransactionDirection = "credit" | "debit";
 
 export type ConversationType = "direct" | "vendor_chat";
 
@@ -465,6 +470,7 @@ export interface WalletTransaction {
   id: string;
   walletId: string;
   type: WalletTransactionType;
+  direction: WalletTransactionDirection;
   amount: number;
   status: WalletTransactionStatus;
   description: string;
@@ -472,12 +478,16 @@ export interface WalletTransaction {
   createdAt: string;
   completedAt?: string;
   orderId?: string;
+  bankName?: string;
+  bankAccount?: string;
+  metadata?: Record<string, string>;
 }
 
 export interface Wallet {
   id: string;
   userId: string;
   balance: number;
+  pendingAmount: number;
   currency: string;
   isActive: boolean;
   createdAt: string;

@@ -2,61 +2,83 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft, Wallet, ArrowUpRight, ArrowDownLeft, ArrowDownRight,
-  Plus, TrendingUp, Clock, CreditCard, Building2, RefreshCw, X,
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
-import { SettingsGroup, SettingsRow } from "@/components/profile/SettingsGroup";
-import { getCurrentUser } from "@/services/users";
-import { getWalletByUser } from "@/data/wallet";
-import { formatNaira, formatDate } from "@/lib/utils";
-import { WalletTransaction } from "@/types";
+import { BalanceCard } from "@/components/wallet/BalanceCard";
+import { WalletStats } from "@/components/wallet/WalletStats";
+import { TransactionItem } from "@/components/wallet/TransactionItem";
+import { TransactionDetail } from "@/components/wallet/TransactionDetail";
+import { FundingModal } from "@/components/wallet/FundingModal";
+import { WithdrawModal } from "@/components/wallet/WithdrawModal";
+import { useAuth } from "@/lib/auth-context";
+import { getWallet, getWalletTransactions, depositToWallet, withdrawFromWallet } from "@/services/wallet";
+import { WalletTransaction, WalletTransactionType } from "@/types";
+import { Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const txIcons: Record<string, { icon: typeof ArrowUpRight; color: string }> = {
-  deposit: { icon: ArrowDownLeft, color: "text-green-600 bg-green-50" },
-  payment: { icon: ArrowUpRight, color: "text-kampmax-error bg-red-50" },
-  withdrawal: { icon: ArrowDownRight, color: "text-orange-600 bg-orange-50" },
-  refund: { icon: RefreshCw, color: "text-kampmax-blue bg-blue-50" },
-  transfer: { icon: ArrowUpRight, color: "text-purple-600 bg-purple-50" },
-};
+const filterTabs: { id: "all" | WalletTransactionType; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "deposit", label: "Deposits" },
+  { id: "purchase", label: "Purchases" },
+  { id: "refund", label: "Refunds" },
+  { id: "withdrawal", label: "Withdrawals" },
+  { id: "loyalty_reward", label: "Rewards" },
+  { id: "transfer", label: "Transfers" },
+];
 
 export default function WalletPage() {
   const router = useRouter();
-  const user = getCurrentUser();
-  const wallet = getWalletByUser(user.id);
-  const [showTopUp, setShowTopUp] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState("");
-  const [filter, setFilter] = useState<"all" | "deposit" | "payment" | "withdrawal">("all");
+  const { user } = useAuth();
+  const [, setTick] = useState(0);
 
+  const [filter, setFilter] = useState<"all" | WalletTransactionType>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "processing" | "failed">("all");
+  const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
+  const [showFunding, setShowFunding] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+
+  if (!user) return null;
+
+  const wallet = getWallet(user.id);
   if (!wallet) {
     return (
-      <PageContainer className="space-y-4">
+    <PageContainer className="space-y-4">
         <Breadcrumbs items={[{ label: "Profile", href: "/profile" }, { label: "Wallet" }]} />
         <div className="bg-white rounded-xl border border-kampmax-border p-8 text-center">
-          <Wallet className="h-10 w-10 text-kampmax-text-secondary mx-auto mb-3" />
           <p className="text-sm font-medium text-kampmax-text">No wallet found</p>
-          <p className="text-xs text-kampmax-text-secondary mt-1">Contact support to set up your wallet</p>
+          <p className="text-xs text-kampmax-text-secondary mt-1">
+            Contact support to set up your wallet
+          </p>
         </div>
       </PageContainer>
     );
   }
 
-  const txs: WalletTransaction[] = wallet.transactions;
-  const filtered = filter === "all" ? txs : txs.filter((t) => t.type === filter);
+  const txs = getWalletTransactions(wallet.id);
+  const filtered = txs.filter((tx) => {
+    const matchType = filter === "all" || tx.type === filter;
+    const matchStatus = statusFilter === "all" || tx.status === statusFilter;
+    return matchType && matchStatus;
+  });
 
-  const quickAmounts = [1000, 2000, 5000, 10000];
+  function handleFund(amt: number, method: string) {
+    depositToWallet(user!.id, amt, `Top-up via ${method}`);
+    setTick((t) => t + 1);
+  }
+
+  function handleWithdraw(amt: number, bank: string, account: string) {
+    withdrawFromWallet(user!.id, amt, bank, account);
+    setTick((t) => t + 1);
+  }
 
   return (
     <PageContainer className="space-y-4">
       <Breadcrumbs
-        items={[
-          { label: "Profile", href: "/profile" },
-          { label: "Wallet" },
-        ]}
+        items={[{ label: "Profile", href: "/profile" }, { label: "Wallet" }]}
       />
 
+      {/* Header */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
@@ -67,159 +89,107 @@ export default function WalletPage() {
         <h1 className="text-lg font-bold text-kampmax-text">Kampmax Wallet</h1>
       </div>
 
-      {/* Balance Card */}
-      <div className="bg-gradient-to-br from-kampmax-navy to-kampmax-blue rounded-xl p-5 text-white">
-        <p className="text-xs text-white/60 mb-1">Available Balance</p>
-        <p className="text-3xl font-bold">{formatNaira(wallet.balance)}</p>
-        <p className="text-xs text-white/60 mt-2">
-          {wallet.currency} &middot; Active since {new Date(wallet.createdAt).toLocaleDateString("en-NG", { month: "short", year: "numeric" })}
-        </p>
-        <button
-          onClick={() => setShowTopUp(true)}
-          className="mt-4 w-full py-2.5 rounded-lg bg-white/10 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/20 transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Top Up Wallet
-        </button>
-      </div>
+      {/* Balance */}
+      <BalanceCard
+        wallet={wallet}
+        onTopUp={() => setShowFunding(true)}
+        onWithdraw={() => setShowWithdraw(true)}
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-white rounded-xl border border-kampmax-border p-3 text-center">
-          <TrendingUp className="h-4 w-4 text-green-600 mx-auto mb-1" />
-          <p className="text-sm font-bold text-kampmax-text">
-            {formatNaira(txs.filter((t) => t.type === "deposit").reduce((s, t) => s + t.amount, 0))}
-          </p>
-          <p className="text-[10px] text-kampmax-text-secondary">Total In</p>
-        </div>
-        <div className="bg-white rounded-xl border border-kampmax-border p-3 text-center">
-          <ArrowUpRight className="h-4 w-4 text-kampmax-error mx-auto mb-1" />
-          <p className="text-sm font-bold text-kampmax-text">
-            {formatNaira(txs.filter((t) => t.type === "payment").reduce((s, t) => s + t.amount, 0))}
-          </p>
-          <p className="text-[10px] text-kampmax-text-secondary">Spent</p>
-        </div>
-        <div className="bg-white rounded-xl border border-kampmax-border p-3 text-center">
-          <ArrowDownRight className="h-4 w-4 text-orange-600 mx-auto mb-1" />
-          <p className="text-sm font-bold text-kampmax-text">
-            {formatNaira(txs.filter((t) => t.type === "withdrawal").reduce((s, t) => s + t.amount, 0))}
-          </p>
-          <p className="text-[10px] text-kampmax-text-secondary">Withdrawn</p>
-        </div>
-      </div>
+      <WalletStats transactions={txs} />
 
-      {/* Transaction Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {(["all", "deposit", "payment", "withdrawal"] as const).map((f) => (
+      {/* Type Filters */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
+        {filterTabs.map((tab) => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              filter === f
+            key={tab.id}
+            onClick={() => setFilter(tab.id)}
+            className={cn(
+              "px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0",
+              filter === tab.id
                 ? "bg-kampmax-navy text-white"
                 : "bg-white text-kampmax-text-secondary border border-kampmax-border"
-            }`}
+            )}
           >
-            {f === "all" ? "All" : f === "deposit" ? "Deposits" : f === "payment" ? "Payments" : "Withdrawals"}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Status Filters */}
+      <div className="flex gap-1.5">
+        {(["all", "completed", "pending", "processing", "failed"] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            className={cn(
+              "px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors",
+              statusFilter === s
+                ? "bg-kampmax-blue/10 text-kampmax-blue"
+                : "text-kampmax-text-secondary hover:bg-kampmax-muted"
+            )}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
         ))}
       </div>
 
       {/* Transactions */}
-      <SettingsGroup title="Transactions" description={`${filtered.length} transactions`}>
+      <div className="bg-white rounded-xl border border-kampmax-border overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="p-6 text-center">
-            <Clock className="h-8 w-8 text-kampmax-text-secondary mx-auto mb-2" />
-            <p className="text-xs text-kampmax-text-secondary">No transactions yet</p>
+          <div className="p-8 text-center">
+            <Clock className="h-8 w-8 text-kampmax-text-secondary/30 mx-auto mb-2" />
+            <p className="text-sm text-kampmax-text-secondary">No transactions found</p>
           </div>
         ) : (
-          filtered.map((tx) => {
-            const txConfig = txIcons[tx.type] || txIcons.payment;
-            const Icon = txConfig.icon;
-            const isCredit = tx.type === "deposit" || tx.type === "refund";
-            return (
-              <div key={tx.id} className="px-4 py-3 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${txConfig.color}`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-kampmax-text truncate">
-                    {tx.description}
-                  </p>
-                  <p className="text-[11px] text-kampmax-text-secondary">
-                    {formatDate(tx.createdAt)} &middot; {tx.status}
-                  </p>
-                </div>
-                <span className={`text-sm font-bold flex-shrink-0 ${isCredit ? "text-green-600" : "text-kampmax-text"}`}>
-                  {isCredit ? "+" : "-"}{formatNaira(tx.amount)}
-                </span>
-              </div>
-            );
-          })
+          <div className="divide-y divide-kampmax-border">
+            {filtered.map((tx) => (
+              <TransactionItem
+                key={tx.id}
+                transaction={tx}
+                onClick={() => setSelectedTx(tx)}
+              />
+            ))}
+          </div>
         )}
-      </SettingsGroup>
+      </div>
 
-      {/* Top Up Modal */}
-      {showTopUp && (
+      {/* Transaction Detail Modal */}
+      {selectedTx && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl">
+          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-kampmax-text">Top Up Wallet</h2>
+              <h2 className="text-sm font-bold text-kampmax-text">Transaction Details</h2>
               <button
-                onClick={() => setShowTopUp(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-kampmax-text-secondary"
+                onClick={() => setSelectedTx(null)}
+                className="text-sm text-kampmax-text-secondary"
               >
-                <X className="h-5 w-5" />
+                Close
               </button>
             </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-kampmax-text-secondary mb-1.5">
-                  Amount (₦)
-                </label>
-                <input
-                  type="number"
-                  value={topUpAmount}
-                  onChange={(e) => setTopUpAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  min={100}
-                  className="w-full px-3 py-2.5 rounded-lg border border-kampmax-border text-sm text-kampmax-text focus:outline-none focus:border-kampmax-blue focus:ring-1 focus:ring-kampmax-blue/20"
-                />
-              </div>
-              <div>
-                <p className="text-xs text-kampmax-text-secondary mb-2">Quick amounts</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {quickAmounts.map((amt) => (
-                    <button
-                      key={amt}
-                      onClick={() => setTopUpAmount(String(amt))}
-                      className={`py-2 rounded-lg text-xs font-medium border transition-colors ${
-                        topUpAmount === String(amt)
-                          ? "bg-kampmax-blue text-white border-kampmax-blue"
-                          : "bg-white text-kampmax-text border-kampmax-border"
-                      }`}
-                    >
-                      ₦{amt.toLocaleString()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-kampmax-muted/50 rounded-lg p-3">
-                <p className="text-xs text-kampmax-text-secondary leading-relaxed">
-                  Top up via Paystack (card, bank transfer, USSD). Minimum top-up: ₦100.
-                </p>
-              </div>
-            </div>
-            <div className="sticky bottom-0 bg-white border-t border-kampmax-border px-4 py-3">
-              <button
-                disabled={!topUpAmount || Number(topUpAmount) < 100}
-                className="w-full py-3 rounded-xl bg-kampmax-blue text-white text-sm font-semibold disabled:opacity-40"
-              >
-                Top Up ₦{topUpAmount ? Number(topUpAmount).toLocaleString() : "0"}
-              </button>
+            <div className="p-4">
+              <TransactionDetail transaction={selectedTx} />
             </div>
           </div>
         </div>
       )}
+
+      {/* Funding Modal */}
+      <FundingModal
+        isOpen={showFunding}
+        onClose={() => setShowFunding(false)}
+        onFund={handleFund}
+        balance={wallet.balance}
+      />
+
+      {/* Withdraw Modal */}
+      <WithdrawModal
+        isOpen={showWithdraw}
+        onClose={() => setShowWithdraw(false)}
+        onWithdraw={handleWithdraw}
+        balance={wallet.balance}
+      />
     </PageContainer>
   );
 }
