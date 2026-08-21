@@ -36,8 +36,12 @@ export {
 export {
   getNotifications,
   getUnreadNotificationCount,
+  getNotificationsByCategory,
+  getUnreadCountByCategory,
+  getGroupedNotifications,
   markAsRead,
   markAllAsRead,
+  deleteNotification,
 } from "./notifications";
 export {
   getConversations,

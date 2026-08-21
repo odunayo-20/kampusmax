@@ -26,9 +26,21 @@ export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 export type NotificationType =
   | "order_update"
   | "message"
+  | "marketplace"
+  | "campus"
+  | "payments"
+  | "account"
   | "promotion"
-  | "community"
   | "system";
+
+export type NotificationCategory =
+  | "orders"
+  | "messages"
+  | "marketplace"
+  | "campus"
+  | "payments"
+  | "account"
+  | "promotions";
 
 export type PostType =
   | "discussion"
@@ -267,12 +279,14 @@ export interface Notification {
   id: string;
   userId: string;
   type: NotificationType;
+  category: NotificationCategory;
   title: string;
   message: string;
   read: boolean;
   createdAt: string;
   actionUrl?: string;
   imageUrl?: string;
+  groupId?: string;
 }
 
 // ============================================================
