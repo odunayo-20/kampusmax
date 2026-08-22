@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, Star, Clock, RotateCcw, Check, Info } from "lucide-react";
+import { ArrowLeft, Camera, Clock, RotateCcw, Check } from "lucide-react";
 import { getStoreProfile, updateStoreProfile } from "@/services/vendor";
 import { getCampuses } from "@/services/campus";
 import { StoreProfile } from "@/types";
@@ -41,7 +41,7 @@ export default function StoreProfilePage() {
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="w-9 h-9 rounded-lg bg-kampmax-muted flex items-center justify-center">
           <ArrowLeft className="h-5 w-5 text-kampmax-text" />

@@ -45,7 +45,7 @@ export function VendorOrderGroup({ groups }: VendorOrderGroupProps) {
               onClick={() =>
                 setExpandedVendor(isExpanded ? null : group.vendorId)
               }
-              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-kampmax-border text-left"
+              className="w-full flex items-center justify-between px-4 py-3 bg-kampmax-muted/50 border-b border-kampmax-border text-left"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-7 h-7 rounded-full bg-kampmax-navy/10 flex items-center justify-center text-xs font-bold text-kampmax-navy shrink-0">
@@ -82,7 +82,7 @@ export function VendorOrderGroup({ groups }: VendorOrderGroupProps) {
                     className="flex items-center gap-3 px-4 py-3"
                   >
                     <div className="w-12 h-12 bg-kampmax-muted rounded-lg flex items-center justify-center shrink-0">
-                      <Package className="w-5 h-5 text-gray-300" />
+                      <Package className="w-5 h-5 text-kampmax-text-secondary/40" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-kampmax-text line-clamp-1">
@@ -99,7 +99,7 @@ export function VendorOrderGroup({ groups }: VendorOrderGroupProps) {
                 ))}
 
                 {/* Vendor subtotal */}
-                <div className="flex justify-between items-center px-4 py-2.5 bg-gray-50">
+                <div className="flex justify-between items-center px-4 py-2.5 bg-kampmax-muted/50">
                   <span className="text-xs text-kampmax-text-secondary">
                     Vendor subtotal
                   </span>

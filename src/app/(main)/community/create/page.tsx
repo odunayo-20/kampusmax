@@ -59,35 +59,35 @@ const postTypes: {
     label: "Event",
     description: "Share an event or meetup",
     icon: CalendarDays,
-    color: "text-green-600",
+    color: "text-kampmax-success",
   },
   {
     id: "poll",
     label: "Poll",
     description: "Get the campus vote",
     icon: BarChart3,
-    color: "text-purple-600",
+    color: "text-kampmax-navy",
   },
   {
     id: "announcement",
     label: "Announcement",
     description: "Important campus info",
     icon: Megaphone,
-    color: "text-red-600",
+    color: "text-kampmax-error",
   },
   {
     id: "lost_found",
     label: "Lost & Found",
     description: "Report or find lost items",
     icon: AlertTriangle,
-    color: "text-orange-600",
+    color: "text-kampmax-warning",
   },
   {
     id: "image",
     label: "Photo",
     description: "Share a campus moment",
     icon: ImageIcon,
-    color: "text-pink-600",
+    color: "text-kampmax-info",
   },
 ];
 
@@ -367,7 +367,7 @@ export default function CreatePostPage() {
           {postType === "poll" && (
             <div className="space-y-3 p-4 rounded-xl border border-kampmax-border bg-kampmax-muted/30">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-purple-600" />
+                <BarChart3 className="h-4 w-4 text-kampmax-navy" />
                 <span className="text-sm font-semibold text-kampmax-text">
                   Poll Settings
                 </span>
@@ -398,7 +398,7 @@ export default function CreatePostPage() {
                         onClick={() =>
                           setPollOptions(pollOptions.filter((_, j) => j !== i))
                         }
-                        className="text-kampmax-text-secondary hover:text-red-500"
+                        className="text-kampmax-text-secondary hover:text-kampmax-error"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -432,7 +432,7 @@ export default function CreatePostPage() {
           {postType === "announcement" && (
             <div className="space-y-3 p-4 rounded-xl border border-kampmax-border bg-kampmax-muted/30">
               <div className="flex items-center gap-2">
-                <Megaphone className="h-4 w-4 text-red-600" />
+                <Megaphone className="h-4 w-4 text-kampmax-error" />
                 <span className="text-sm font-semibold text-kampmax-text">
                   Announcement Priority
                 </span>
@@ -446,7 +446,7 @@ export default function CreatePostPage() {
                       "flex-1 py-2.5 rounded-lg text-xs font-semibold capitalize transition-colors",
                       announcementPriority === p
                         ? p === "urgent"
-                          ? "bg-red-500 text-white"
+                          ? "bg-kampmax-error/100 text-white"
                           : p === "warning"
                             ? "bg-kampmax-gold text-kampmax-navy"
                             : "bg-kampmax-blue text-white"
@@ -464,7 +464,7 @@ export default function CreatePostPage() {
           {postType === "lost_found" && (
             <div className="space-y-3 p-4 rounded-xl border border-kampmax-border bg-kampmax-muted/30">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <AlertTriangle className="h-4 w-4 text-kampmax-warning" />
                 <span className="text-sm font-semibold text-kampmax-text">
                   Lost & Found Details
                 </span>
@@ -475,7 +475,7 @@ export default function CreatePostPage() {
                   className={cn(
                     "flex-1 py-2.5 rounded-lg text-xs font-semibold transition-colors",
                     lostStatus === "lost"
-                      ? "bg-red-500 text-white"
+                      ? "bg-kampmax-error text-white"
                       : "bg-white border border-kampmax-border text-kampmax-text-secondary"
                   )}
                 >
@@ -486,7 +486,7 @@ export default function CreatePostPage() {
                   className={cn(
                     "flex-1 py-2.5 rounded-lg text-xs font-semibold transition-colors",
                     lostStatus === "found"
-                      ? "bg-green-500 text-white"
+                      ? "bg-kampmax-success text-white"
                       : "bg-white border border-kampmax-border text-kampmax-text-secondary"
                   )}
                 >

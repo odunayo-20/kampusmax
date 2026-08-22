@@ -26,9 +26,9 @@ const bgColors = [
   "bg-kampmax-navy text-white",
   "bg-kampmax-blue text-white",
   "bg-kampmax-gold text-kampmax-navy",
-  "bg-emerald-600 text-white",
-  "bg-purple-600 text-white",
-  "bg-rose-600 text-white",
+  "bg-kampmax-success text-white",
+  "bg-kampmax-info text-white",
+  "bg-kampmax-error text-white",
 ];
 
 function getColor(name: string): string {

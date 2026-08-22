@@ -58,7 +58,7 @@ export function ConfirmationSection({
           "w-full h-12 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all",
           agreed && !isPlacing
             ? "bg-kampmax-blue text-white hover:bg-kampmax-blue-dark active:scale-[0.98]"
-            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            : "bg-kampmax-border text-kampmax-text-secondary/60 cursor-not-allowed"
         )}
       >
         {isPlacing ? (

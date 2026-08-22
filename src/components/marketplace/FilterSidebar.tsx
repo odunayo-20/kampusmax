@@ -57,7 +57,7 @@ export function FilterSidebar({
               className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 !filters.categoryId
                   ? "bg-kampmax-navy/10 text-kampmax-navy font-medium"
-                  : "text-kampmax-text hover:bg-gray-50"
+                  : "text-kampmax-text hover:bg-kampmax-muted/50"
               }`}
             >
               All Categories
@@ -74,7 +74,7 @@ export function FilterSidebar({
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   filters.categoryId === cat.id
                     ? "bg-kampmax-navy/10 text-kampmax-navy font-medium"
-                    : "text-kampmax-text hover:bg-gray-50"
+                    : "text-kampmax-text hover:bg-kampmax-muted/50"
                 }`}
               >
                 {cat.icon} {cat.name}
@@ -93,7 +93,7 @@ export function FilterSidebar({
               className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 !filters.campusId
                   ? "bg-kampmax-navy/10 text-kampmax-navy font-medium"
-                  : "text-kampmax-text hover:bg-gray-50"
+                  : "text-kampmax-text hover:bg-kampmax-muted/50"
               }`}
             >
               All Campuses
@@ -110,7 +110,7 @@ export function FilterSidebar({
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   filters.campusId === c.id
                     ? "bg-kampmax-navy/10 text-kampmax-navy font-medium"
-                    : "text-kampmax-text hover:bg-gray-50"
+                    : "text-kampmax-text hover:bg-kampmax-muted/50"
                 }`}
               >
                 {c.name}
@@ -136,7 +136,7 @@ export function FilterSidebar({
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   filters.condition === cond
                     ? "bg-kampmax-navy/10 text-kampmax-navy font-medium"
-                    : "text-kampmax-text hover:bg-gray-50"
+                    : "text-kampmax-text hover:bg-kampmax-muted/50"
                 }`}
               >
                 {cond || "All Conditions"}

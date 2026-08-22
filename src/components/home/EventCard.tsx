@@ -30,7 +30,7 @@ export function EventCard({ event, className }: EventCardProps) {
             className={cn(
               "text-[10px] font-medium px-1.5 py-0.5 rounded",
               isUpcoming
-                ? "bg-green-50 text-kampmax-success"
+                ? "bg-kampmax-success/10 text-kampmax-success"
                 : "bg-kampmax-muted text-kampmax-text-secondary"
             )}
           >

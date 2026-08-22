@@ -33,7 +33,7 @@ export default function WalletPage() {
   const [, setTick] = useState(0);
 
   const [filter, setFilter] = useState<"all" | WalletTransactionType>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "processing" | "failed">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "processing" | "failed" | "cancelled">("all");
   const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
   const [showFunding, setShowFunding] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -157,9 +157,9 @@ export default function WalletPage() {
 
       {/* Transaction Detail Modal */}
       {selectedTx && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-xl max-h-[85vh] flex flex-col">
+            <div className="shrink-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
               <h2 className="text-sm font-bold text-kampmax-text">Transaction Details</h2>
               <button
                 onClick={() => setSelectedTx(null)}
@@ -168,7 +168,7 @@ export default function WalletPage() {
                 Close
               </button>
             </div>
-            <div className="p-4">
+            <div className="flex-1 overflow-y-auto p-4">
               <TransactionDetail transaction={selectedTx} />
             </div>
           </div>

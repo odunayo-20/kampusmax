@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn, formatNaira } from "@/lib/utils";
-import { X, CreditCard, Building2, Smartphone } from "lucide-react";
+import { X, CreditCard, Building2, Smartphone, Check } from "lucide-react";
 
 interface FundingModalProps {
   isOpen: boolean;
@@ -23,6 +23,20 @@ export function FundingModal({ isOpen, onClose, onFund, balance }: FundingModalP
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("card");
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  function handleClose() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    setStep("form");
+    onClose();
+  }
 
   if (!isOpen) return null;
 
@@ -31,10 +45,10 @@ export function FundingModal({ isOpen, onClose, onFund, balance }: FundingModalP
     if (amt < 100) return;
     setStep("processing");
     // Simulate processing
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       onFund(amt, method);
       setStep("success");
-      setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setStep("form");
         setAmount("");
         onClose();
@@ -48,13 +62,7 @@ export function FundingModal({ isOpen, onClose, onFund, balance }: FundingModalP
         {/* Header */}
         <div className="shrink-0 border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
           <h2 className="text-sm font-bold text-kampmax-text">Fund Wallet</h2>
-          <button
-            onClick={() => {
-              setStep("form");
-              onClose();
-            }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-kampmax-text-secondary"
-          >
+          <button onClick={handleClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-kampmax-text-secondary">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -71,8 +79,8 @@ export function FundingModal({ isOpen, onClose, onFund, balance }: FundingModalP
 
         {step === "success" && (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">✓</span>
+            <div className="w-12 h-12 rounded-full bg-kampmax-success/10 flex items-center justify-center mx-auto mb-4">
+              <Check className="h-6 w-6 text-kampmax-success" />
             </div>
             <p className="text-sm font-semibold text-kampmax-text">Wallet Funded!</p>
             <p className="text-xs text-kampmax-text-secondary mt-1">
@@ -181,7 +189,7 @@ export function FundingModal({ isOpen, onClose, onFund, balance }: FundingModalP
                 disabled={!amount || Number(amount) < 100}
                 className="w-full py-3 rounded-xl bg-kampmax-blue text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Fund Wallet · {amount ? formatNaira(Number(amount)) : formatNaira(0)}
+                Fund Wallet{amount ? ` · ${formatNaira(Number(amount))}` : ""}
               </button>
             </div>
           </>

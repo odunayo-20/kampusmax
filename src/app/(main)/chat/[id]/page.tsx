@@ -225,8 +225,8 @@ export default function ChatScreenPage({ params }: { params: Promise<{ id: strin
 
       {/* Product Picker Modal */}
       {showProductPicker && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[70vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-xl max-h-[70vh] overflow-hidden flex flex-col">
             <div className="px-4 py-3 border-b border-kampmax-border flex items-center justify-between">
               <h3 className="text-sm font-bold text-kampmax-text">Share a Product</h3>
               <button onClick={() => setShowProductPicker(false)}><X className="h-5 w-5 text-kampmax-text-secondary" /></button>
@@ -255,8 +255,8 @@ export default function ChatScreenPage({ params }: { params: Promise<{ id: strin
 
       {/* Order Picker Modal */}
       {showOrderPicker && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[70vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-xl max-h-[70vh] overflow-hidden flex flex-col">
             <div className="px-4 py-3 border-b border-kampmax-border flex items-center justify-between">
               <h3 className="text-sm font-bold text-kampmax-text">Share an Order</h3>
               <button onClick={() => setShowOrderPicker(false)}><X className="h-5 w-5 text-kampmax-text-secondary" /></button>

@@ -58,8 +58,8 @@ export default function CheckoutPage() {
     return (
       <PageContainer narrow>
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <ShoppingBag className="w-8 h-8 text-gray-300" />
+          <div className="w-16 h-16 rounded-full bg-kampmax-muted flex items-center justify-center mb-4">
+            <ShoppingBag className="w-8 h-8 text-kampmax-text-secondary/40" />
           </div>
           <h2 className="text-lg font-semibold text-kampmax-text mb-1">
             Your cart is empty

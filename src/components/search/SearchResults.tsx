@@ -17,8 +17,8 @@ const typeConfig: Record<
   product: { icon: Package, color: "text-kampmax-blue", bg: "bg-kampmax-blue/10", label: "Product" },
   vendor: { icon: Store, color: "text-kampmax-navy", bg: "bg-kampmax-navy/10", label: "Vendor" },
   category: { icon: Tag, color: "text-kampmax-gold", bg: "bg-kampmax-gold/10", label: "Category" },
-  post: { icon: MessageSquare, color: "text-green-600", bg: "bg-green-50", label: "Post" },
-  event: { icon: CalendarDays, color: "text-purple-600", bg: "bg-purple-50", label: "Event" },
+  post: { icon: MessageSquare, color: "text-kampmax-success", bg: "bg-kampmax-success/10", label: "Post" },
+  event: { icon: CalendarDays, color: "text-kampmax-gold-dark", bg: "bg-kampmax-gold/10", label: "Event" },
 };
 
 interface SearchResultsProps {

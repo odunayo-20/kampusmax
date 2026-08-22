@@ -91,7 +91,7 @@ export function PaymentMethodSection({
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
               form.paymentMethod === opt.id && opt.available
-                ? "border-kampmax-blue bg-blue-50 ring-1 ring-kampmax-blue"
+                ? "border-kampmax-blue bg-kampmax-blue/10 ring-1 ring-kampmax-blue"
                 : opt.available
                   ? "border-kampmax-border hover:border-kampmax-blue/50"
                   : "border-kampmax-border opacity-50 cursor-not-allowed"
@@ -102,7 +102,7 @@ export function PaymentMethodSection({
                 "h-5 w-5 shrink-0",
                 form.paymentMethod === opt.id && opt.available
                   ? "text-kampmax-blue"
-                  : "text-gray-400"
+                  : "text-kampmax-text-secondary/60"
               )}
             />
             <div className="flex-1 min-w-0">
@@ -136,7 +136,7 @@ export function PaymentMethodSection({
       )}
 
       {form.paymentMethod === "paystack" && (
-        <div className="flex items-center gap-1.5 p-2 bg-blue-50 rounded-lg">
+        <div className="flex items-center gap-1.5 p-2 bg-kampmax-blue/10 rounded-lg">
           <Shield className="w-3.5 h-3.5 text-kampmax-blue shrink-0" />
           <p className="text-[10px] text-kampmax-text-secondary">
             Secured by Paystack. Your card details are never stored.
@@ -145,7 +145,7 @@ export function PaymentMethodSection({
       )}
 
       {form.paymentMethod === "cod" && (
-        <div className="flex items-center gap-1.5 p-2 bg-amber-50 rounded-lg">
+        <div className="flex items-center gap-1.5 p-2 bg-kampmax-gold/10 rounded-lg">
           <AlertCircle className="w-3.5 h-4 text-kampmax-warning shrink-0" />
           <p className="text-[10px] text-kampmax-text-secondary">
             Please have the exact amount ready. Payment is collected at pickup.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Info } from "lucide-react";
+import { ArrowLeft, Check, Info, Package, Zap, RotateCcw, Eye, Banknote, Bell, MessageSquare } from "lucide-react";
 import { SettingsToggle, SettingsRow, SettingsGroup } from "@/components/profile/SettingsGroup";
 import { getStoreSettings, updateStoreSettings } from "@/services/vendor";
 import { StoreSettings } from "@/types";
@@ -25,7 +25,7 @@ export default function StoreSettingsPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="w-9 h-9 rounded-lg bg-kampmax-muted flex items-center justify-center">
           <ArrowLeft className="h-5 w-5 text-kampmax-text" />
@@ -35,19 +35,19 @@ export default function StoreSettingsPage() {
 
       <SettingsGroup title="Order Management">
         <SettingsRow
-          icon={<span className="text-lg">📦</span>}
+          icon={<Package className="h-5 w-5 text-kampmax-blue" />}
           label="Accept Orders"
           description="Enable or disable incoming orders"
           action={<SettingsToggle enabled={settings.acceptOrders} onToggle={(v) => update("acceptOrders", v)} />}
         />
         <SettingsRow
-          icon={<span className="text-lg">⚡</span>}
+          icon={<Zap className="h-5 w-5 text-kampmax-gold" />}
           label="Auto-Confirm Orders"
           description="Automatically confirm new orders"
           action={<SettingsToggle enabled={settings.autoConfirm} onToggle={(v) => update("autoConfirm", v)} />}
         />
         <SettingsRow
-          icon={<span className="text-lg">🔄</span>}
+          icon={<RotateCcw className="h-5 w-5 text-kampmax-info" />}
           label="Allow Pre-Orders"
           description="Let customers order out-of-stock items"
           action={<SettingsToggle enabled={settings.allowPreOrder} onToggle={(v) => update("allowPreOrder", v)} />}
@@ -56,31 +56,31 @@ export default function StoreSettingsPage() {
 
       <SettingsGroup title="Display">
         <SettingsRow
-          icon={<span className="text-lg">👁️</span>}
+          icon={<Eye className="h-5 w-5 text-kampmax-navy" />}
           label="Show Sold Items"
           description="Display previously sold items on your store"
           action={<SettingsToggle enabled={settings.showSoldItems} onToggle={(v) => update("showSoldItems", v)} />}
         />
         <SettingsRow
-          icon={<span className="text-lg">💰</span>}
+          icon={<Banknote className="h-5 w-5 text-kampmax-success" />}
           label="Minimum Order Amount"
           description="Minimum order to place an order (₦)"
           action={
             <input type="number" value={minOrder} onChange={(e) => setMinOrder(e.target.value)}
-              className="w-24 px-2 py-1 rounded border border-kampmax-border text-sm text-right focus:outline-none focus:border-kampmax-blue" />
+              className="w-24 px-2 py-1 rounded-lg border border-kampmax-border text-sm text-right focus:outline-none focus:border-kampmax-blue" />
           }
         />
       </SettingsGroup>
 
       <SettingsGroup title="Notifications">
         <SettingsRow
-          icon={<span className="text-lg">🔔</span>}
+          icon={<Bell className="h-5 w-5 text-kampmax-gold" />}
           label="Order Notifications"
           description="Get notified when a new order comes in"
           action={<SettingsToggle enabled={settings.notifyOnOrder} onToggle={(v) => update("notifyOnOrder", v)} />}
         />
         <SettingsRow
-          icon={<span className="text-lg">💬</span>}
+          icon={<MessageSquare className="h-5 w-5 text-kampmax-blue" />}
           label="Message Notifications"
           description="Get notified about new messages"
           action={<SettingsToggle enabled={settings.notifyOnMessage} onToggle={(v) => update("notifyOnMessage", v)} />}

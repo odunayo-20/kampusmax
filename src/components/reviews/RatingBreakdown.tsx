@@ -26,7 +26,7 @@ export function RatingBreakdown({ summary, className, onStarClick }: RatingBreak
                   "h-3.5 w-3.5",
                   i < Math.round(summary.averageRating)
                     ? "fill-kampmax-gold text-kampmax-gold"
-                    : "fill-transparent text-gray-300"
+                    : "fill-transparent text-kampmax-text-secondary/40"
                 )}
               />
             ))}

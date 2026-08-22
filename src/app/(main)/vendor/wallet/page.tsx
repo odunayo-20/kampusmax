@@ -58,7 +58,7 @@ export default function VendorWalletPage() {
 
   return (
     <PageContainer className="space-y-4">
-      <h1 className="text-lg font-bold text-kampmax-text">Vendor Wallet</h1>
+      <h1 className="text-xl font-bold text-kampmax-text">Vendor Wallet</h1>
 
       <BalanceCard
         wallet={wallet}
@@ -68,13 +68,13 @@ export default function VendorWalletPage() {
 
       <div className="bg-white rounded-xl border border-kampmax-border p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Building2 className="h-4 w-4 text-emerald-600" />
+          <Building2 className="h-4 w-4 text-kampmax-success" />
           <span className="text-sm font-semibold text-kampmax-text">Earnings Summary</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-green-50 rounded-lg p-3">
-            <p className="text-[10px] text-green-600 font-medium">Received</p>
-            <p className="text-sm font-bold text-green-600">{formatNaira(completedSales)}</p>
+          <div className="bg-kampmax-success/10 rounded-lg p-3">
+            <p className="text-[10px] text-kampmax-success font-medium">Received</p>
+            <p className="text-sm font-bold text-kampmax-success">{formatNaira(completedSales)}</p>
           </div>
           <div className="bg-kampmax-gold/10 rounded-lg p-3">
             <p className="text-[10px] text-kampmax-gold font-medium">Pending</p>
@@ -118,13 +118,13 @@ export default function VendorWalletPage() {
       </div>
 
       {selectedTx && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-xl max-h-[85vh] flex flex-col">
+            <div className="shrink-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
               <h2 className="text-sm font-bold text-kampmax-text">Transaction Details</h2>
               <button onClick={() => setSelectedTx(null)} className="text-sm text-kampmax-text-secondary">Close</button>
             </div>
-            <div className="p-4">
+            <div className="flex-1 overflow-y-auto p-4">
               <TransactionDetail transaction={selectedTx} />
             </div>
           </div>

@@ -43,7 +43,7 @@ export function PromoCodeSection({
           </div>
           <button
             onClick={onRemove}
-            className="p-1.5 rounded-full hover:bg-red-50 text-kampmax-text-secondary hover:text-kampmax-error transition-colors"
+            className="p-1.5 rounded-full hover:bg-kampmax-error/10 text-kampmax-text-secondary hover:text-kampmax-error transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

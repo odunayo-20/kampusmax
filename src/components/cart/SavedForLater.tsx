@@ -19,7 +19,7 @@ export function SavedForLater({
 
   return (
     <div className="bg-white rounded-xl border border-kampmax-border overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-kampmax-border">
+      <div className="flex items-center gap-2 px-4 py-3 bg-kampmax-muted/50 border-b border-kampmax-border">
         <Bookmark className="w-4 h-4 text-kampmax-gold" />
         <span className="text-sm font-semibold text-kampmax-text">
           Saved for Later
@@ -33,7 +33,7 @@ export function SavedForLater({
         {items.map((item) => (
           <div key={item.product.id} className="flex gap-3 p-3">
             <div className="w-14 h-14 bg-kampmax-muted rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
-              <div className="text-gray-300">
+              <div className="text-kampmax-text-secondary/40">
                 <svg
                   className="w-6 h-6"
                   fill="none"

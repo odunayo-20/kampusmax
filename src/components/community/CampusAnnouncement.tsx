@@ -28,10 +28,10 @@ const priorityConfig = {
   },
   urgent: {
     icon: Megaphone,
-    bg: "bg-red-50",
-    border: "border-red-200",
-    iconColor: "text-red-600",
-    badge: "bg-red-100 text-red-700",
+    bg: "bg-kampmax-error/10",
+    border: "border-kampmax-error/20",
+    iconColor: "text-kampmax-error",
+    badge: "bg-kampmax-error/20 text-kampmax-error",
     label: "Urgent",
   },
 };

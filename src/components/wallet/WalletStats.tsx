@@ -35,15 +35,15 @@ export function WalletStats({ transactions }: WalletStatsProps) {
       icon: ArrowDownLeft,
       label: "Money In",
       value: totalIn,
-      color: "text-green-600",
-      bg: "bg-green-50",
+      color: "text-kampmax-success",
+      bg: "bg-kampmax-success/10",
     },
     {
       icon: ArrowUpRight,
       label: "Money Out",
       value: totalOut,
-      color: "text-red-500",
-      bg: "bg-red-50",
+      color: "text-kampmax-error",
+      bg: "bg-kampmax-error/10",
     },
     {
       icon: Clock,
@@ -63,7 +63,7 @@ export function WalletStats({ transactions }: WalletStatsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (

@@ -47,7 +47,7 @@ export function FilterDrawer({
               </span>
             )}
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
+          <button onClick={onClose} className="p-1 hover:bg-kampmax-muted rounded-full">
             <X className="w-5 h-5 text-kampmax-text-secondary" />
           </button>
         </div>

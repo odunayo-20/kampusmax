@@ -208,9 +208,9 @@ export default function PaymentMethodsPage() {
 
       {/* Add Form */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl">
-            <div className="sticky top-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-xl max-h-[85vh] flex flex-col">
+            <div className="shrink-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
               <h2 className="text-sm font-bold text-kampmax-text">Add Payment Method</h2>
               <button
                 onClick={() => setShowForm(false)}
@@ -219,7 +219,7 @@ export default function PaymentMethodsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div className="flex gap-2">
                 {(["card", "bank_account"] as const).map((type) => (
                   <button
@@ -291,7 +291,7 @@ export default function PaymentMethodsPage() {
                 />
               </div>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-kampmax-border px-4 py-3">
+            <div className="shrink-0 bg-white border-t border-kampmax-border px-4 py-3">
               <button
                 onClick={handleAdd}
                 disabled={!formLabel.trim() || !formLast4.trim() || formLast4.length < 4}

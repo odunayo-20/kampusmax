@@ -54,8 +54,8 @@ const typeConfig: Record<
   },
   event: {
     icon: CalendarDays,
-    color: "text-green-600",
-    bg: "bg-green-50",
+    color: "text-kampmax-success",
+    bg: "bg-kampmax-success/10",
     label: "Event",
   },
   marketplace: {
@@ -66,26 +66,26 @@ const typeConfig: Record<
   },
   poll: {
     icon: BarChart3,
-    color: "text-purple-600",
-    bg: "bg-purple-50",
+    color: "text-kampmax-navy",
+    bg: "bg-kampmax-navy/10",
     label: "Poll",
   },
   announcement: {
     icon: Megaphone,
-    color: "text-red-600",
-    bg: "bg-red-50",
+    color: "text-kampmax-error",
+    bg: "bg-kampmax-error/10",
     label: "Announcement",
   },
   lost_found: {
     icon: Search,
-    color: "text-orange-600",
-    bg: "bg-orange-50",
+    color: "text-kampmax-gold-dark",
+    bg: "bg-kampmax-gold/10",
     label: "Lost & Found",
   },
   image: {
     icon: ImageIcon,
-    color: "text-pink-600",
-    bg: "bg-pink-50",
+    color: "text-kampmax-info",
+    bg: "bg-kampmax-info/10",
     label: "Photo",
   },
 };
@@ -209,7 +209,7 @@ export function PostCard({ post, onLike, onSave, onReport }: PostCardProps) {
                       onReport?.();
                       setShowMenu(false);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-red-50"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-kampmax-error hover:bg-kampmax-error/10"
                   >
                     <Flag className="h-3.5 w-3.5" />
                     Report
@@ -263,20 +263,20 @@ export function PostCard({ post, onLike, onSave, onReport }: PostCardProps) {
 
         {/* Lost & Found badge */}
         {localPost.type === "lost_found" && localPost.lostFound && (
-          <div className="mt-3 rounded-lg bg-orange-50 border border-orange-200 p-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-orange-600" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600">
+          <div className="mt-3 rounded-lg bg-kampmax-gold/10 border border-kampmax-gold/30 p-3">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-kampmax-warning" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-kampmax-warning">
                 {localPost.lostFound.status === "open" ? "Open" : localPost.lostFound.status}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <span className="text-orange-600/60 text-[10px] font-medium">Item</span>
+                <span className="text-kampmax-warning/70 text-[10px] font-medium">Item</span>
                 <p className="text-kampmax-text">{localPost.lostFound.itemDescription}</p>
               </div>
               <div>
-                <span className="text-orange-600/60 text-[10px] font-medium">Location</span>
+                <span className="text-kampmax-warning/70 text-[10px] font-medium">Location</span>
                 <p className="text-kampmax-text flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
                   {localPost.lostFound.location}

@@ -2,19 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ShoppingCart, Package } from "lucide-react";
+import { Search, ShoppingCart } from "lucide-react";
 import { cn, formatNaira } from "@/lib/utils";
 import { getVendorOrders } from "@/services/vendor";
 import { VendorOrder, OrderStatus } from "@/types";
 
 const statusConfig: Record<OrderStatus, { label: string; color: string }> = {
-  placed: { label: "Placed", color: "bg-gray-100 text-gray-700" },
-  confirmed: { label: "Confirmed", color: "bg-purple-50 text-purple-700" },
-  preparing: { label: "Preparing", color: "bg-blue-50 text-blue-700" },
+  placed: { label: "Placed", color: "bg-kampmax-muted text-kampmax-text-secondary" },
+  confirmed: { label: "Confirmed", color: "bg-kampmax-info/10 text-kampmax-info" },
+  preparing: { label: "Preparing", color: "bg-kampmax-info/10 text-kampmax-info" },
   ready: { label: "Ready", color: "bg-kampmax-gold/10 text-kampmax-gold" },
-  out_for_delivery: { label: "Out for Delivery", color: "bg-indigo-50 text-indigo-700" },
-  delivered: { label: "Delivered", color: "bg-green-50 text-green-700" },
-  cancelled: { label: "Cancelled", color: "bg-red-50 text-red-700" },
+  out_for_delivery: { label: "Out for Delivery", color: "bg-kampmax-blue/10 text-kampmax-blue" },
+  delivered: { label: "Delivered", color: "bg-kampmax-success/10 text-kampmax-success" },
+  cancelled: { label: "Cancelled", color: "bg-kampmax-error/10 text-kampmax-error" },
 };
 
 export default function VendorOrdersPage() {
@@ -78,8 +78,8 @@ export default function VendorOrdersPage() {
           {filtered.map((order) => (
             <button key={order.id} onClick={() => router.push(`/vendor/orders/${order.id}`)}
               className="w-full bg-white rounded-xl border border-kampmax-border p-4 text-left hover:bg-kampmax-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-kampmax-text">{order.id}</span>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-sm font-semibold text-kampmax-text truncate min-w-0">{order.id}</span>
                 <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium", statusConfig[order.status].color)}>
                   {statusConfig[order.status].label}
                 </span>

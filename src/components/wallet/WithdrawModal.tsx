@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { cn, formatNaira } from "@/lib/utils";
+import { useState, useRef, useEffect } from "react";
+import { cn, formatNaira, formatNairaCompact } from "@/lib/utils";
 import { X, Building2, Check } from "lucide-react";
 
 interface WithdrawModalProps {
@@ -20,6 +20,20 @@ export function WithdrawModal({ isOpen, onClose, onWithdraw, balance }: Withdraw
   const [amount, setAmount] = useState("");
   const [selectedBank, setSelectedBank] = useState(0);
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  function handleClose() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    setStep("form");
+    onClose();
+  }
 
   if (!isOpen) return null;
 
@@ -27,10 +41,10 @@ export function WithdrawModal({ isOpen, onClose, onWithdraw, balance }: Withdraw
     const amt = Number(amount);
     if (amt < 100 || amt > balance) return;
     setStep("processing");
-    setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       onWithdraw(amt, savedBanks[selectedBank].name, savedBanks[selectedBank].account);
       setStep("success");
-      setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setStep("form");
         setAmount("");
         onClose();
@@ -44,13 +58,7 @@ export function WithdrawModal({ isOpen, onClose, onWithdraw, balance }: Withdraw
         {/* Header */}
         <div className="shrink-0 border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
           <h2 className="text-sm font-bold text-kampmax-text">Withdraw Funds</h2>
-          <button
-            onClick={() => {
-              setStep("form");
-              onClose();
-            }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-kampmax-text-secondary"
-          >
+          <button onClick={handleClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-kampmax-text-secondary">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -67,8 +75,8 @@ export function WithdrawModal({ isOpen, onClose, onWithdraw, balance }: Withdraw
 
         {step === "success" && (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">✓</span>
+            <div className="w-12 h-12 rounded-full bg-kampmax-success/10 flex items-center justify-center mx-auto mb-4">
+              <Check className="h-6 w-6 text-kampmax-success" />
             </div>
             <p className="text-sm font-semibold text-kampmax-text">Withdrawal Initiated!</p>
             <p className="text-xs text-kampmax-text-secondary mt-1">
@@ -103,24 +111,25 @@ export function WithdrawModal({ isOpen, onClose, onWithdraw, balance }: Withdraw
                   className="w-full px-3 py-2.5 rounded-lg border border-kampmax-border text-sm focus:outline-none focus:border-kampmax-blue"
                 />
                 {Number(amount) > balance && (
-                  <p className="text-[10px] text-red-500 mt-1">Amount exceeds balance</p>
+                  <p className="text-[10px] text-kampmax-error mt-1">Amount exceeds balance</p>
                 )}
               </div>
 
               {/* Quick amounts */}
               <div className="grid grid-cols-4 gap-2">
-                {[1000, 5000, 10000, balance].map((amt) => (
+                {[...new Set([1000, 5000, 10000, balance])].map((amt) => (
                   <button
                     key={amt}
                     onClick={() => setAmount(String(amt))}
                     className={cn(
-                      "py-2 rounded-lg text-xs font-medium border transition-colors",
+                      "py-2 rounded-lg text-xs font-medium border transition-colors truncate px-1",
                       amount === String(amt)
                         ? "bg-kampmax-blue text-white border-kampmax-blue"
                         : "bg-white text-kampmax-text border-kampmax-border"
                     )}
+                    title={formatNaira(amt)}
                   >
-                    {amt === balance ? "All" : formatNaira(amt)}
+                    {amt === balance ? "All" : formatNairaCompact(amt)}
                   </button>
                 ))}
               </div>

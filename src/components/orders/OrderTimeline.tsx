@@ -21,12 +21,12 @@ const STATUS_CONFIG: Record<
   { icon: typeof Package; color: string; bgColor: string; label: string }
 > = {
   placed: { icon: Package, color: "text-kampmax-info", bgColor: "bg-kampmax-info", label: "Order Placed" },
-  confirmed: { icon: CheckCircle2, color: "text-indigo-600", bgColor: "bg-indigo-500", label: "Confirmed" },
-  preparing: { icon: Clock, color: "text-kampmax-warning", bgColor: "bg-amber-500", label: "Preparing" },
-  ready: { icon: MapPin, color: "text-purple-600", bgColor: "bg-purple-500", label: "Ready" },
-  out_for_delivery: { icon: Truck, color: "text-orange-600", bgColor: "bg-orange-500", label: "Out for Delivery" },
-  delivered: { icon: CheckCircle2, color: "text-kampmax-success", bgColor: "bg-green-500", label: "Delivered" },
-  cancelled: { icon: XCircle, color: "text-kampmax-error", bgColor: "bg-red-500", label: "Cancelled" },
+  confirmed: { icon: CheckCircle2, color: "text-kampmax-blue", bgColor: "bg-kampmax-blue", label: "Confirmed" },
+  preparing: { icon: Clock, color: "text-kampmax-gold-dark", bgColor: "bg-kampmax-gold", label: "Preparing" },
+  ready: { icon: MapPin, color: "text-kampmax-gold-dark", bgColor: "bg-kampmax-gold", label: "Ready" },
+  out_for_delivery: { icon: Truck, color: "text-kampmax-info", bgColor: "bg-kampmax-info", label: "Out for Delivery" },
+  delivered: { icon: CheckCircle2, color: "text-kampmax-success", bgColor: "bg-kampmax-success", label: "Delivered" },
+  cancelled: { icon: XCircle, color: "text-kampmax-error", bgColor: "bg-kampmax-error", label: "Cancelled" },
 };
 
 export function OrderTimeline({ timeline, currentStatus }: OrderTimelineProps) {
@@ -49,7 +49,7 @@ export function OrderTimeline({ timeline, currentStatus }: OrderTimelineProps) {
                   isActive
                     ? `${config.bgColor} text-white`
                     : isCancelled && entry.status === "cancelled"
-                      ? "bg-red-500 text-white"
+                      ? "bg-kampmax-error/100 text-white"
                       : "bg-kampmax-muted text-kampmax-text-secondary border border-kampmax-border"
                 )}
               >

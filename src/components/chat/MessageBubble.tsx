@@ -91,7 +91,7 @@ export function MessageBubble({ message, isMine, showTail }: MessageBubbleProps)
                 </span>
                 <span className={cn(
                   "text-[10px] px-1.5 py-0.5 rounded font-medium capitalize",
-                  isMine ? "bg-white/20 text-white" : "bg-blue-50 text-kampmax-blue"
+                  isMine ? "bg-white/20 text-white" : "bg-kampmax-blue/10 text-kampmax-blue"
                 )}>
                   {message.sharedOrder.status.replace("_", " ")}
                 </span>

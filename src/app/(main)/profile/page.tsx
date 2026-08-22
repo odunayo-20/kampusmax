@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ChevronRight, LogOut, Store, Package, Heart, MapPin,
   CreditCard, Wallet, Bell, Shield, HelpCircle,
-  Settings, Star, ChevronDown, Pencil, Clock,
+  Settings, Star, ChevronDown, Pencil, Clock, Lock,
 } from "lucide-react";
 import { Avatar } from "@/components/atoms/Avatar";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -91,7 +91,7 @@ export default function ProfilePage() {
                   {currentUser.name}
                 </h1>
                 {currentUser.isVerified && (
-                  <span className="text-[10px] bg-blue-50 text-kampmax-blue px-1.5 py-0.5 rounded font-medium">
+                  <span className="text-[10px] bg-kampmax-blue/10 text-kampmax-blue px-1.5 py-0.5 rounded font-medium">
                     Verified
                   </span>
                 )}
@@ -127,7 +127,7 @@ export default function ProfilePage() {
         <ProfileStatCard
           icon={<Heart className="h-5 w-5" />}
           label="Wishlist"
-          value={12}
+          value={0}
           onClick={() => router.push("/profile/wishlist")}
         />
         <ProfileStatCard
@@ -307,7 +307,7 @@ export default function ProfilePage() {
       <button
         onClick={handleLogout}
         disabled={loggingOut}
-        className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-medium text-kampmax-error hover:bg-red-50 rounded-xl border border-red-200 transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-medium text-kampmax-error hover:bg-kampmax-error/10 rounded-xl border border-kampmax-error/20 transition-colors disabled:opacity-50"
       >
         {loggingOut ? (
           <span className="flex items-center gap-2">
@@ -329,11 +329,3 @@ export default function ProfilePage() {
   );
 }
 
-function Lock(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}

@@ -8,13 +8,13 @@ import { getVendorOrderById, updateVendorOrderStatus } from "@/services/vendor";
 import { OrderStatus } from "@/types";
 
 const statusConfig: Record<OrderStatus, { label: string; color: string }> = {
-  placed: { label: "Placed", color: "bg-gray-100 text-gray-700" },
-  confirmed: { label: "Confirmed", color: "bg-purple-50 text-purple-700" },
-  preparing: { label: "Preparing", color: "bg-blue-50 text-blue-700" },
+  placed: { label: "Placed", color: "bg-kampmax-muted text-kampmax-text-secondary" },
+  confirmed: { label: "Confirmed", color: "bg-kampmax-info/10 text-kampmax-info" },
+  preparing: { label: "Preparing", color: "bg-kampmax-info/10 text-kampmax-info" },
   ready: { label: "Ready for Pickup", color: "bg-kampmax-gold/10 text-kampmax-gold" },
-  out_for_delivery: { label: "Out for Delivery", color: "bg-indigo-50 text-indigo-700" },
-  delivered: { label: "Delivered", color: "bg-green-50 text-green-700" },
-  cancelled: { label: "Cancelled", color: "bg-red-50 text-red-700" },
+  out_for_delivery: { label: "Out for Delivery", color: "bg-kampmax-blue/10 text-kampmax-blue" },
+  delivered: { label: "Delivered", color: "bg-kampmax-success/10 text-kampmax-success" },
+  cancelled: { label: "Cancelled", color: "bg-kampmax-error/10 text-kampmax-error" },
 };
 
 const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -52,7 +52,7 @@ export default function VendorOrderDetailPage({ params }: { params: Promise<{ id
   const isCancellable = order.status === "placed" || order.status === "confirmed";
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="w-9 h-9 rounded-lg bg-kampmax-muted flex items-center justify-center">
           <ArrowLeft className="h-5 w-5 text-kampmax-text" />
@@ -157,13 +157,13 @@ export default function VendorOrderDetailPage({ params }: { params: Promise<{ id
           </div>
           <div className="border-t border-kampmax-border pt-2 flex justify-between text-sm">
             <span className="font-semibold text-kampmax-text">Your Earning</span>
-            <span className="font-bold text-green-600">{formatNaira(order.vendorEarning)}</span>
+            <span className="font-bold text-kampmax-success">{formatNaira(order.vendorEarning)}</span>
           </div>
           <div className="flex justify-between text-xs text-kampmax-text-secondary">
             <span>Payment: {order.paymentMethod.replace("_", " ")}</span>
             <span className={cn(
               "font-medium",
-              order.paymentStatus === "paid" ? "text-green-600" : order.paymentStatus === "refunded" ? "text-orange-500" : "text-kampmax-text-secondary"
+              order.paymentStatus === "paid" ? "text-kampmax-success" : order.paymentStatus === "refunded" ? "text-kampmax-warning" : "text-kampmax-text-secondary"
             )}>
               {order.paymentStatus}
             </span>

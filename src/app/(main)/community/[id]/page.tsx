@@ -85,7 +85,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         <div className="flex gap-2">
           <button
             onClick={handleDelete}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-kampmax-error bg-kampmax-error/10 hover:bg-kampmax-error/20"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete Post
@@ -97,14 +97,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       {!isOwner && !reported && (
         <button
           onClick={() => setShowReportModal(true)}
-          className="flex items-center gap-1.5 text-xs text-kampmax-text-secondary hover:text-red-500"
+          className="flex items-center gap-1.5 text-xs text-kampmax-text-secondary hover:text-kampmax-error"
         >
           <Flag className="h-3.5 w-3.5" />
           Report post
         </button>
       )}
       {reported && (
-        <div className="flex items-center gap-1.5 text-xs text-green-600">
+        <div className="flex items-center gap-1.5 text-xs text-kampmax-success">
           <AlertTriangle className="h-3.5 w-3.5" />
           Thank you for reporting. We'll review this post.
         </div>
@@ -120,8 +120,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
       {/* Report Modal */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl p-5">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-xl p-5 max-h-[85vh] overflow-y-auto">
             <h3 className="text-base font-bold text-kampmax-text mb-4">
               Report Post
             </h3>
@@ -177,7 +177,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               </button>
               <button
                 onClick={handleReport}
-                className="flex-1 py-2.5 rounded-lg bg-red-500 text-white text-sm font-semibold"
+                className="flex-1 py-2.5 rounded-lg bg-kampmax-error/100 text-white text-sm font-semibold"
               >
                 Report
               </button>

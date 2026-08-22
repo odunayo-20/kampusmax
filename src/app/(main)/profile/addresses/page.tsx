@@ -217,9 +217,9 @@ export default function AddressesPage() {
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-xl max-h-[85vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-xl max-h-[85vh] flex flex-col">
+            <div className="shrink-0 bg-white border-b border-kampmax-border px-4 py-3 flex items-center justify-between">
               <h2 className="text-sm font-bold text-kampmax-text">
                 {editingId ? "Edit Address" : "Add Address"}
               </h2>
@@ -233,7 +233,7 @@ export default function AddressesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-kampmax-text-secondary mb-1.5">
                   Label
@@ -322,7 +322,7 @@ export default function AddressesPage() {
                 <span className="text-sm text-kampmax-text">Set as default address</span>
               </label>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-kampmax-border px-4 py-3">
+            <div className="shrink-0 bg-white border-t border-kampmax-border px-4 py-3">
               <button
                 onClick={handleSave}
                 disabled={!formLabel.trim() || !formAddress.trim()}

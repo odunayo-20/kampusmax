@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Users, Mail, Phone, ShoppingCart } from "lucide-react";
+import { Search, Users, Mail, Phone } from "lucide-react";
 import { formatNaira, formatDate } from "@/lib/utils";
 import { getVendorCustomers } from "@/services/vendor";
 import { VendorCustomer } from "@/types";
@@ -59,7 +59,7 @@ export default function VendorCustomersPage() {
                   <p className="text-[10px] text-kampmax-text-secondary">Total Spent</p>
                 </div>
                 <div className="bg-kampmax-muted/50 rounded-lg p-2">
-                  <p className="text-[11px] font-medium text-kampmax-text">
+                  <p className="text-sm font-bold text-kampmax-text">
                     {new Date(customer.lastOrderDate).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
                   </p>
                   <p className="text-[10px] text-kampmax-text-secondary">Last Order</p>
@@ -67,11 +67,11 @@ export default function VendorCustomersPage() {
               </div>
               <div className="flex items-center gap-2 mt-3">
                 <a href={`tel:${customer.phone.replace(/\s/g, "")}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kampmax-muted text-xs font-medium text-kampmax-text">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kampmax-muted text-xs font-medium text-kampmax-text hover:bg-kampmax-muted/80 transition-colors">
                   <Phone className="h-3 w-3" /> Call
                 </a>
                 <a href={`mailto:${customer.email}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kampmax-muted text-xs font-medium text-kampmax-text">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kampmax-muted text-xs font-medium text-kampmax-text hover:bg-kampmax-muted/80 transition-colors">
                   <Mail className="h-3 w-3" /> Email
                 </a>
               </div>

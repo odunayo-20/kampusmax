@@ -59,7 +59,7 @@ export function DeliverySection({ form, errors, onFieldChange }: DeliverySection
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
                   form.pickupLocation === loc
-                    ? "border-kampmax-blue bg-blue-50 ring-1 ring-kampmax-blue"
+                    ? "border-kampmax-blue bg-kampmax-blue/10 ring-1 ring-kampmax-blue"
                     : "border-kampmax-border hover:border-kampmax-blue/50"
                 )}
               >

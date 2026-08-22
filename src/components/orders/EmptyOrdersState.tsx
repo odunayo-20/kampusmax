@@ -33,7 +33,7 @@ const CONFIG: Record<
     description:
       "When you place your first order, it will appear here. Browse the marketplace to get started!",
     action: { label: "Browse Marketplace", href: "/marketplace" },
-    iconBg: "bg-gray-100",
+    iconBg: "bg-kampmax-muted",
   },
   active: {
     icon: Clock,
@@ -41,27 +41,27 @@ const CONFIG: Record<
     description:
       "You don't have any orders being processed right now. All caught up!",
     action: { label: "Start Shopping", href: "/marketplace" },
-    iconBg: "bg-blue-50",
+    iconBg: "bg-kampmax-blue/10",
   },
   completed: {
     icon: PackageCheck,
     title: "No completed orders",
     description:
       "Orders you've received will show up here. Keep an eye on your deliveries!",
-    iconBg: "bg-green-50",
+    iconBg: "bg-kampmax-success/10",
   },
   cancelled: {
     icon: Ban,
     title: "No cancelled orders",
     description:
       "Great news — you haven't cancelled any orders. Hopefully it stays that way!",
-    iconBg: "bg-red-50",
+    iconBg: "bg-kampmax-error/10",
   },
   search: {
     icon: Search,
     title: "No orders found",
     description: "No orders match your search. Try a different order number.",
-    iconBg: "bg-gray-100",
+    iconBg: "bg-kampmax-muted",
   },
 };
 
@@ -78,7 +78,7 @@ export function EmptyOrdersState({ type, searchQuery }: EmptyOrdersStateProps) {
           config.iconBg
         )}
       >
-        <Icon className="w-8 h-8 text-gray-400" />
+        <Icon className="w-8 h-8 text-kampmax-text-secondary/60" />
       </div>
       <h3 className="text-base font-semibold text-kampmax-text mb-1">
         {config.title}

@@ -90,7 +90,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           </button>
           <h1 className="text-xl font-bold text-kampmax-text">Edit Product</h1>
         </div>
-        <button onClick={() => setShowDelete(true)} className="w-9 h-9 rounded-lg bg-red-50 text-kampmax-error flex items-center justify-center">
+        <button onClick={() => setShowDelete(true)} className="w-9 h-9 rounded-lg bg-kampmax-error/10 text-kampmax-error flex items-center justify-center">
           <Trash2 className="h-4 w-4" />
         </button>
       </div>

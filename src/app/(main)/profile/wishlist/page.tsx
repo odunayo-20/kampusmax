@@ -102,7 +102,7 @@ export default function WishlistPage() {
               <div className="flex flex-col items-center gap-1">
                 <button
                   onClick={() => removeItem(product.id)}
-                  className="w-8 h-8 rounded-lg bg-red-50 text-kampmax-error flex items-center justify-center"
+                  className="w-8 h-8 rounded-lg bg-kampmax-error/10 text-kampmax-error flex items-center justify-center"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

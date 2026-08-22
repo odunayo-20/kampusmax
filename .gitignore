@@ -1,3 +1,8 @@
+# Build Frameworks & Tools
+.turbo/
+.next/
+node_modules
+
 # System Files
 .DS_Store
 Thumbs.db
@@ -11,7 +16,4 @@ Thumbs.db
 # Local Development & Environment
 *.local
 
-# Build Frameworks & Tools
-.turbo/
-.next/
-node_modules
+

@@ -121,7 +121,7 @@ export function SettingsToggle({
       onClick={() => onToggle(!enabled)}
       className={cn(
         "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-kampmax-blue focus:ring-offset-2",
-        enabled ? "bg-kampmax-blue" : "bg-gray-200",
+        enabled ? "bg-kampmax-blue" : "bg-kampmax-border",
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >

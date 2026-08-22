@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Camera, Send } from "lucide-react";
+import { X, Camera, Send, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StarRating } from "./StarRating";
 import { addReview } from "@/services/reviews";
@@ -94,8 +94,8 @@ export function ReviewForm({
 
         {submitted ? (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">✓</span>
+            <div className="w-12 h-12 rounded-full bg-kampmax-success/10 flex items-center justify-center mx-auto mb-3">
+              <Check className="h-6 w-6 text-kampmax-success" />
             </div>
             <p className="text-sm font-semibold text-kampmax-text">Review Submitted!</p>
             <p className="text-xs text-kampmax-text-secondary mt-1">

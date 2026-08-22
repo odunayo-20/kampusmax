@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Package, Eye, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Package, Pencil, Trash2 } from "lucide-react";
 import { cn, formatNaira } from "@/lib/utils";
 import { getVendorProducts, deleteVendorProduct } from "@/services/vendor";
 import { VendorProduct, VendorProductStatus } from "@/types";
 
 const statusConfig: Record<VendorProductStatus, { label: string; color: string }> = {
-  active: { label: "Active", color: "bg-green-50 text-green-700" },
-  draft: { label: "Draft", color: "bg-gray-100 text-gray-600" },
-  sold_out: { label: "Sold Out", color: "bg-red-50 text-red-700" },
-  archived: { label: "Archived", color: "bg-orange-50 text-orange-700" },
+  active: { label: "Active", color: "bg-kampmax-success/10 text-kampmax-success" },
+  draft: { label: "Draft", color: "bg-kampmax-muted text-kampmax-text-secondary" },
+  sold_out: { label: "Sold Out", color: "bg-kampmax-error/10 text-kampmax-error" },
+  archived: { label: "Archived", color: "bg-kampmax-warning/10 text-kampmax-warning" },
 };
 
 export default function VendorProductsPage() {
@@ -63,7 +63,7 @@ export default function VendorProductsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {(["all", "active", "draft", "sold_out", "archived"] as const).map((f) => (
           <button
             key={f}
@@ -103,7 +103,7 @@ export default function VendorProductsPage() {
                       {statusConfig[product.status].label}
                     </span>
                     {product.stock <= 3 && product.status === "active" && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-orange-50 text-orange-600">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-kampmax-warning/10 text-kampmax-warning">
                         Low Stock
                       </span>
                     )}
@@ -134,7 +134,7 @@ export default function VendorProductsPage() {
                 ) : (
                   <button
                     onClick={() => setDeletingId(product.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-kampmax-error hover:bg-red-50 ml-auto"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-kampmax-error hover:bg-kampmax-error/10 ml-auto"
                   >
                     <Trash2 className="h-3 w-3" /> Delete
                   </button>

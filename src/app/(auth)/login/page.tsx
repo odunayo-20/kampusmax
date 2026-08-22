@@ -76,7 +76,7 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {errors.general && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-3 bg-kampmax-error/10 border border-kampmax-error/20 rounded-lg">
             <p className="text-sm text-kampmax-error">{errors.general}</p>
           </div>
         )}

@@ -34,13 +34,13 @@ const categoryConfig: Record<
   },
   messages: {
     icon: MessageCircle,
-    bg: "bg-green-50",
-    color: "text-green-600",
+    bg: "bg-kampmax-success/10",
+    color: "text-kampmax-success",
   },
   marketplace: {
     icon: ShoppingCart,
-    bg: "bg-purple-50",
-    color: "text-purple-600",
+    bg: "bg-kampmax-gold/10",
+    color: "text-kampmax-gold-dark",
   },
   campus: {
     icon: GraduationCap,
@@ -49,18 +49,18 @@ const categoryConfig: Record<
   },
   payments: {
     icon: CreditCard,
-    bg: "bg-emerald-50",
-    color: "text-emerald-600",
+    bg: "bg-kampmax-success/10",
+    color: "text-kampmax-success",
   },
   account: {
     icon: User,
-    bg: "bg-slate-100",
-    color: "text-slate-600",
+    bg: "bg-kampmax-muted",
+    color: "text-kampmax-text-secondary",
   },
   promotions: {
     icon: Tag,
-    bg: "bg-red-50",
-    color: "text-red-500",
+    bg: "bg-kampmax-error/10",
+    color: "text-kampmax-error",
   },
 };
 
@@ -95,10 +95,18 @@ export function NotificationItem({
   }
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       className={cn(
-        "w-full flex items-start gap-3 text-left transition-colors group",
+        "w-full flex items-start gap-3 text-left transition-colors group cursor-pointer",
         compact ? "px-3 py-2.5" : "px-4 py-3.5",
         notification.read
           ? "bg-white hover:bg-kampmax-muted/30"
@@ -146,14 +154,15 @@ export function NotificationItem({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         {onDelete && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete(notification.id);
             }}
-            className="p-1 rounded-md hover:bg-red-50 text-kampmax-text-secondary/40 hover:text-red-500"
+            aria-label="Delete notification"
+            className="p-1 rounded-md hover:bg-kampmax-error/10 text-kampmax-text-secondary/40 hover:text-kampmax-error"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -162,6 +171,6 @@ export function NotificationItem({
           <ChevronRight className="h-4 w-4 text-kampmax-text-secondary/30" />
         )}
       </div>
-    </button>
+    </div>
   );
 }

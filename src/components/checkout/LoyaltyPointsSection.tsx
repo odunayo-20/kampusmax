@@ -34,7 +34,7 @@ export function LoyaltyPointsSection({
         </span>
       </div>
 
-      <div className="flex items-start gap-2 p-2.5 bg-blue-50 rounded-lg">
+      <div className="flex items-start gap-2 p-2.5 bg-kampmax-blue/10 rounded-lg">
         <Info className="w-3.5 h-3.5 text-kampmax-blue shrink-0 mt-0.5" />
         <p className="text-[11px] text-kampmax-text-secondary leading-relaxed">
           Use up to {maxPoints.toLocaleString()} points (30% of order). 
@@ -51,7 +51,7 @@ export function LoyaltyPointsSection({
             step={10}
             value={useAllPoints ? maxPoints : pointsToUse}
             onChange={(e) => onPointsChange(Number(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-kampmax-blue"
+            className="w-full h-2 bg-kampmax-border rounded-lg appearance-none cursor-pointer accent-kampmax-blue"
           />
         </div>
         <span className="text-sm font-semibold text-kampmax-navy tabular-nums w-16 text-right">

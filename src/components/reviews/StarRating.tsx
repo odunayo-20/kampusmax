@@ -57,7 +57,7 @@ export function StarRating({
                   ? "fill-kampmax-gold text-kampmax-gold"
                   : isHalf
                   ? "fill-kampmax-gold/50 text-kampmax-gold"
-                  : "fill-transparent text-gray-300"
+                  : "fill-transparent text-kampmax-text-secondary/40"
               )}
             />
           </button>

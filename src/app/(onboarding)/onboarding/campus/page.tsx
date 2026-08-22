@@ -71,7 +71,7 @@ export default function CampusSelectionPage() {
                 className={cn(
                   "w-full flex items-center gap-3 p-4 rounded-lg border text-left transition-all duration-200",
                   selectedId === campus.id
-                    ? "border-kampmax-blue bg-blue-50 ring-1 ring-kampmax-blue"
+                    ? "border-kampmax-blue bg-kampmax-blue/10 ring-1 ring-kampmax-blue"
                     : "border-kampmax-border bg-white hover:border-kampmax-blue/50"
                 )}
               >

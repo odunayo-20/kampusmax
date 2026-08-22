@@ -16,7 +16,7 @@ interface ProductCardProps {
 function conditionColor(condition: ProductCondition) {
   return condition === "New"
     ? "bg-kampmax-blue/10 text-kampmax-blue"
-    : "bg-kampmax-gold/20 text-yellow-700";
+    : "bg-kampmax-gold/20 text-kampmax-gold-dark";
 }
 
 function discountPercent(original: number, current: number) {
@@ -40,8 +40,8 @@ export function ProductCard({
         className
       )}
     >
-      <div className="relative aspect-square bg-gray-50 overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center text-gray-300">
+      <div className="relative aspect-square bg-kampmax-muted/50 overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center text-kampmax-text-secondary/40">
           <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
@@ -49,7 +49,7 @@ export function ProductCard({
 
         {hasDiscount && (
           <div className="absolute top-2 left-2">
-            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            <span className="bg-kampmax-error/100 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
               -{discountPercent(product.originalPrice!, product.price)}%
             </span>
           </div>
@@ -65,7 +65,7 @@ export function ProductCard({
           <Heart
             className={cn(
               "w-4 h-4 transition-colors",
-              saved ? "fill-red-500 text-red-500" : "text-gray-400"
+              saved ? "fill-kampmax-error text-kampmax-error" : "text-kampmax-text-secondary/60"
             )}
           />
         </button>
@@ -100,7 +100,7 @@ export function ProductCard({
 
         {product.location && (
           <div className="flex items-center gap-0.5 mb-1.5">
-            <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+            <MapPin className="w-3 h-3 text-kampmax-text-secondary/60 shrink-0" />
             <span className="text-[10px] text-kampmax-text-secondary truncate">
               {product.location}
             </span>
@@ -113,7 +113,7 @@ export function ProductCard({
               {formatNaira(product.price)}
             </span>
             {hasDiscount && (
-              <span className="text-xs text-gray-400 line-through">
+              <span className="text-xs text-kampmax-text-secondary/60 line-through">
                 {formatNaira(product.originalPrice!)}
               </span>
             )}

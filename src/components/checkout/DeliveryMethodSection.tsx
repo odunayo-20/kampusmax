@@ -50,7 +50,7 @@ export function DeliveryMethodSection({ form, errors, onFieldChange }: DeliveryM
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
               form.deliveryMethod === opt.id
-                ? "border-kampmax-blue bg-blue-50 ring-1 ring-kampmax-blue"
+                ? "border-kampmax-blue bg-kampmax-blue/10 ring-1 ring-kampmax-blue"
                 : "border-kampmax-border hover:border-kampmax-blue/50"
             )}
           >

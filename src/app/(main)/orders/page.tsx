@@ -94,7 +94,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex gap-1 bg-kampmax-muted rounded-lg p-1">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -113,7 +113,7 @@ export default function OrdersPage() {
                     "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
                     activeTab === tab.key
                       ? "bg-kampmax-blue text-white"
-                      : "bg-gray-200 text-kampmax-text-secondary"
+                      : "bg-kampmax-border text-kampmax-text-secondary"
                   )}
                 >
                   {tabCounts[tab.key]}

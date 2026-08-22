@@ -34,7 +34,7 @@ export function SearchEmptyState({
         {[
           { icon: Package, label: "Products", color: "text-kampmax-blue" },
           { icon: Store, label: "Vendors", color: "text-kampmax-navy" },
-          { icon: MessageSquare, label: "Posts", color: "text-green-600" },
+          { icon: MessageSquare, label: "Posts", color: "text-kampmax-success" },
         ].map((item) => (
           <div key={item.label} className="flex flex-col items-center gap-1.5">
             <div className="w-10 h-10 rounded-xl bg-kampmax-muted flex items-center justify-center">

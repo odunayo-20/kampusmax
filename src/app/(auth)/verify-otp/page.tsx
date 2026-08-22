@@ -136,7 +136,7 @@ function VerifyOtpForm() {
     return (
       <div className="space-y-6 text-center">
         <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-kampmax-success/10 flex items-center justify-center">
             <CheckCircle2 className="h-8 w-8 text-kampmax-success" />
           </div>
         </div>
@@ -172,7 +172,7 @@ function VerifyOtpForm() {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className="p-3 bg-kampmax-error/10 border border-kampmax-error/20 rounded-lg">
           <p className="text-sm text-kampmax-error">{error}</p>
         </div>
       )}
@@ -194,7 +194,7 @@ function VerifyOtpForm() {
               "w-12 h-14 text-center text-xl font-bold rounded-lg border transition-colors",
               "focus:outline-none focus:ring-1",
               digit
-                ? "border-kampmax-blue bg-blue-50 text-kampmax-text"
+                ? "border-kampmax-blue bg-kampmax-blue/10 text-kampmax-text"
                 : "border-kampmax-border bg-white text-kampmax-text",
               error && "border-kampmax-error"
             )}

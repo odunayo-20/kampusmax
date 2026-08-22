@@ -125,7 +125,7 @@ function RegisterForm() {
               "border-kampmax-border hover:border-kampmax-blue/50 bg-white"
             )}
           >
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-kampmax-blue/10 flex items-center justify-center flex-shrink-0">
               <User className="h-6 w-6 text-kampmax-blue" />
             </div>
             <div className="flex-1">
@@ -145,7 +145,7 @@ function RegisterForm() {
               "border-kampmax-border hover:border-kampmax-blue/50 bg-white"
             )}
           >
-            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-kampmax-gold/10 flex items-center justify-center flex-shrink-0">
               <svg
                 className="h-6 w-6 text-kampmax-gold-dark"
                 fill="none"
@@ -205,7 +205,7 @@ function RegisterForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {errors.general && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-3 bg-kampmax-error/10 border border-kampmax-error/20 rounded-lg">
             <p className="text-sm text-kampmax-error">{errors.general}</p>
           </div>
         )}

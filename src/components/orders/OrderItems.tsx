@@ -20,7 +20,7 @@ export function OrderItems({ items }: OrderItemsProps) {
           )}
         >
           <div className="w-14 h-14 bg-kampmax-muted rounded-lg flex items-center justify-center shrink-0">
-            <Package className="w-6 h-6 text-gray-300" />
+            <Package className="w-6 h-6 text-kampmax-text-secondary/40" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-kampmax-text line-clamp-1">

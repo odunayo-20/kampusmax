@@ -8,10 +8,17 @@ import { VendorDailyEarning } from "@/types";
 
 export default function VendorEarningsPage() {
   const summary = getEarningsSummary();
-  const daily = getDailyEarnings();
   const [period, setPeriod] = useState<"week" | "month" | "all">("week");
+  const daily = getDailyEarnings();
 
-  const maxRevenue = Math.max(...daily.map((d) => d.revenue), 1);
+  const filteredDaily =
+    period === "week"
+      ? daily.slice(-7)
+      : period === "month"
+        ? daily.slice(-30)
+        : daily;
+
+  const maxRevenue = Math.max(...filteredDaily.map((d) => d.revenue), 1);
 
   return (
     <div className="space-y-4">
@@ -45,7 +52,7 @@ export default function VendorEarningsPage() {
           <h3 className="text-sm font-semibold text-kampmax-text">Monthly Comparison</h3>
           <span className={cn(
             "text-xs font-medium flex items-center gap-1",
-            summary.growth > 0 ? "text-green-600" : "text-kampmax-error"
+            summary.growth > 0 ? "text-kampmax-success" : "text-kampmax-error"
           )}>
             {summary.growth > 0 ? <TrendingUp className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
             {summary.growth > 0 ? "+" : ""}{summary.growth}%
@@ -80,7 +87,7 @@ export default function VendorEarningsPage() {
         </div>
         {/* Simple bar chart */}
         <div className="flex items-end gap-1 h-32">
-          {daily.map((d, i) => (
+          {filteredDaily.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
               <div className="w-full bg-kampmax-blue/20 rounded-t relative" style={{ height: `${(d.revenue / maxRevenue) * 100}%`, minHeight: d.revenue > 0 ? "4px" : "0" }}>
                 {d.revenue > 0 && (
@@ -91,7 +98,7 @@ export default function VendorEarningsPage() {
           ))}
         </div>
         <div className="flex gap-1 mt-1">
-          {daily.map((d, i) => (
+          {filteredDaily.map((d, i) => (
             <div key={i} className="flex-1 text-center">
               <span className="text-[9px] text-kampmax-text-secondary">
                 {new Date(d.date).getDate()}
@@ -115,7 +122,7 @@ export default function VendorEarningsPage() {
           </div>
           <div className="border-t border-kampmax-border pt-2 flex justify-between items-center">
             <span className="text-sm font-semibold text-kampmax-text">Net Earnings</span>
-            <span className="text-base font-bold text-green-600">{formatNaira(summary.totalEarning)}</span>
+            <span className="text-base font-bold text-kampmax-success">{formatNaira(summary.totalEarning)}</span>
           </div>
         </div>
       </div>

@@ -33,7 +33,7 @@ export function CartItemCard({
         href={`/marketplace/${item.product.id}`}
         className="w-20 h-20 bg-kampmax-muted rounded-md overflow-hidden flex-shrink-0 relative"
       >
-        <div className="w-full h-full flex items-center justify-center text-gray-300">
+        <div className="w-full h-full flex items-center justify-center text-kampmax-text-secondary/40">
           <svg
             className="w-8 h-8"
             fill="none"

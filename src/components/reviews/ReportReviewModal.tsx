@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Flag } from "lucide-react";
+import { X, Flag, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReviewReportReason } from "@/types";
 
@@ -41,8 +41,8 @@ export function ReportReviewModal({ isOpen, onClose, onSubmit }: ReportReviewMod
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-kampmax-border">
+      <div className="bg-white w-full max-w-md rounded-xl flex flex-col max-h-[85vh]">
+        <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-kampmax-border">
           <div className="flex items-center gap-2">
             <Flag className="h-4 w-4 text-kampmax-error" />
             <h2 className="text-sm font-bold text-kampmax-text">Report Review</h2>
@@ -57,8 +57,8 @@ export function ReportReviewModal({ isOpen, onClose, onSubmit }: ReportReviewMod
 
         {submitted ? (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">✓</span>
+            <div className="w-12 h-12 rounded-full bg-kampmax-success/10 flex items-center justify-center mx-auto mb-3">
+              <Check className="h-6 w-6 text-kampmax-success" />
             </div>
             <p className="text-sm font-semibold text-kampmax-text">Report Submitted</p>
             <p className="text-xs text-kampmax-text-secondary mt-1">
@@ -66,7 +66,7 @@ export function ReportReviewModal({ isOpen, onClose, onSubmit }: ReportReviewMod
             </p>
           </div>
         ) : (
-          <div className="p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <p className="text-xs text-kampmax-text-secondary">
               Why are you reporting this review?
             </p>

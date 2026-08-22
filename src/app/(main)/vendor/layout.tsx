@@ -33,13 +33,16 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
   function isActive(href: string) {
     if (href === "/vendor") return pathname === "/vendor";
+    if (["/vendor/products/new", "/vendor/store/settings"].includes(href)) {
+      return pathname === href;
+    }
     return pathname.startsWith(href);
   }
 
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-kampmax-bg">
-        <div className="h-8 w-8 border-3 border-kampmax-blue/20 border-t-kampmax-blue rounded-full animate-spin" />
+        <div className="h-8 w-8 border-[3px] border-kampmax-blue/20 border-t-kampmax-blue rounded-full animate-spin" />
       </div>
     );
   }
@@ -114,7 +117,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden sticky top-0 z-30 bg-kampmax-navy px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden sticky top-0 z-50 bg-kampmax-navy px-4 py-3 flex items-center justify-between">
         <button onClick={() => router.push("/home")} className="text-white/60 hover:text-white">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -157,7 +160,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
       {/* Main Content */}
       <main className="lg:pl-64">
-        <div className="px-4 py-4 lg:px-8 lg:py-6 max-w-6xl">
+        <div className="px-4 py-4 lg:px-8 lg:py-6 max-w-6xl mx-auto">
           {children}
         </div>
       </main>

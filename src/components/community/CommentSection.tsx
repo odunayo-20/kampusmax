@@ -111,7 +111,7 @@ export function CommentSection({ postId, comments: initialComments, onCommentAdd
                     {comment.userId === user.id && (
                       <button
                         onClick={() => handleDelete(comment.id)}
-                        className="flex items-center gap-1 text-[10px] text-kampmax-text-secondary/60 hover:text-red-500 transition-colors"
+                        className="flex items-center gap-1 text-[10px] text-kampmax-text-secondary/60 hover:text-kampmax-error transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

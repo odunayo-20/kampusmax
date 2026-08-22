@@ -44,7 +44,7 @@ export function OrderActions({
           onClick={onCancel}
           className={cn(
             "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
-            "border-red-200 bg-white text-kampmax-error hover:bg-red-50"
+            "border-kampmax-error/20 bg-white text-kampmax-error hover:bg-kampmax-error/10"
           )}
         >
           <XCircle className="w-3.5 h-3.5" />
@@ -72,7 +72,7 @@ export function OrderActions({
           onClick={onReview}
           className={cn(
             "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
-            "border-kampmax-gold/30 bg-white text-kampmax-gold hover:bg-amber-50"
+            "border-kampmax-gold/30 bg-white text-kampmax-gold hover:bg-kampmax-gold/10"
           )}
         >
           <Star className="w-3.5 h-3.5" />

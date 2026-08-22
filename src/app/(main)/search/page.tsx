@@ -7,7 +7,8 @@ import { SearchInput } from "@/components/search/SearchInput";
 import { SearchResults } from "@/components/search/SearchResults";
 import { SearchFilters } from "@/components/search/SearchFilters";
 import { SearchEmptyState } from "@/components/search/SearchEmptyState";
-import { RecentSearches, TrendingSearches } from "@/components/search/RecentSearches";
+import { RecentSearches } from "@/components/search/RecentSearches";
+import { TrendingSearches } from "@/components/search/TrendingSearches";
 import {
   search,
   getTrendingSearches,

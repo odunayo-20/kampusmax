@@ -52,7 +52,7 @@ export default function OnboardingPage() {
             <div
               className={cn(
                 "w-20 h-20 rounded-2xl flex items-center justify-center",
-                currentSlide === 1 ? "bg-amber-50" : "bg-blue-50"
+                currentSlide === 1 ? "bg-kampmax-gold/10" : "bg-kampmax-blue/10"
               )}
             >
               {(() => {

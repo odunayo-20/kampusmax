@@ -8,10 +8,10 @@ interface BadgeProps {
 
 const variantStyles = {
   default: "bg-kampmax-navy text-white",
-  success: "bg-green-50 text-kampmax-success border border-green-200",
-  warning: "bg-amber-50 text-kampmax-warning border border-amber-200",
-  error: "bg-red-50 text-kampmax-error border border-red-200",
-  info: "bg-blue-50 text-kampmax-info border border-blue-200",
+  success: "bg-kampmax-success/10 text-kampmax-success border border-kampmax-success/20",
+  warning: "bg-kampmax-warning/10 text-kampmax-warning border border-kampmax-warning/20",
+  error: "bg-kampmax-error/10 text-kampmax-error border border-kampmax-error/20",
+  info: "bg-kampmax-info/10 text-kampmax-info border border-kampmax-info/20",
   outline: "bg-transparent border border-kampmax-border text-kampmax-text-secondary",
 };
 
@@ -34,9 +34,9 @@ interface ConditionBadgeProps {
 }
 
 const conditionStyles = {
-  New: "bg-blue-50 text-kampmax-info border border-blue-200",
-  Used: "bg-amber-50 text-kampmax-warning border border-amber-200",
-  Fair: "bg-gray-50 text-kampmax-text-secondary border border-gray-200",
+  New: "bg-kampmax-blue/10 text-kampmax-blue border border-kampmax-blue/20",
+  Used: "bg-kampmax-warning/10 text-kampmax-warning border border-kampmax-warning/20",
+  Fair: "bg-kampmax-muted text-kampmax-text-secondary border border-kampmax-border",
 };
 
 export function ConditionBadge({ condition }: ConditionBadgeProps) {
@@ -57,13 +57,13 @@ interface OrderStatusBadgeProps {
 }
 
 const orderStatusStyles: Record<string, string> = {
-  placed: "bg-blue-50 text-kampmax-info border border-blue-200",
-  confirmed: "bg-indigo-50 text-indigo-600 border border-indigo-200",
-  preparing: "bg-amber-50 text-kampmax-warning border border-amber-200",
-  ready: "bg-purple-50 text-purple-600 border border-purple-200",
-  out_for_delivery: "bg-orange-50 text-orange-600 border border-orange-200",
-  delivered: "bg-green-50 text-kampmax-success border border-green-200",
-  cancelled: "bg-red-50 text-kampmax-error border border-red-200",
+  placed: "bg-kampmax-info/10 text-kampmax-info border border-kampmax-info/20",
+  confirmed: "bg-kampmax-blue/10 text-kampmax-blue border border-kampmax-blue/20",
+  preparing: "bg-kampmax-gold/10 text-kampmax-gold-dark border border-kampmax-gold/30",
+  ready: "bg-kampmax-gold/10 text-kampmax-gold-dark border border-kampmax-gold/30",
+  out_for_delivery: "bg-kampmax-info/10 text-kampmax-info border border-kampmax-info/20",
+  delivered: "bg-kampmax-success/10 text-kampmax-success border border-kampmax-success/20",
+  cancelled: "bg-kampmax-error/10 text-kampmax-error border border-kampmax-error/20",
 };
 
 const orderStatusLabels: Record<string, string> = {

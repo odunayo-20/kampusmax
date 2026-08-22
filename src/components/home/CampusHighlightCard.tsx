@@ -11,14 +11,14 @@ interface CampusHighlightCardProps {
 }
 
 const typeConfig: Record<string, { label: string; color: string }> = {
-  discussion: { label: "Discussion", color: "bg-blue-50 text-kampmax-blue" },
-  question: { label: "Question", color: "bg-amber-50 text-kampmax-gold-dark" },
-  event: { label: "Event", color: "bg-green-50 text-kampmax-success" },
-  marketplace: { label: "Marketplace", color: "bg-purple-50 text-purple-600" },
-  poll: { label: "Poll", color: "bg-purple-50 text-purple-600" },
-  announcement: { label: "Announcement", color: "bg-red-50 text-red-600" },
-  lost_found: { label: "Lost & Found", color: "bg-orange-50 text-orange-600" },
-  image: { label: "Photo", color: "bg-pink-50 text-pink-600" },
+  discussion: { label: "Discussion", color: "bg-kampmax-blue/10 text-kampmax-blue" },
+  question: { label: "Question", color: "bg-kampmax-gold/10 text-kampmax-gold-dark" },
+  event: { label: "Event", color: "bg-kampmax-success/10 text-kampmax-success" },
+  marketplace: { label: "Marketplace", color: "bg-kampmax-navy/10 text-kampmax-navy" },
+  poll: { label: "Poll", color: "bg-kampmax-info/10 text-kampmax-info" },
+  announcement: { label: "Announcement", color: "bg-kampmax-error/10 text-kampmax-error" },
+  lost_found: { label: "Lost & Found", color: "bg-kampmax-gold/10 text-kampmax-warning" },
+  image: { label: "Photo", color: "bg-kampmax-info/10 text-kampmax-info" },
 };
 
 export function CampusHighlightCard({ post, className }: CampusHighlightCardProps) {

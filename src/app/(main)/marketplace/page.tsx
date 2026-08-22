@@ -211,10 +211,10 @@ export default function MarketplacePage() {
       fallback={
         <PageContainer className="space-y-4">
           <h1 className="text-xl font-bold text-kampmax-text">Marketplace</h1>
-          <div className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+          <div className="h-10 bg-kampmax-muted rounded-lg animate-pulse" />
           <div className="flex gap-2 overflow-hidden">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-8 w-20 bg-gray-100 rounded-full animate-pulse shrink-0" />
+              <div key={i} className="h-8 w-20 bg-kampmax-muted rounded-full animate-pulse shrink-0" />
             ))}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

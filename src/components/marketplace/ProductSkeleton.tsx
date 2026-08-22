@@ -10,14 +10,14 @@ export function ProductSkeleton({ className }: { className?: string }) {
         className
       )}
     >
-      <div className="aspect-square bg-gray-200" />
+      <div className="aspect-square bg-kampmax-border" />
       <div className="p-3 space-y-2">
-        <div className="h-3 bg-gray-200 rounded w-1/3" />
-        <div className="h-4 bg-gray-200 rounded w-3/4" />
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
+        <div className="h-3 bg-kampmax-border rounded w-1/3" />
+        <div className="h-4 bg-kampmax-border rounded w-3/4" />
+        <div className="h-3 bg-kampmax-border rounded w-1/2" />
         <div className="flex items-center justify-between pt-1">
-          <div className="h-4 bg-gray-200 rounded w-1/3" />
-          <div className="h-3 bg-gray-200 rounded w-1/4" />
+          <div className="h-4 bg-kampmax-border rounded w-1/3" />
+          <div className="h-3 bg-kampmax-border rounded w-1/4" />
         </div>
       </div>
     </div>

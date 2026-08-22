@@ -53,8 +53,8 @@ export default function OrderDetailPage({
           <h1 className="text-xl font-bold text-kampmax-text">Order Not Found</h1>
         </div>
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <Package className="w-8 h-8 text-gray-300" />
+          <div className="w-16 h-16 rounded-full bg-kampmax-muted flex items-center justify-center mb-4">
+            <Package className="w-8 h-8 text-kampmax-text-secondary/40" />
           </div>
           <h2 className="text-base font-semibold text-kampmax-text mb-1">
             Order not found
@@ -268,7 +268,7 @@ export default function OrderDetailPage({
 
         {/* Cancel reason (if cancelled) */}
         {(isCancelled || order.status === "cancelled") && (
-          <section className="bg-red-50 rounded-xl border border-red-200 p-4">
+          <section className="bg-kampmax-error/10 rounded-xl border border-kampmax-error/20 p-4">
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-kampmax-error mt-0.5 shrink-0" />
               <div>
@@ -343,7 +343,7 @@ export default function OrderDetailPage({
               <button
                 onClick={confirmCancel}
                 disabled={!cancelReason}
-                className="flex-1 h-10 text-sm font-medium bg-kampmax-error text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 h-10 text-sm font-medium bg-kampmax-error text-white rounded-lg hover:bg-kampmax-error/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Cancel Order
               </button>

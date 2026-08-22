@@ -58,7 +58,7 @@ export function OrderCard({ order, vendorName, className }: OrderCardProps) {
       {/* Items preview */}
       <div className="flex items-center gap-3 mb-3">
         <div className="w-11 h-11 bg-kampmax-muted rounded-lg flex items-center justify-center shrink-0">
-          <Package className="w-5 h-5 text-gray-400" />
+          <Package className="w-5 h-5 text-kampmax-text-secondary/60" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-kampmax-text line-clamp-1">
@@ -76,7 +76,7 @@ export function OrderCard({ order, vendorName, className }: OrderCardProps) {
         {vendorName && (
           <span className="font-medium text-kampmax-text">{vendorName}</span>
         )}
-        <span className="w-1 h-1 bg-gray-300 rounded-full" />
+        <span className="w-1 h-1 bg-kampmax-text-secondary/40 rounded-full" />
         <span className="flex items-center gap-1">
           <DeliveryIcon className="w-3 h-3" />
           {order.deliveryMethod === "campus_pickup"
@@ -90,7 +90,7 @@ export function OrderCard({ order, vendorName, className }: OrderCardProps) {
       {/* Progress bar (active orders only) */}
       {isActive && (
         <div className="mb-3">
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-kampmax-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-kampmax-blue rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}

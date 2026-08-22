@@ -22,7 +22,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             "bg-kampmax-blue text-white hover:bg-kampmax-blue-dark": variant === "secondary",
             "border border-kampmax-border bg-white text-kampmax-text hover:bg-kampmax-muted": variant === "outline",
             "text-kampmax-text hover:bg-kampmax-muted": variant === "ghost",
-            "bg-kampmax-error text-white hover:bg-red-700": variant === "destructive",
+            "bg-kampmax-error text-white hover:bg-kampmax-error/90": variant === "destructive",
           },
           {
             "h-8 px-3 text-xs rounded": size === "sm",

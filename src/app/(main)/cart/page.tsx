@@ -6,6 +6,7 @@ import { ArrowLeft, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useApp } from "@/lib/app-context";
 import { getVendorById } from "@/services/users";
+import { formatNaira } from "@/lib/utils";
 import { PageContainer } from "@/components/layout";
 import { Button } from "@/components/atoms/Button";
 import {
@@ -123,10 +124,7 @@ export default function CartPage() {
               className="w-full bg-kampmax-blue text-white hover:bg-kampmax-blue/90 h-12 text-base font-semibold"
             >
               Proceed to Checkout —{" "}
-              {summary.total.toLocaleString("en-NG", {
-                style: "currency",
-                currency: "NGN",
-              })}
+              {formatNaira(summary.total)}
             </Button>
           )}
 

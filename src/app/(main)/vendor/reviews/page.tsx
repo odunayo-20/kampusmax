@@ -69,9 +69,9 @@ export default function VendorReviewsPage() {
   const totalHelpful = reviews.reduce((sum, r) => sum + r.helpfulCount, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-kampmax-text">Reviews & Ratings</h1>
+        <h1 className="text-xl font-bold text-kampmax-text">Reviews & Ratings</h1>
         <p className="text-sm text-kampmax-text-secondary mt-0.5">
           See what customers are saying about {vendor.storeName}
         </p>
@@ -95,13 +95,13 @@ export default function VendorReviewsPage() {
           icon={TrendingUp}
           label="Recommend Rate"
           value={`${summary.recommendPercentage}%`}
-          color="bg-green-50 text-green-600"
+          color="bg-kampmax-success/10 text-kampmax-success"
         />
         <StatCard
           icon={ThumbsUp}
           label="Helpful Votes"
           value={totalHelpful}
-          color="bg-purple-50 text-purple-600"
+          color="bg-kampmax-info/10 text-kampmax-info"
         />
       </div>
 
@@ -141,41 +141,40 @@ export default function VendorReviewsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-kampmax-text">
-          {filtered.length} Review{filtered.length !== 1 ? "s" : ""}
-          {filterStar !== null && (
-            <span className="text-kampmax-blue ml-1">
-              ({filterStar} star{filterStar !== 1 ? "s" : ""})
-            </span>
-          )}
-        </p>
-
-        <div className="flex items-center gap-2">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-kampmax-text">
+            {filtered.length} Review{filtered.length !== 1 ? "s" : ""}
+            {filterStar !== null && (
+              <span className="text-kampmax-blue ml-1">
+                ({filterStar} star{filterStar !== 1 ? "s" : ""})
+              </span>
+            )}
+          </p>
           {filterStar !== null && (
             <button
               onClick={() => setFilterStar(null)}
-              className="px-2 py-1 rounded-lg bg-kampmax-blue/10 text-kampmax-blue text-xs font-medium"
+              className="px-2 py-1 rounded-lg bg-kampmax-blue/10 text-kampmax-blue text-xs font-medium shrink-0"
             >
               Clear filter
             </button>
           )}
-          <div className="flex gap-1">
-            {sortOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setSort(opt.value)}
-                className={cn(
-                  "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
-                  sort === opt.value
-                    ? "bg-kampmax-navy text-white"
-                    : "bg-kampmax-muted text-kampmax-text-secondary hover:bg-kampmax-muted/80"
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+        </div>
+        <div className="flex gap-1 overflow-x-auto no-scrollbar pb-0.5">
+          {sortOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSort(opt.value)}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap",
+                sort === opt.value
+                  ? "bg-kampmax-navy text-white"
+                  : "bg-kampmax-muted text-kampmax-text-secondary hover:bg-kampmax-muted/80"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -183,7 +182,7 @@ export default function VendorReviewsPage() {
       <div className="bg-white rounded-xl border border-kampmax-border">
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <Star className="h-8 w-8 text-kampmax-muted mx-auto mb-3" />
+            <Star className="h-8 w-8 text-kampmax-text-secondary/30 mx-auto mb-3" />
             <p className="text-sm text-kampmax-text-secondary">
               {filterStar !== null
                 ? `No ${filterStar}-star reviews yet`

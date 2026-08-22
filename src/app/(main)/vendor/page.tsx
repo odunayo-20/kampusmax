@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
   Package, ShoppingCart, DollarSign, Clock, TrendingUp, ArrowUpRight,
-  ArrowDownRight, AlertTriangle, Eye, Star,
+  AlertTriangle,
 } from "lucide-react";
 import { cn, formatNaira } from "@/lib/utils";
 import {
@@ -30,7 +30,7 @@ export default function VendorDashboardPage() {
       label: "Total Revenue",
       value: formatNaira(earnings.totalRevenue),
       icon: DollarSign,
-      color: "text-green-600 bg-green-50",
+      color: "text-kampmax-success bg-kampmax-success/10",
       change: `+${earnings.growth}%`,
       positive: true,
     },
@@ -38,7 +38,7 @@ export default function VendorDashboardPage() {
       label: "Total Orders",
       value: earnings.orderCount,
       icon: ShoppingCart,
-      color: "text-kampmax-blue bg-blue-50",
+      color: "text-kampmax-blue bg-kampmax-blue/10",
       change: `${pendingOrders.length} pending`,
       positive: null,
     },
@@ -54,14 +54,14 @@ export default function VendorDashboardPage() {
       label: "This Month",
       value: formatNaira(earnings.thisMonth),
       icon: TrendingUp,
-      color: "text-kampmax-gold bg-yellow-50",
+      color: "text-kampmax-gold bg-kampmax-gold/10",
       change: `${earnings.growth > 0 ? "+" : ""}${earnings.growth}%`,
       positive: earnings.growth > 0,
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-kampmax-text">Dashboard</h1>
         <p className="text-sm text-kampmax-text-secondary mt-0.5">
@@ -83,7 +83,7 @@ export default function VendorDashboardPage() {
               {stat.change && (
                 <span className={cn(
                   "text-[11px] font-medium",
-                  stat.positive === true && "text-green-600",
+                  stat.positive === true && "text-kampmax-success",
                   stat.positive === false && "text-kampmax-error",
                   stat.positive === null && "text-kampmax-text-secondary"
                 )}>
@@ -122,7 +122,7 @@ export default function VendorDashboardPage() {
       {lowStock.length > 0 && (
         <div className="bg-white rounded-xl border border-kampmax-border p-4">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <AlertTriangle className="h-4 w-4 text-kampmax-warning" />
             <h3 className="text-sm font-semibold text-kampmax-text">Low Stock Alert</h3>
           </div>
           <div className="space-y-2">
@@ -139,7 +139,7 @@ export default function VendorDashboardPage() {
                 </div>
                 <span className={cn(
                   "text-xs font-bold ml-3",
-                  product.stock === 0 ? "text-kampmax-error" : "text-orange-500"
+                  product.stock === 0 ? "text-kampmax-error" : "text-kampmax-warning"
                 )}>
                   {product.stock === 0 ? "Out of stock" : `${product.stock} left`}
                 </span>
@@ -175,7 +175,7 @@ export default function VendorDashboardPage() {
           </div>
           <div>
             <p className="text-[11px] text-kampmax-text-secondary">Net Earnings</p>
-            <p className="text-sm font-bold text-green-600">
+            <p className="text-sm font-bold text-kampmax-success">
               {formatNaira(earnings.totalEarning)}
             </p>
           </div>
@@ -207,13 +207,13 @@ export default function VendorDashboardPage() {
                   </span>
                   <span className={cn(
                     "text-[10px] px-1.5 py-0.5 rounded font-medium",
-                    order.status === "delivered" && "bg-green-50 text-green-700",
-                    order.status === "preparing" && "bg-blue-50 text-blue-700",
+                    order.status === "delivered" && "bg-kampmax-success/10 text-kampmax-success",
+                    order.status === "preparing" && "bg-kampmax-info/10 text-kampmax-info",
                     order.status === "ready" && "bg-kampmax-gold/10 text-kampmax-gold",
-                    order.status === "cancelled" && "bg-red-50 text-red-700",
-                    order.status === "placed" && "bg-gray-50 text-gray-700",
-                    order.status === "confirmed" && "bg-purple-50 text-purple-700",
-                    order.status === "out_for_delivery" && "bg-indigo-50 text-indigo-700",
+                    order.status === "cancelled" && "bg-kampmax-error/10 text-kampmax-error",
+                    order.status === "placed" && "bg-kampmax-muted text-kampmax-text-secondary",
+                    order.status === "confirmed" && "bg-kampmax-info/10 text-kampmax-info",
+                    order.status === "out_for_delivery" && "bg-kampmax-blue/10 text-kampmax-blue",
                   )}>
                     {order.status.replace("_", " ")}
                   </span>

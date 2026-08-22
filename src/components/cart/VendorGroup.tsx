@@ -24,7 +24,7 @@ export function VendorGroup({
 }: VendorGroupProps) {
   return (
     <div className="bg-white rounded-xl border border-kampmax-border overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-kampmax-border">
+      <div className="flex items-center justify-between px-4 py-3 bg-kampmax-muted/50 border-b border-kampmax-border">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-kampmax-navy/10 flex items-center justify-center text-xs font-bold text-kampmax-navy">
             {vendorName.charAt(0).toUpperCase()}
@@ -61,7 +61,7 @@ export function VendorGroup({
         ))}
       </div>
 
-      <div className="px-4 py-2.5 bg-gray-50 border-t border-kampmax-border flex justify-between items-center">
+      <div className="px-4 py-2.5 bg-kampmax-muted/50 border-t border-kampmax-border flex justify-between items-center">
         <span className="text-xs text-kampmax-text-secondary">
           Vendor subtotal
         </span>
