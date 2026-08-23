@@ -1,5 +1,6 @@
 export * from "./campuses";
 export * from "./people";
+export * from "./user-management";
 export * from "./catalog";
 export * from "./commerce";
 export * from "./growth";

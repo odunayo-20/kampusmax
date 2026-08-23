@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
     guard(dashboardService.getLowStock(), setLowStock);
     guard(dashboardService.getRecentOrders(8), setRecentOrders);
     guard(
-      dashboardService.getActivity({ pageSize: 50 }),
+      dashboardService.getActivity({ pageSize: 50 }).then((p) => p.items),
       setActivity
     );
 
@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
             <MiniStat label="Product approvals" value={String(operationsData.pendingProductApproval)} tone="warning" onClick={() => router.push("/admin/products?status=pending_review")} />
             <MiniStat label="Withdrawal requests" value={String(operationsData.pendingWithdrawalRequests)} tone="warning" onClick={() => router.push("/admin/withdrawals?status=pending")} />
             <MiniStat label="Reported products" value={String(operationsData.reportedProducts)} tone="error" onClick={() => router.push("/admin/products?status=flagged")} />
-            <MiniStat label="Reported users" value={String(operationsData.reportedUsers)} tone="error" onClick={() => router.push("/admin/users?status=banned")} />
+            <MiniStat label="Reported users" value={String(operationsData.reportedUsers)} tone="error" onClick={() => router.push("/admin/users?status=suspended")} />
             <MiniStat label="Open disputes" value={String(operationsData.openDisputes)} tone="error" onClick={() => router.push("/admin/disputes?status=open")} />
           </div>
         )}
@@ -552,5 +552,4 @@ function RangeTabs({
 
 // Top-vendors panel reads straight from mock until the analytics API
 // exposes an endpoint; kept out of component state intentionally.
-import { mockTopVendors } from "@/data/admin/system";
 const mockTopVendorsFallback = mockTopVendors;

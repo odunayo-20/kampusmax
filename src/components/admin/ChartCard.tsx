@@ -15,7 +15,8 @@ export type ChartType = "bar" | "line" | "area" | "hbar";
 export interface ChartDatum {
   label: string;
   value: number;
-  secondary?: number;
+  /** Numeric series point, or a display-only annotation (e.g. "12%"). */
+  secondary?: number | string;
 }
 
 interface ChartCardProps {
@@ -184,7 +185,8 @@ export function ChartCard({
                         )}
                       >
                         {formatValue(d.value)}
-                        {d.secondary !== undefined && ` · ${compactNumber(d.secondary)} orders`}
+                        {typeof d.secondary === "number" && ` · ${compactNumber(d.secondary)} orders`}
+                        {typeof d.secondary === "string" && ` · ${d.secondary}`}
                       </div>
                     </div>
                   ))}
@@ -242,7 +244,7 @@ function LineAreaPlot({
   data: ChartDatum[];
   maxVal: number;
   height: number;
-  colors: (typeof ACCENTS)["blue"];
+  colors: { fill: string; soft: string; line: string; secondary: string };
   filled: boolean;
   hoverIdx: number | null;
   setHoverIdx: Dispatch<SetStateAction<number | null>>;
@@ -320,8 +322,9 @@ function LineAreaPlot({
           fontWeight={600}
         >
           {formatValue(data[hoverIdx].value)}
-          {data[hoverIdx].secondary !== undefined &&
+          {typeof data[hoverIdx].secondary === "number" &&
             ` · ${data[hoverIdx].secondary} ${data[hoverIdx].secondary === 1 ? "order" : "orders"}`}
+          {typeof data[hoverIdx].secondary === "string" && ` · ${data[hoverIdx].secondary}`}
         </text>
       )}
     </svg>

@@ -1,4 +1,4 @@
-import { Promotion, PromotionStatus } from "@/types/admin";
+import { Paginated, Promotion, PromotionStatus } from "@/types/admin";
 import { apiDelay, applySearch, paginate } from "@/lib/admin/api";
 
 export interface AdminPromotionService {

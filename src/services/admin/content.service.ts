@@ -26,7 +26,7 @@ export function createMockPostService(seed: CampusPost[]): AdminContentService {
   let rows = seed.map((p) => ({ ...p }));
 
   return {
-    async list(query = {}) {
+    async listPosts(query = {}) {
       await apiDelay();
       const { search, status = "all", page = 1, pageSize = 10 } = query;
       let filtered = rows.filter(

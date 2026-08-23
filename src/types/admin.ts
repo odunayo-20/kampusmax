@@ -94,6 +94,140 @@ export interface PlatformUser {
 }
 
 // ------------------------------------------------------------
+// USER MANAGEMENT (/admin/users console)
+// Full platform directory - customers, vendors and staff accounts -
+// governed from the dedicated users module.
+// ------------------------------------------------------------
+
+export type ManagedUserRole =
+  | "customer"
+  | "vendor"
+  | "campus_admin"
+  | "admin"
+  | "super_admin";
+
+export type ManagedUserStatus =
+  | "active"
+  | "suspended"
+  | "pending_verification"
+  | "deactivated";
+
+/** Store details attached when role === "vendor". */
+export interface ManagedVendorProfile {
+  storeName: string;
+  category: string;
+  status: VendorStatus;
+  rating: number;
+  reviewsCount: number;
+  productsCount: number;
+  totalSales: number;
+  fulfillmentRate: number;
+}
+
+export interface ManagedUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: ManagedUserRole;
+  campusId: string;
+  status: ManagedUserStatus;
+  isVerified: boolean;
+  joinedAt: string;
+  lastActiveAt: string;
+  ordersCount: number;
+  totalSpent: number;
+  walletBalance: number;
+  disputeCount: number;
+  reportsCount: number;
+  vendorProfile: ManagedVendorProfile | null;
+}
+
+export interface ManagedUserUpdateInput {
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: ManagedUserRole;
+  campusId?: string;
+}
+
+export interface UserStatusCounts {
+  all: number;
+  active: number;
+  suspended: number;
+  pending_verification: number;
+  deactivated: number;
+}
+
+export type UserActivityKind =
+  | "order"
+  | "auth"
+  | "wallet"
+  | "listing"
+  | "moderation"
+  | "profile"
+  | "admin";
+
+export interface UserActivityEvent {
+  id: string;
+  kind: UserActivityKind;
+  message: string;
+  meta: string;
+  at: string;
+}
+
+export interface UserOrderSummary {
+  id: string;
+  itemsSummary: string;
+  itemsCount: number;
+  total: number;
+  status: AdminOrderStatus;
+  paymentMethod: AdminOrder["paymentMethod"];
+  paymentStatus: AdminOrder["paymentStatus"];
+  createdAt: string;
+}
+
+export interface UserWalletTxn {
+  id: string;
+  direction: WalletTxnDirection;
+  type: AdminWalletTxn["type"];
+  amount: number;
+  reference: string;
+  status: WalletTxnStatus;
+  createdAt: string;
+}
+
+export interface UserWalletSummary {
+  accountId: string;
+  balance: number;
+  totalCredited: number;
+  totalDebited: number;
+  status: WalletAccountStatus;
+  lastActivityAt: string;
+  recentTransactions: UserWalletTxn[];
+}
+
+export interface UserProfileReport {
+  id: string;
+  reason: ContentReport["reason"];
+  detail: string;
+  reporterName: string;
+  status: ReportStatus;
+  priority: ReportPriority;
+  createdAt: string;
+}
+
+/** Full payload backing the user profile drawer. */
+export interface ManagedUserDetail {
+  user: ManagedUser;
+  campus: Campus | null;
+  wallet: UserWalletSummary;
+  orders: UserOrderSummary[];
+  activity: UserActivityEvent[];
+  reports: UserProfileReport[];
+}
+
+// ------------------------------------------------------------
 // VENDORS
 // ------------------------------------------------------------
 

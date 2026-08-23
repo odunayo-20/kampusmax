@@ -11,6 +11,8 @@ export interface OrderListFilters {
   status?: AdminOrder["status"] | "all";
   paymentStatus?: AdminOrder["paymentStatus"] | "all";
   campusId?: string | "all";
+  from?: string;
+  to?: string;
 }
 
 export interface OrderListQuery extends ListQuery, OrderListFilters {}

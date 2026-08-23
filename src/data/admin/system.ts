@@ -10,7 +10,7 @@ import { mockVendors, mockUsers } from "./people";
 import { mockOrders } from "./commerce";
 import { mockProducts } from "./catalog";
 import { mockReports } from "./content";
-import { getCampusShortName } from "./campuses";
+import { getCampusShortName, mockCampuses } from "./campuses";
 import { formatNaira } from "@/lib/utils";
 import { daysAgoIso, intBetween, pick, seededRandom } from "@/lib/admin/api";
 

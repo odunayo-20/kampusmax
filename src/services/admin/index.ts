@@ -24,11 +24,15 @@ import {
   mockWithdrawals,
 } from "@/data/admin/commerce";
 import { mockPromotions } from "@/data/admin/growth";
-import { mockPosts, mockReports, mockReviews, mockDisputes } from "@/data/admin/content";
-import { mockNotifications, mockSettings } from "@/data/admin/system";
-
+import { mockDisputes, mockPosts, mockReports, mockReviews } from "@/data/admin/content";
 import { DashboardService, createMockDashboardService } from "./dashboard.service";
+
+export type { ChartRange } from "./dashboard.service";
 import { AdminUserService, createMockUserService } from "./users.service";
+import {
+  AdminUserManagementService,
+  createUserManagementService,
+} from "./user-management.service";
 import { AdminCampusService, createMockCampusService } from "./campuses.service";
 import { AdminVendorService, createMockVendorService } from "./vendors.service";
 import {
@@ -87,6 +91,12 @@ export const dashboardService: DashboardService =
   });
 
 export const userService: AdminUserService = createMockUserService(mockUsers);
+
+/** /admin/users console (full directory incl. staff accounts). */
+export const userManagementService: AdminUserManagementService =
+  createUserManagementService();
+
+export type { ManagedUserSortField } from "./user-management.service";
 
 export const campusService: AdminCampusService =
   createMockCampusService(mockCampuses);

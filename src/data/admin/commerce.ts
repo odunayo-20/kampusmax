@@ -1,7 +1,9 @@
 import {
   AdminOrder,
+  AdminVendor,
   AdminWalletTxn,
   PaymentRecord,
+  PlatformUser,
   WalletAccount,
   WithdrawalRequest,
 } from "@/types/admin";
@@ -137,7 +139,10 @@ export function buildMockWalletAccounts(): WalletAccount[] {
     accounts.push({
       id: `wal-${String(i + 1).padStart(3, "0")}`,
       ownerType,
-      ownerName: ownerType === "vendor" ? (owner as (typeof mockVendors)[number]).storeName : owner.name,
+      ownerName:
+        ownerType === "vendor"
+          ? (owner as AdminVendor).storeName
+          : (owner as PlatformUser).name,
       ownerEmail: owner.email,
       campusId: owner.campusId,
       balance,

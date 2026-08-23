@@ -226,3 +226,5 @@ export function buildMockDisputes(count = 11): Dispute[] {
     (a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime()
   );
 }
+
+export const mockDisputes: Dispute[] = buildMockDisputes();
