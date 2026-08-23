@@ -33,6 +33,10 @@ import {
   AdminUserManagementService,
   createUserManagementService,
 } from "./user-management.service";
+import {
+  AdminCampusManagementService,
+  createCampusManagementService,
+} from "./campus-management.service";
 import { AdminCampusService, createMockCampusService } from "./campuses.service";
 import { AdminVendorService, createMockVendorService } from "./vendors.service";
 import {
@@ -97,6 +101,12 @@ export const userManagementService: AdminUserManagementService =
   createUserManagementService();
 
 export type { ManagedUserSortField } from "./user-management.service";
+
+/** /admin/campuses console (campus lifecycle + admin assignments). */
+export const campusManagementService: AdminCampusManagementService =
+  createCampusManagementService();
+
+export type { ManagedCampusSortField } from "./campus-management.service";
 
 export const campusService: AdminCampusService =
   createMockCampusService(mockCampuses);

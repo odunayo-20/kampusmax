@@ -1,4 +1,5 @@
 export * from "./campuses";
+export * from "./campus-management";
 export * from "./people";
 export * from "./user-management";
 export * from "./catalog";

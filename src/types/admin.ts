@@ -228,6 +228,104 @@ export interface ManagedUserDetail {
 }
 
 // ------------------------------------------------------------
+// CAMPUS MANAGEMENT (/admin/campuses console)
+// Campuses supported by Kampmax - governed from the dedicated
+// campuses module. Ids mirror `Campus` so every campus-scoped
+// record in the platform keeps resolving.
+// ------------------------------------------------------------
+
+export type CampusAdminAssignmentStatus = "active" | "invited";
+
+export interface CampusAdminAssignment {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: CampusAdminAssignmentStatus;
+  assignedAt: string;
+}
+
+export interface ManagedCampus {
+  id: string;
+  /** Campus name (e.g. "RUGIPO Main Campus"). */
+  name: string;
+  /** Owning institution (e.g. "Rufus Giwa Polytechnic"). */
+  institution: string;
+  shortName: string;
+  state: string;
+  city: string;
+  address: string;
+  description: string;
+  /** Logo URL or text monogram; null falls back to shortName initials. */
+  logo: string | null;
+  status: CampusStatus;
+  usersCount: number;
+  activeUsersCount: number;
+  vendorsCount: number;
+  productsCount: number;
+  ordersCount: number;
+  revenue: number;
+  admins: CampusAdminAssignment[];
+  createdAt: string;
+}
+
+export type CampusActivityKind =
+  | "order"
+  | "vendor"
+  | "user"
+  | "listing"
+  | "moderation"
+  | "admin";
+
+export interface CampusActivityEvent {
+  id: string;
+  kind: CampusActivityKind;
+  message: string;
+  meta: string;
+  at: string;
+}
+
+export interface CampusOverviewStats {
+  totalStudents: number;
+  totalUsers: number;
+  activeUsers: number;
+  vendors: number;
+  products: number;
+  orders: number;
+  revenue: number;
+  adminsCount: number;
+}
+
+export interface CampusStatusCounts {
+  all: number;
+  active: number;
+  inactive: number;
+}
+
+export interface CampusCreateInput {
+  institution: string;
+  name: string;
+  state: string;
+  city: string;
+  address?: string;
+  description?: string;
+  logo?: string | null;
+  status: CampusStatus;
+}
+
+export interface CampusAdminInput {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+export interface ManagedCampusDetail {
+  campus: ManagedCampus;
+  stats: CampusOverviewStats;
+  activity: CampusActivityEvent[];
+}
+
+// ------------------------------------------------------------
 // VENDORS
 // ------------------------------------------------------------
 
