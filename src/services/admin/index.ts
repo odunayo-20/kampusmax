@@ -44,6 +44,10 @@ import {
   createVendorManagementService,
 } from "./vendor-management.service";
 import {
+  AdminProductManagementService,
+  createProductManagementService,
+} from "./product-management.service";
+import {
   AdminCategoryService,
   AdminProductService,
   createMockCategoryService,
@@ -123,6 +127,15 @@ export const vendorManagementService: AdminVendorManagementService =
   createVendorManagementService();
 
 export type { ManagedVendorSortField } from "./vendor-management.service";
+
+/** /admin/products console (moderation + listing lifecycle). */
+export const productManagementService: AdminProductManagementService =
+  createProductManagementService();
+
+export type {
+  ManagedProductSortField,
+  ProductStockFilter,
+} from "./product-management.service";
 
 export const productService: AdminProductService =
   createMockProductService(mockProducts);

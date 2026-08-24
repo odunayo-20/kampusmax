@@ -576,6 +576,122 @@ export interface AdminProduct {
 }
 
 // ------------------------------------------------------------
+// PRODUCT MANAGEMENT (/admin/products moderation console)
+// Lifecycle: pending_approval -> active -> suspended/archived,
+// with out_of_stock as a trading state and rejected for listings
+// that never passed review.
+// ------------------------------------------------------------
+
+export type ManagedProductStatus =
+  | "active"
+  | "pending_approval"
+  | "rejected"
+  | "out_of_stock"
+  | "suspended"
+  | "archived";
+
+export interface ProductSpecification {
+  label: string;
+  value: string;
+}
+
+export interface ProductModerationRecord {
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  rejectionReason: string | null;
+  suspensionReason: string | null;
+}
+
+export interface ManagedProduct {
+  id: string;
+  title: string;
+  /** Remote showcase images (first entry = primary thumbnail). */
+  images: string[];
+  slug: string;
+  description: string;
+  specifications: ProductSpecification[];
+  vendorId: string;
+  vendorName: string;
+  categoryId: string;
+  categoryName: string;
+  campusId: string;
+  price: number;
+  originalPrice: number | null;
+  condition: AdminProduct["condition"];
+  status: ManagedProductStatus;
+  moderation: ProductModerationRecord;
+  stock: number;
+  views: number;
+  saves: number;
+  /** Units sold lifetime. */
+  salesCount: number;
+  /** Lifetime gross revenue through this listing. */
+  revenue: number;
+  rating: number;
+  reviewsCount: number;
+  reportsCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProductActivityKind =
+  | "listing"
+  | "order"
+  | "moderation"
+  | "admin"
+  | "pricing";
+
+export interface ProductActivityEvent {
+  id: string;
+  kind: ProductActivityKind;
+  message: string;
+  meta: string;
+  at: string;
+}
+
+export interface ProductReviewRow {
+  id: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  status: AdminReviewStatus;
+  helpfulCount: number;
+  createdAt: string;
+}
+
+export interface ProductFacets {
+  categories: { id: string; name: string }[];
+  campuses: { id: string; name: string }[];
+  vendors: { id: string; name: string }[];
+}
+
+export interface ProductStatusCounts {
+  all: number;
+  active: number;
+  pending_approval: number;
+  rejected: number;
+  out_of_stock: number;
+  suspended: number;
+  archived: number;
+}
+
+export interface ManagedProductDetail {
+  product: ManagedProduct;
+  vendor: {
+    id: string;
+    storeName: string;
+    campusId: string;
+    rating: number;
+    productsCount: number;
+  };
+  campus: Campus | null;
+  reviews: ProductReviewRow[];
+  reports: ContentReport[];
+  activity: ProductActivityEvent[];
+}
+
+// ------------------------------------------------------------
 // ORDERS
 // ------------------------------------------------------------
 

@@ -1,6 +1,7 @@
 export * from "./campuses";
 export * from "./campus-management";
 export * from "./vendor-management";
+export * from "./product-management";
 export * from "./people";
 export * from "./user-management";
 export * from "./catalog";
