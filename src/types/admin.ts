@@ -1600,3 +1600,183 @@ export interface PromotionTargetingOptions {
   products: { id: string; name: string }[];
   categories: { id: string; name: string }[];
 }
+
+// ------------------------------------------------------------
+// COMMUNITY MANAGEMENT (/admin/campus)
+// ------------------------------------------------------------
+
+export type CommunityPostStatus =
+  | "published"
+  | "hidden"
+  | "reported"
+  | "removed"
+  | "under_review";
+
+export interface CommunityAuthor {
+  /** PlatformUser id (usr-###) so the author profile deep-links. */
+  id: string;
+  name: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  author: CommunityAuthor;
+  campusId: string;
+  type: CampusPostType;
+  content: string;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  reportsCount: number;
+  status: CommunityPostStatus;
+  createdAt: string;
+}
+
+export type CommunityCommentStatus = "published" | "hidden" | "removed";
+
+export interface CommunityComment {
+  id: string;
+  postId: string;
+  postExcerpt: string;
+  author: CommunityAuthor;
+  content: string;
+  campusId: string;
+  likeCount: number;
+  status: CommunityCommentStatus;
+  createdAt: string;
+}
+
+export type CommunityEventStatus =
+  | "draft"
+  | "upcoming"
+  | "live"
+  | "completed"
+  | "cancelled";
+
+export interface CommunityEvent {
+  id: string;
+  title: string;
+  organizer: CommunityAuthor;
+  campusId: string;
+  venue: string;
+  startsAt: string;
+  endsAt: string;
+  attendeeCount: number;
+  capacity: number;
+  status: CommunityEventStatus;
+  createdAt: string;
+}
+
+export type AnnouncementStatus = "draft" | "scheduled" | "published" | "archived";
+export type AnnouncementPlacement = "feed_top" | "feed_banner" | "push" | "email";
+
+export interface ManagedAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  placement: AnnouncementPlacement;
+  /** Empty array = all campuses. */
+  campusIds: string[];
+  publishAt: string | null;
+  createdBy: string;
+  status: AnnouncementStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnnouncementInput {
+  title: string;
+  body: string;
+  placement: AnnouncementPlacement;
+  campusIds: string[];
+  /** Required when scheduling. */
+  publishAt?: string | null;
+}
+
+export type CommunityReportTargetType = "post" | "comment" | "event" | "poll";
+export type CommunityReportReason =
+  | "spam"
+  | "harassment"
+  | "misinformation"
+  | "scam"
+  | "inappropriate"
+  | "other";
+export type CommunityReportStatus = "open" | "reviewing" | "actioned" | "dismissed";
+
+export interface CommunityReport {
+  id: string;
+  targetType: CommunityReportTargetType;
+  targetId: string;
+  targetPreview: string;
+  reason: CommunityReportReason;
+  detail: string;
+  reporterName: string;
+  priority: "low" | "medium" | "high";
+  status: CommunityReportStatus;
+  createdAt: string;
+}
+
+export interface ManagedPollOption {
+  label: string;
+  votes: number;
+}
+
+export type ManagedPollStatus = "active" | "closed";
+
+export interface ManagedPoll {
+  id: string;
+  question: string;
+  options: ManagedPollOption[];
+  campusId: string;
+  totalVotes: number;
+  endsAt: string;
+  status: ManagedPollStatus;
+  createdAt: string;
+}
+
+export interface CommunityPostDetail {
+  post: CommunityPost;
+  comments: CommunityComment[];
+  reports: CommunityReport[];
+}
+
+export interface PostListQuery extends ListQuery {
+  search?: string;
+  status?: CommunityPostStatus | "all";
+  type?: CampusPostType | "all";
+  campusId?: string | "all";
+}
+
+export interface CommentListQuery extends ListQuery {
+  search?: string;
+  status?: CommunityCommentStatus | "all";
+  campusId?: string | "all";
+}
+
+export interface EventListQuery extends ListQuery {
+  search?: string;
+  status?: CommunityEventStatus | "all";
+  campusId?: string | "all";
+}
+
+export interface AnnouncementListQuery extends ListQuery {
+  search?: string;
+  status?: AnnouncementStatus | "all";
+}
+
+export interface ReportListQuery extends ListQuery {
+  status?: CommunityReportStatus | "all";
+  targetType?: CommunityReportTargetType | "all";
+}
+
+export interface PollListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedPollStatus | "all";
+  campusId?: string | "all";
+}
+
+/** `{ all, byStatus }` shape shared by every community section. */
+export interface CommunitySectionCounts<S extends string> {
+  all: number;
+  byStatus: Record<S, number>;
+}
