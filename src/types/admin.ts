@@ -1977,3 +1977,132 @@ export interface DisputeRequestInfoInput {
 export interface DisputeResolutionInput {
   note: string;
 }
+
+// ------------------------------------------------------------
+// REPORTS & ANALYTICS (/admin/reports)
+// ------------------------------------------------------------
+
+export type AnalyticsRange = "7d" | "30d" | "90d" | "12m";
+
+export interface AnalyticsQuery {
+  range?: AnalyticsRange;
+  campusId?: string | "all";
+  vendorId?: string | "all";
+  categoryId?: string | "all";
+}
+
+export interface AnalyticsSeriesPoint {
+  label: string;
+  /** Primary metric (revenue, registrations, orders…). */
+  value: number;
+  /** Optional companion metric rendered in tooltips. */
+  secondary?: number;
+}
+
+export interface AnalyticsCampusRow {
+  campusId: string;
+  shortName: string;
+  name: string;
+  usersCount: number;
+  activeUsers: number;
+  newUsers: number;
+  orders: number;
+  revenue: number;
+  vendorsCount: number;
+  newVendors: number;
+  aov: number;
+}
+
+export interface AnalyticsVendorRow {
+  vendorId: string;
+  storeName: string;
+  campusShortName: string;
+  category: string;
+  orders: number;
+  revenue: number;
+  aov: number;
+  rating: number;
+  fulfillmentRate: number;
+  disputeRate: number;
+  isNew: boolean;
+  joinedAt: string;
+}
+
+export interface AnalyticsProductRow {
+  productId: string;
+  title: string;
+  vendorName: string;
+  campusShortName: string;
+  category: string;
+  unitsSold: number;
+  revenue: number;
+}
+
+export interface AnalyticsCategoryRow {
+  categoryId: string;
+  name: string;
+  orders: number;
+  revenue: number;
+  sharePct: number;
+}
+
+export interface AnalyticsFinancials {
+  grossSales: number;
+  platformFees: number;
+  vendorEarnings: number;
+  refunds: number;
+  refundRate: number;
+  withdrawalsPaid: number;
+  withdrawalsPending: number;
+  withdrawalsPendingAmount: number;
+  commissionRate: number;
+}
+
+export interface AnalyticsRetention {
+  day1: number;
+  day7: number;
+  day30: number;
+  returningUsers: number;
+  churnedUsers: number;
+}
+
+export interface AnalyticsReport {
+  range: AnalyticsRange;
+  previousRangeLabel: string;
+  // Summary cards
+  kpis: {
+    grossSales: number;
+    grossSalesDelta: number;
+    orders: number;
+    ordersDelta: number;
+    aov: number;
+    aovDelta: number;
+    activeUsers: number;
+    activeUsersDelta: number;
+    newUsers: number;
+    newUsersDelta: number;
+    activeVendors: number;
+    activeVendorsDelta: number;
+    platformFees: number;
+    refunds: number;
+  };
+  // Time series
+  revenueSeries: AnalyticsSeriesPoint[];
+  registrationsSeries: AnalyticsSeriesPoint[];
+  activeUsersSeries: AnalyticsSeriesPoint[];
+  newVendorsSeries: AnalyticsSeriesPoint[];
+  aovSeries: AnalyticsSeriesPoint[];
+  // Tables / ranked lists
+  campuses: AnalyticsCampusRow[];
+  vendors: AnalyticsVendorRow[];
+  topProducts: AnalyticsProductRow[];
+  categories: AnalyticsCategoryRow[];
+  retention: AnalyticsRetention;
+  financials: AnalyticsFinancials;
+}
+
+export interface AnalyticsFilterOptions {
+  campuses: { id: string; name: string }[];
+  vendors: { id: string; name: string }[];
+  categories: { id: string; name: string }[];
+}

@@ -1,9 +1,9 @@
 import { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   Bell,
   Building2,
   CreditCard,
-  Flag,
   GraduationCap,
   LayoutDashboard,
   Megaphone,
@@ -40,6 +40,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Overview",
     items: [
       { key: "dashboard", href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { key: "reports", href: "/admin/reports", label: "Analytics", icon: BarChart3 },
     ],
   },
   {
@@ -81,7 +82,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Moderation",
     items: [
       { key: "campusFeed", href: "/admin/campus", label: "Campus Feed", icon: GraduationCap },
-      { key: "reports", href: "/admin/reports", label: "Reports", icon: Flag },
       { key: "reviews", href: "/admin/reviews", label: "Reviews", icon: Star },
       { key: "disputes", href: "/admin/disputes", label: "Disputes", icon: Scale },
     ],

@@ -239,6 +239,15 @@ import {
 export const disputeManagementService: AdminDisputeManagementService =
   createMockDisputeManagementService();
 
+import {
+  AdminAnalyticsService,
+  createMockAnalyticsService,
+} from "./analytics.service";
+
+/** /admin/reports console (platform analytics). */
+export const analyticsService: AdminAnalyticsService =
+  createMockAnalyticsService();
+
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);
 
