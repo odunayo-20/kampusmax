@@ -1188,3 +1188,199 @@ export interface CategoryInput {
   icon: string;
   parentId: string | null;
 }
+
+// ------------------------------------------------------------
+// ORDER MANAGEMENT (/admin/orders)
+// ------------------------------------------------------------
+
+export type ManagedOrderStatus =
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "ready_for_pickup"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled"
+  | "disputed";
+
+export type ManagedOrderPaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "partially_refunded";
+
+export interface ManagedOrderItem {
+  id: string;
+  productId: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+  thumbnail?: string | null;
+  variant?: string | null;
+}
+
+export interface ManagedOrderPayment {
+  method: AdminOrder["paymentMethod"];
+  status: ManagedOrderPaymentStatus;
+  transactionId: string; // links to /admin/payments ledger
+  paidAt: string | null;
+  refundedAmount: number;
+}
+
+export interface ManagedOrderDeliveryInfo {
+  method: AdminOrder["deliveryMethod"];
+  address?: string | null;
+  meetupSpot?: string | null;
+  pickupPoint?: string | null;
+  riderName?: string | null;
+  riderPhone?: string | null;
+}
+
+export interface ManagedOrderTimelineEvent {
+  id: string;
+  kind:
+    | "placed"
+    | "payment"
+    | "confirmation"
+    | "preparation"
+    | "ready"
+    | "dispatch"
+    | "delivery"
+    | "cancellation"
+    | "dispute";
+  label: string;
+  detail?: string | null;
+  at: string;
+}
+
+export interface ManagedOrderNote {
+  id: string;
+  authorRole: "customer" | "vendor" | "admin";
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface ManagedOrder extends Omit<AdminOrder, "status" | "paymentStatus"> {
+  status: ManagedOrderStatus;
+  paymentStatus: ManagedOrderPaymentStatus;
+}
+
+export interface ManagedOrderDetail {
+  order: ManagedOrder;
+  items: ManagedOrderItem[];
+  payment: ManagedOrderPayment;
+  delivery: ManagedOrderDeliveryInfo;
+  timeline: ManagedOrderTimelineEvent[];
+  notes: ManagedOrderNote[];
+}
+
+export type OrderSortField = "orderNumber" | "createdAt" | "total";
+
+export interface OrderListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedOrderStatus | "all";
+  paymentStatus?: ManagedOrderPaymentStatus | "all";
+  fulfillment?: AdminOrder["deliveryMethod"] | "all";
+  campusId?: string;
+  vendorId?: string;
+  sortBy?: OrderSortField;
+  sortDir?: SortDir;
+}
+
+export interface OrderFacets {
+  campuses: { id: string; name: string }[];
+  vendors: { id: string; name: string }[];
+}
+
+export interface OrderStatusCounts {
+  all: number;
+  byStatus: Record<ManagedOrderStatus, number>;
+  paymentIssues: number; // pending + failed payments awaiting action
+}
+
+// ------------------------------------------------------------
+// PAYMENT MANAGEMENT (/admin/payments)
+// ------------------------------------------------------------
+
+export type ManagedPaymentStatus =
+  | "pending"
+  | "successful"
+  | "failed"
+  | "reversed"
+  | "refunded"
+  | "partially_refunded";
+
+/** Grouped for the admin console; raw rails stay visible on records. */
+export type ManagedPaymentMethod = "wallet" | "paystack" | "other";
+
+export interface ManagedPayment {
+  id: string;
+  type: PaymentType;
+  orderId: string | null; // set for order-linked flows
+  customerId: string;
+  customerName: string;
+  vendorId: string | null;
+  vendorName: string | null;
+  campusId: string;
+  amount: number;
+  platformFee: number;
+  vendorAmount: number; // what lands on the vendor's ledger
+  method: ManagedPaymentMethod;
+  status: ManagedPaymentStatus;
+  reference: string; // internal reference
+  gatewayRef: string; // provider-side reference (mock)
+  refundedAmount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedPaymentTimelineEvent {
+  id: string;
+  kind:
+    | "initiated"
+    | "processing"
+    | "settled"
+    | "failure"
+    | "refund"
+    | "partial_refund"
+    | "reversal";
+  label: string;
+  detail?: string | null;
+  at: string;
+}
+
+export interface ManagedPaymentDetail {
+  payment: ManagedPayment;
+  order: Pick<
+    ManagedOrder,
+    "id" | "customerName" | "vendorName" | "total" | "status" | "createdAt"
+  > | null;
+  timeline: ManagedPaymentTimelineEvent[];
+}
+
+export type PaymentSortField = "createdAt" | "amount";
+
+export interface PaymentListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedPaymentStatus | "all";
+  method?: ManagedPaymentMethod | "all";
+  campusId?: string;
+  vendorId?: string;
+  sortBy?: PaymentSortField;
+  sortDir?: SortDir;
+}
+
+export interface PaymentFacets {
+  campuses: { id: string; name: string }[];
+  vendors: { id: string; name: string }[];
+}
+
+export interface PaymentStatusCounts {
+  all: number;
+  byStatus: Record<ManagedPaymentStatus, number>;
+  totalVolume: number;
+  settlementPending: number; // naira awaiting clearance
+}

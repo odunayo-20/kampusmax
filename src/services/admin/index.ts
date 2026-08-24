@@ -146,6 +146,24 @@ import {
 export const categoryManagementService: AdminCategoryManagementService =
   createCategoryManagementService();
 
+import {
+  AdminOrderManagementService,
+  createOrderManagementService,
+} from "./order-management.service";
+
+/** /admin/orders console (lifecycle inspection). */
+export const orderManagementService: AdminOrderManagementService =
+  createOrderManagementService();
+
+import {
+  AdminPaymentManagementService,
+  createPaymentManagementService,
+} from "./payment-management.service";
+
+/** /admin/payments console (ledger + settlement inspection). */
+export const paymentManagementService: AdminPaymentManagementService =
+  createPaymentManagementService();
+
 export const productService: AdminProductService =
   createMockProductService(mockProducts);
 
