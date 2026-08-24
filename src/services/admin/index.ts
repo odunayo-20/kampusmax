@@ -173,6 +173,15 @@ import {
 export const financeManagementService: AdminFinanceManagementService =
   createFinanceManagementService();
 
+import {
+  AdminPromotionManagementService,
+  createPromotionManagementService,
+} from "./promotion-management.service";
+
+/** /admin/promotions console (campaigns, codes, featured placements). */
+export const promotionManagementService: AdminPromotionManagementService =
+  createPromotionManagementService();
+
 export const productService: AdminProductService =
   createMockProductService(mockProducts);
 

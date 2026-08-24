@@ -1500,3 +1500,103 @@ export interface WithdrawalStatusCounts {
   pendingAmount: number;
   completedAmount: number;
 }
+
+// ------------------------------------------------------------
+// PROMOTION MANAGEMENT (/admin/promotions)
+// Discounts, deals, promo codes, featured placements and
+// campus campaigns. Mock only - no order-level discount
+// calculation is wired to the checkout yet.
+// ------------------------------------------------------------
+
+export type ManagedPromotionType =
+  | "percentage_discount"
+  | "fixed_discount"
+  | "promo_code"
+  | "featured_product"
+  | "featured_vendor"
+  | "campus_promotion";
+
+export type ManagedPromotionStatus =
+  | "draft"
+  | "scheduled"
+  | "active"
+  | "paused"
+  | "ended";
+
+/** Where Kampmax surfaces the promotion in the storefront. */
+export type PromotionPlacement =
+  | "homepage_banner"
+  | "deals_page"
+  | "category_strip"
+  | "search_boost"
+  | "none";
+
+/**
+ * Audience + catalogue scoping. An empty array means "no restriction"
+ * (e.g. all campuses) except where a type requires an explicit target.
+ */
+export interface PromotionTargeting {
+  campusIds: string[];
+  vendorIds: string[];
+  productIds: string[];
+  categoryIds: string[];
+}
+
+export interface ManagedPromotion {
+  id: string; // prm-###
+  name: string;
+  description: string;
+  type: ManagedPromotionType;
+  status: ManagedPromotionStatus;
+  /** Redeemable code - promo_code type only. */
+  code: string | null;
+  /** Percent (percentage_discount) or naira (fixed_discount / promo_code). */
+  discountValue: number | null;
+  minSpend: number | null;
+  placement: PromotionPlacement;
+  targeting: PromotionTargeting;
+  usageCount: number;
+  usageLimit: number | null;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Editable payload for create/update. */
+export interface PromotionInput {
+  name: string;
+  description: string;
+  type: ManagedPromotionType;
+  code: string | null;
+  discountValue: number | null;
+  minSpend: number | null;
+  placement: PromotionPlacement;
+  targeting: PromotionTargeting;
+  usageLimit: number | null;
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface PromotionListQuery extends ListQuery {
+  search?: string;
+  type?: ManagedPromotionType | "all";
+  status?: ManagedPromotionStatus | "all";
+  campusId?: string | "all";
+  sortBy?: "name" | "startsAt" | "endsAt" | "usageCount";
+  sortDir?: SortDir;
+}
+
+export interface PromotionStatusCounts {
+  all: number;
+  byStatus: Record<ManagedPromotionStatus, number>;
+  /** Active right now by calendar window. */
+  liveNow: number;
+}
+
+export interface PromotionTargetingOptions {
+  campuses: { id: string; name: string }[];
+  vendors: { id: string; name: string }[];
+  products: { id: string; name: string }[];
+  categories: { id: string; name: string }[];
+}

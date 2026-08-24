@@ -124,7 +124,7 @@ export function breadcrumbLabel(segment: string, index: number): string {
 }
 
 export function isDetailSegment(segment: string): boolean {
-  return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-)/i.test(segment);
+    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-)/i.test(segment);
 }
 
 function titleCase(value: string): string {
