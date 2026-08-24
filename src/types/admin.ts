@@ -1852,3 +1852,128 @@ export interface ReviewListQuery extends ListQuery {
   /** Only rows with at least one report, regardless of status. */
   reportedOnly?: boolean;
 }
+
+// ------------------------------------------------------------
+// DISPUTE MANAGEMENT (/admin/disputes)
+// ------------------------------------------------------------
+
+export type ManagedDisputeStatus =
+  | "open"
+  | "under_review"
+  | "awaiting_customer"
+  | "awaiting_vendor"
+  | "resolved"
+  | "rejected"
+  | "escalated";
+
+export type ManagedDisputeReason =
+  | "payment_issue"
+  | "missing_order"
+  | "wrong_product"
+  | "damaged_product"
+  | "delivery_issue"
+  | "refund_request"
+  | "unauthorized_transaction";
+
+/** Who is on each side of the dispute. */
+export type DisputeParty = "customer_vs_vendor" | "customer_vs_platform";
+
+export interface ManagedDispute {
+  id: string;
+  orderId: string;
+  customerId: string;
+  customerName: string;
+  vendorId: string;
+  vendorName: string;
+  campusId: string;
+  parties: DisputeParty;
+  reason: ManagedDisputeReason;
+  subject: string;
+  amount: number;
+  priority: "low" | "medium" | "high";
+  status: ManagedDisputeStatus;
+  messagesCount: number;
+  evidenceCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DisputeMessage {
+  id: string;
+  authorRole: "customer" | "vendor" | "support";
+  authorName: string;
+  body: string;
+  at: string;
+}
+
+export interface DisputeEvidenceItem {
+  id: string;
+  kind: "photo" | "document" | "chat_log";
+  name: string;
+  note: string;
+  uploadedBy: "customer" | "vendor";
+  at: string;
+}
+
+export interface DisputePaymentSummary {
+  method: string;
+  reference: string;
+  paidAt: string | null;
+  amount: number;
+  status: "paid" | "pending" | "failed" | "refunded";
+}
+
+export interface DisputeTimelineEvent {
+  id: string;
+  label: string;
+  detail?: string;
+  actor: "customer" | "vendor" | "support" | "system";
+  at: string;
+}
+
+export interface DisputeResolution {
+  outcome: Extract<ManagedDisputeStatus, "resolved" | "rejected">;
+  note: string;
+  decidedBy: string;
+  decidedAt: string;
+  /**
+   * PLACEHOLDER ONLY - records that a refund was agreed for this
+   * dispute. No money movement happens in the prototype; the real
+   * refund will be executed by the payments service.
+   */
+  refundPlaceholder?: { amount: number; method: string; recordedBy: string };
+}
+
+export interface ManagedDisputeDetail {
+  dispute: ManagedDispute;
+  order: {
+    id: string;
+    itemsSummary: string;
+    itemsCount: number;
+    total: number;
+    placedAt: string;
+    deliveryMethod: string;
+    orderStatus: string;
+  } | null;
+  payment: DisputePaymentSummary;
+  messages: DisputeMessage[];
+  evidence: DisputeEvidenceItem[];
+  timeline: DisputeTimelineEvent[];
+  resolution: DisputeResolution | null;
+}
+
+export interface DisputeListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedDisputeStatus | "all";
+  campusId?: string | "all";
+  reason?: ManagedDisputeReason | "all";
+}
+
+export interface DisputeRequestInfoInput {
+  party: "customer" | "vendor";
+  note: string;
+}
+
+export interface DisputeResolutionInput {
+  note: string;
+}

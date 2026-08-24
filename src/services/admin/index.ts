@@ -230,6 +230,15 @@ import {
 export const reviewManagementService: AdminReviewManagementService =
   createReviewManagementService();
 
+import {
+  AdminDisputeManagementService,
+  createMockDisputeManagementService,
+} from "./dispute-management.service";
+
+/** /admin/disputes console (case resolution + refund placeholders). */
+export const disputeManagementService: AdminDisputeManagementService =
+  createMockDisputeManagementService();
+
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);
 
