@@ -1134,3 +1134,57 @@ export interface ActivityFeedItem {
   meta: string;
   at: string;
 }
+
+// ------------------------------------------------------------
+// CATEGORY MANAGEMENT (/admin/categories)
+// ------------------------------------------------------------
+
+export type ManagedCategoryStatus = "active" | "inactive";
+
+export interface ManagedCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string; // lucide icon name key resolved in UI layer
+  parentId: string | null;
+  parentName: string | null;
+  productCount: number; // products directly assigned to this category
+  activeListings: number;
+  subcategoryCount: number;
+  totalProductCount: number; // includes descendants
+  sortOrder: number; // position among siblings, 1-based
+  status: ManagedCategoryStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CategorySortField = "sortOrder" | "name" | "productCount";
+
+export type CategoryReorderDirection = "up" | "down";
+
+export interface CategoryListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedCategoryStatus | "all";
+  sortBy?: CategorySortField;
+  sortDir?: SortDir;
+}
+
+export interface CategoryStatusCounts {
+  total: number;
+  active: number;
+  inactive: number;
+  productsCovered: number;
+}
+
+export interface CategoryParentOption {
+  id: string;
+  name: string;
+}
+
+export interface CategoryInput {
+  name: string;
+  description: string;
+  icon: string;
+  parentId: string | null;
+}

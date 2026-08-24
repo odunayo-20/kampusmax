@@ -137,6 +137,15 @@ export type {
   ProductStockFilter,
 } from "./product-management.service";
 
+import {
+  AdminCategoryManagementService,
+  createCategoryManagementService,
+} from "./category-management.service";
+
+/** /admin/categories console (taxonomy + display order). */
+export const categoryManagementService: AdminCategoryManagementService =
+  createCategoryManagementService();
+
 export const productService: AdminProductService =
   createMockProductService(mockProducts);
 
