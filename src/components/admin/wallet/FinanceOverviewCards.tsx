@@ -140,8 +140,8 @@ export function FinanceOverviewCards({ overview }: { overview: FinanceOverview }
           hint="Returned to customer wallets"
         />
         <StatCard
-          label="Withdrawals paid"
-          value={formatNaira(withdrawals.paidAmount)}
+          label="Withdrawals completed"
+          value={formatNaira(withdrawals.completedAmount)}
           icon={ArrowDownToLine}
           tone="gold"
           hint={`${withdrawals.pendingCount} pending · ${formatNairaCompact(withdrawals.pendingAmount)} queued`}

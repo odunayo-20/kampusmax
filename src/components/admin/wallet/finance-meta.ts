@@ -66,9 +66,10 @@ export function withdrawalStatusVariant(status: WithdrawalStatus): BadgeVariant 
       return "info";
     case "approved":
       return "blue";
-    case "paid":
+    case "completed":
       return "success";
     case "rejected":
+    case "failed":
       return "error";
   }
 }
@@ -77,6 +78,7 @@ export const WITHDRAWAL_STATUS_LABELS: Record<WithdrawalStatus, string> = {
   pending: "Pending",
   processing: "Processing",
   approved: "Approved",
-  paid: "Paid",
+  completed: "Completed",
   rejected: "Rejected",
+  failed: "Failed",
 };

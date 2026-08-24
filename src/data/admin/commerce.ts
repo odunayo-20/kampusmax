@@ -6,8 +6,11 @@ import {
   PlatformUser,
   WalletAccount,
   WithdrawalRequest,
+  WithdrawalStatus,
 } from "@/types/admin";
 import { mockUsers, mockVendors } from "./people";
+
+export { mockVendors };
 import { daysAgoIso, intBetween, pick, seededRandom } from "@/lib/admin/api";
 
 // ------------------------------------------------------------
@@ -131,7 +134,7 @@ export const mockPayments: PaymentRecord[] = buildMockPayments();
 export function buildMockWalletAccounts(): WalletAccount[] {
   const rand = seededRandom(31);
   const accounts: WalletAccount[] = [];
-  const pool = [...mockVendors.slice(0, 12), ...mockUsers.slice(0, 14)];
+  const pool = [...mockVendors, ...mockUsers.slice(0, 14)];
 
   pool.forEach((owner, i) => {
     const ownerType = "storeName" in owner ? "vendor" : "user";
@@ -198,6 +201,26 @@ export const mockWalletTxns: AdminWalletTxn[] = buildMockWalletTxns();
 
 const BANKS = ["GTBank", "Access Bank", "Zenith Bank", "Kuda MFB", "Moniepoint MFB", "Opay", "UBA"] as const;
 
+/** Index-bucketed so every status always appears in a 16-row dataset. */
+const WITHDRAWAL_PATTERN: WithdrawalStatus[] = [
+  "pending",
+  "processing",
+  "approved",
+  "completed",
+  "rejected",
+  "failed",
+  "pending",
+  "completed",
+  "processing",
+  "approved",
+  "completed",
+  "pending",
+  "failed",
+  "completed",
+  "approved",
+  "processing",
+];
+
 export function buildMockWithdrawals(count = 16): WithdrawalRequest[] {
   const rand = seededRandom(77);
   const withdrawals: WithdrawalRequest[] = [];
@@ -205,9 +228,9 @@ export function buildMockWithdrawals(count = 16): WithdrawalRequest[] {
 
   for (let i = 0; i < count; i++) {
     const vendor = approvedVendors[intBetween(rand, 0, approvedVendors.length - 1)];
-    const statusRoll = rand();
-    const status =
-      statusRoll > 0.75 ? "pending" : statusRoll > 0.55 ? "processing" : statusRoll > 0.35 ? "approved" : statusRoll > 0.12 ? "paid" : "rejected";
+    const status = WITHDRAWAL_PATTERN[i % WITHDRAWAL_PATTERN.length];
+
+    const terminal = ["approved", "completed", "rejected", "failed"].includes(status);
 
     withdrawals.push({
       id: `wdr-${String(i + 1).padStart(3, "0")}`,
@@ -220,13 +243,15 @@ export function buildMockWithdrawals(count = 16): WithdrawalRequest[] {
       fee: 100,
       status,
       requestedAt: daysAgoIso(rand, intBetween(rand, 0, 18)),
-      processedAt: ["approved", "paid", "rejected"].includes(status)
+      processedAt: terminal
         ? daysAgoIso(rand, intBetween(rand, 0, 10))
         : null,
       note:
         status === "rejected"
           ? "Account name mismatch with BVN records"
-          : null,
+          : status === "failed"
+            ? "Bank transfer returned - account unavailable"
+            : null,
     });
   }
   return withdrawals.sort(

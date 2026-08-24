@@ -2,6 +2,7 @@ import { apiDelay, applySearch, applySort, paginate } from "@/lib/admin/api";
 import {
   buildFinanceOverview,
   buildFinanceTransactions,
+  buildWithdrawalDetail,
 } from "@/data/admin/finance";
 import { mockWithdrawals } from "@/data/admin/commerce";
 import { createMockWithdrawalService } from "./withdrawals.service";
@@ -9,10 +10,11 @@ import type {
   FinanceOverview,
   FinanceTxnQuery,
   ManagedFinanceTxn,
+  ManagedWithdrawalDetail,
   Paginated,
   WithdrawalRequest,
-  WithdrawalStatusCounts,
   WithdrawalStatus,
+  WithdrawalStatusCounts,
 } from "@/types/admin";
 
 export interface FinanceWithdrawalQuery {
@@ -24,13 +26,19 @@ export interface FinanceWithdrawalQuery {
   pageSize?: number;
 }
 
-type WithdrawalLifecycleAction = "approve" | "mark_paid" | "reject" | "start_processing";
+type WithdrawalLifecycleAction =
+  | "approve"
+  | "mark_completed"
+  | "mark_failed"
+  | "reject"
+  | "start_processing";
 
 export interface AdminFinanceManagementService {
   /** Headline figures for the /admin/wallet dashboard. */
   getOverview(): Promise<FinanceOverview>;
   listTransactions(query?: FinanceTxnQuery): Promise<Paginated<ManagedFinanceTxn>>;
   listWithdrawals(query?: FinanceWithdrawalQuery): Promise<Paginated<WithdrawalRequest>>;
+  getWithdrawalDetail(id: string): Promise<ManagedWithdrawalDetail | null>;
   getWithdrawalCounts(): Promise<WithdrawalStatusCounts>;
   actOnWithdrawal(
     id: string,
@@ -47,9 +55,12 @@ const ALL_WITHDRAWAL_STATUSES: WithdrawalStatus[] = [
   "pending",
   "processing",
   "approved",
-  "paid",
+  "completed",
   "rejected",
+  "failed",
 ];
+
+const PENDING_SETTLEMENT: WithdrawalStatus[] = ["pending", "processing", "approved"];
 
 export function createFinanceManagementService(): AdminFinanceManagementService {
   const transactions = buildFinanceTransactions();
@@ -101,6 +112,12 @@ export function createFinanceManagementService(): AdminFinanceManagementService 
       return withdrawalService.list(query);
     },
 
+    async getWithdrawalDetail(id) {
+      await apiDelay();
+      const detail = buildWithdrawalDetail(id);
+      return detail ? structuredCopy(detail) : null;
+    },
+
     async getWithdrawalCounts() {
       await apiDelay();
       const rows = await withdrawalService.list({ pageSize: 500 });
@@ -115,10 +132,8 @@ export function createFinanceManagementService(): AdminFinanceManagementService 
       return {
         all: rows.total,
         byStatus,
-        pendingAmount: sum((w) =>
-          ["pending", "processing", "approved"].includes(w.status)
-        ),
-        paidAmount: sum((w) => w.status === "paid"),
+        pendingAmount: sum((w) => PENDING_SETTLEMENT.includes(w.status)),
+        completedAmount: sum((w) => w.status === "completed"),
       };
     },
 

@@ -1,11 +1,11 @@
-import { Paginated, WithdrawalRequest } from "@/types/admin";
+import {
+  Paginated,
+  WithdrawalAction,
+  WithdrawalRequest,
+} from "@/types/admin";
 import { apiDelay, applySearch, applySort, paginate } from "@/lib/admin/api";
 
-export type WithdrawalAction =
-  | "approve"
-  | "mark_paid"
-  | "reject"
-  | "start_processing";
+export type { WithdrawalAction };
 
 export interface WithdrawalListQuery {
   search?: string;
@@ -73,7 +73,8 @@ export function createMockWithdrawalService(
         { status: WithdrawalRequest["status"]; requiresNote?: boolean }
       > = {
         approve: { status: "approved" },
-        mark_paid: { status: "paid" },
+        mark_completed: { status: "completed" },
+        mark_failed: { status: "failed", requiresNote: true },
         reject: { status: "rejected", requiresNote: true },
         start_processing: { status: "processing" },
       };

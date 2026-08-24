@@ -28,9 +28,15 @@ const VALID_STATUSES: WithdrawalStatus[] = [
   "pending",
   "processing",
   "approved",
-  "paid",
+  "completed",
   "rejected",
+  "failed",
 ];
+
+type QuickAction = Extract<
+  WithdrawalAction,
+  "start_processing" | "approve" | "mark_completed" | "mark_failed"
+>;
 
 function parseInitialFilters(): { search: string; status: WithdrawalStatus | "all" } {
   if (typeof window === "undefined") return { search: "", status: "all" };
@@ -53,10 +59,13 @@ export default function AdminWithdrawalsPage() {
   const [error, setError] = useState(false);
 
   const [acting, setActing] = useState(false);
-  const [rejectTarget, setRejectTarget] = useState<WithdrawalRequest | null>(null);
+  const [reasonTarget, setReasonTarget] = useState<{
+    w: WithdrawalRequest;
+    mode: "reject" | "fail";
+  } | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{
     w: WithdrawalRequest;
-    action: Extract<WithdrawalAction, "start_processing" | "approve" | "mark_paid">;
+    action: Exclude<QuickAction, "mark_failed">;
   } | null>(null);
 
   const loadList = useCallback(async () => {
@@ -142,7 +151,7 @@ export default function AdminWithdrawalsPage() {
               </span>
               <span className="hidden h-9 items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-3 text-xs font-medium text-kampmax-text-secondary lg:inline-flex">
                 <ArrowDownToLine className="h-3.5 w-3.5 opacity-60" />
-                {formatNairaCompact(counts.paidAmount)} paid all-time
+                {formatNairaCompact(counts.completedAmount)} completed all-time
               </span>
             </>
           )
@@ -176,8 +185,14 @@ export default function AdminWithdrawalsPage() {
         onClearFilters={() => patchFilters({ search: "", status: "all" })}
         filters={filters}
         onFilterChange={patchFilters}
-        onAct={(w, action) => setConfirmTarget({ w, action })}
-        onReject={(w) => setRejectTarget(w)}
+        onAct={(w, action) => {
+          if (action === "mark_failed") {
+            setReasonTarget({ w, mode: "fail" });
+          } else {
+            setConfirmTarget({ w, action });
+          }
+        }}
+        onReject={(w) => setReasonTarget({ w, mode: "reject" })}
       />
 
       {list && list.totalPages > 1 && (
@@ -198,40 +213,41 @@ export default function AdminWithdrawalsPage() {
 
       {/* Mutations */}
       <RejectWithdrawalDialog
-        open={rejectTarget != null}
-        withdrawal={rejectTarget}
+        open={reasonTarget != null}
+        withdrawal={reasonTarget?.w ?? null}
+        mode={reasonTarget?.mode ?? "reject"}
         working={acting}
-        onClose={() => setRejectTarget(null)}
-        onReject={async (w, note) => {
-          await runAct(w, "reject", note);
-          setRejectTarget(null);
+        onClose={() => setReasonTarget(null)}
+        onConfirm={async (w, note) => {
+          await runAct(w, reasonTarget?.mode === "fail" ? "mark_failed" : "reject", note);
+          setReasonTarget(null);
         }}
       />
 
       <ConfirmDialog
         open={confirmTarget != null}
         title={
-          confirmTarget?.action === "mark_paid"
-            ? "Mark as paid?"
+          confirmTarget?.action === "mark_completed"
+            ? "Mark as completed?"
             : confirmTarget?.action === "approve"
               ? "Approve withdrawal?"
-              : "Start processing?"
+              : "Mark as processing?"
         }
         message={
           confirmTarget == null
             ? ""
-            : confirmTarget.action === "mark_paid"
+            : confirmTarget.action === "mark_completed"
               ? `Confirm the bank transfer of ${formatNairaCompact(confirmTarget.w.amount + confirmTarget.w.fee)} to ${confirmTarget.w.vendorName} (${confirmTarget.w.bankName} ${confirmTarget.w.accountNumberMasked}) is complete.`
               : `${confirmTarget.w.vendorName} · ${formatNairaCompact(confirmTarget.w.amount)} to ${confirmTarget.w.bankName}. This moves vendor payable forward - funds stay reconciled in the wallet console.`
         }
         tone={confirmTarget?.action === "start_processing" ? "default" : "warning"}
         loading={acting}
         confirmLabel={
-          confirmTarget?.action === "mark_paid"
-            ? "Yes, mark paid"
+          confirmTarget?.action === "mark_completed"
+            ? "Yes, mark completed"
             : confirmTarget?.action === "approve"
               ? "Approve"
-              : "Start processing"
+              : "Mark processing"
         }
         onConfirm={async () => {
           if (!confirmTarget) return;
@@ -253,10 +269,7 @@ interface WithdrawalsSectionProps {
   onClearFilters: () => void;
   filters: { search: string; status: WithdrawalStatus | "all" };
   onFilterChange: (patch: Partial<{ search: string; status: WithdrawalStatus | "all" }>) => void;
-  onAct: (
-    w: WithdrawalRequest,
-    action: Extract<WithdrawalAction, "start_processing" | "approve" | "mark_paid">
-  ) => void;
+  onAct: (w: WithdrawalRequest, action: QuickAction) => void;
   onReject: (w: WithdrawalRequest) => void;
 }
 

@@ -802,15 +802,45 @@ export type WithdrawalStatus =
   | "pending"
   | "processing"
   | "approved"
-  | "paid"
-  | "rejected";
+  | "rejected"
+  | "failed"
+  | "completed";
 
 /** Admin-side lifecycle transitions shared by console + service layers. */
 export type WithdrawalAction =
   | "approve"
-  | "mark_paid"
   | "reject"
-  | "start_processing";
+  | "start_processing"
+  | "mark_completed"
+  | "mark_failed";
+
+export interface ManagedWithdrawalTimelineEvent {
+  id: string;
+  kind:
+    | "requested"
+    | "review"
+    | "decision"
+    | "completed"
+    | "rejected"
+    | "failed";
+  label: string;
+  detail?: string | null;
+  at: string;
+}
+
+/** Everything the /admin/withdrawals/[id] screen renders. */
+export interface ManagedWithdrawalDetail {
+  request: WithdrawalRequest;
+  /** Vendor's available wallet balance at inspection time. */
+  vendorBalance: number | null;
+  vendorWalletId: string | null;
+  campusId: string | null;
+  timeline: ManagedWithdrawalTimelineEvent[];
+  /** This vendor's recent wallet activity. */
+  history: ManagedFinanceTxn[];
+  /** Same vendor's other payout requests, newest first. */
+  previous: WithdrawalRequest[];
+}
 
 export interface WithdrawalRequest {
   id: string;
@@ -1458,7 +1488,7 @@ export interface FinanceOverview {
     net: number; // gross - refunds
   };
   withdrawals: {
-    paidAmount: number;
+    completedAmount: number;
     pendingCount: number;
     pendingAmount: number;
   };
@@ -1468,5 +1498,5 @@ export interface WithdrawalStatusCounts {
   all: number;
   byStatus: Record<WithdrawalStatus, number>;
   pendingAmount: number;
-  paidAmount: number;
+  completedAmount: number;
 }
