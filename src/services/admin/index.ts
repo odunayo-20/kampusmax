@@ -164,6 +164,15 @@ import {
 export const paymentManagementService: AdminPaymentManagementService =
   createPaymentManagementService();
 
+import {
+  AdminFinanceManagementService,
+  createFinanceManagementService,
+} from "./wallet-management.service";
+
+/** /admin/wallet + /admin/withdrawals console (funds overview, ledger, payouts). */
+export const financeManagementService: AdminFinanceManagementService =
+  createFinanceManagementService();
+
 export const productService: AdminProductService =
   createMockProductService(mockProducts);
 

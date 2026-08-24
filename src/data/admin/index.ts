@@ -5,6 +5,7 @@ export * from "./product-management";
 export * from "./category-management";
 export * from "./order-management";
 export * from "./payment-management";
+export * from "./finance";
 export * from "./people";
 export * from "./user-management";
 export * from "./catalog";

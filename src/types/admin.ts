@@ -805,6 +805,13 @@ export type WithdrawalStatus =
   | "paid"
   | "rejected";
 
+/** Admin-side lifecycle transitions shared by console + service layers. */
+export type WithdrawalAction =
+  | "approve"
+  | "mark_paid"
+  | "reject"
+  | "start_processing";
+
 export interface WithdrawalRequest {
   id: string;
   vendorId: string;
@@ -1383,4 +1390,83 @@ export interface PaymentStatusCounts {
   byStatus: Record<ManagedPaymentStatus, number>;
   totalVolume: number;
   settlementPending: number; // naira awaiting clearance
+}
+
+// ------------------------------------------------------------
+// WALLET & FINANCE (/admin/wallet, /admin/withdrawals)
+// ------------------------------------------------------------
+
+export type ManagedFinanceTxnType =
+  | "purchase"
+  | "refund"
+  | "vendor_payout"
+  | "wallet_funding"
+  | "withdrawal"
+  | "platform_fee"
+  | "loyalty_reward";
+
+/** Which books a transaction touches - kept explicit so the console
+ *  can always separate platform float from vendor and customer money.
+ *  Reconciliation on the backend keys off this field. */
+export type FinanceFundPool = "platform" | "vendor" | "customer";
+
+export interface ManagedFinanceTxn {
+  id: string;
+  type: ManagedFinanceTxnType;
+  pool: FinanceFundPool;
+  ownerName: string;
+  ownerType: WalletOwnerType;
+  direction: WalletTxnDirection; // relative to the owning wallet
+  amount: number;
+  status: WalletTxnStatus;
+  reference: string;
+  balanceAfter: number;
+  orderId: string | null;
+  createdAt: string;
+}
+
+export interface FinanceTxnQuery extends ListQuery {
+  search?: string;
+  type?: ManagedFinanceTxnType | "all";
+  status?: WalletTxnStatus | "all";
+  pool?: FinanceFundPool | "all";
+  sortBy?: "createdAt" | "amount";
+  sortDir?: SortDir;
+}
+
+export interface FinanceOverview {
+  /** Kampmax operating float - money the platform itself holds. */
+  platform: {
+    balance: number; // available + pending
+    available: number; // settled, spendable
+    pending: number; // in-flight transactions
+    earnings: number; // commissions + platform fees collected
+  };
+  /** Money that belongs to vendors but sits on platform rails. */
+  vendor: {
+    payable: number; // owed to vendors incl. approved-but-unpaid withdrawals
+    walletHeld: number; // aggregate vendor wallet balances
+  };
+  /** Money customers keep inside Kampmax wallets - a liability. */
+  customer: {
+    liability: number; // aggregate user wallet balances
+    accounts: number;
+  };
+  revenue: {
+    gross: number; // successful order payments
+    refunds: number; // refunded back to customers
+    net: number; // gross - refunds
+  };
+  withdrawals: {
+    paidAmount: number;
+    pendingCount: number;
+    pendingAmount: number;
+  };
+}
+
+export interface WithdrawalStatusCounts {
+  all: number;
+  byStatus: Record<WithdrawalStatus, number>;
+  pendingAmount: number;
+  paidAmount: number;
 }
