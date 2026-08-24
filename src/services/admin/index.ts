@@ -221,6 +221,15 @@ export const communityService: AdminCommunityService =
 
 export type { CommunityAnnouncementCreateInput } from "./community.service";
 
+import {
+  AdminReviewManagementService,
+  createReviewManagementService,
+} from "./review-management.service";
+
+/** /admin/reviews console (review moderation + report triage). */
+export const reviewManagementService: AdminReviewManagementService =
+  createReviewManagementService();
+
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);
 

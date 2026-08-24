@@ -1780,3 +1780,75 @@ export interface CommunitySectionCounts<S extends string> {
   all: number;
   byStatus: Record<S, number>;
 }
+
+// ------------------------------------------------------------
+// REVIEW MANAGEMENT (/admin/reviews)
+// ------------------------------------------------------------
+
+export type ManagedReviewStatus =
+  | "published"
+  | "reported"
+  | "hidden"
+  | "removed"
+  | "under_review";
+
+export type ManagedReviewTargetType = "product" | "vendor";
+
+export interface ManagedReview {
+  id: string;
+  reviewer: CommunityAuthor;
+  targetType: ManagedReviewTargetType;
+  /** Product title (or vendor store name when rating the store). */
+  targetTitle: string;
+  productId: string | null;
+  vendorId: string;
+  vendorName: string;
+  campusId: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string;
+  helpfulCount: number;
+  /** True when tied to a completed Kampmax order. */
+  verifiedPurchase: boolean;
+  orderRef: string | null;
+  reportsCount: number;
+  status: ManagedReviewStatus;
+  createdAt: string;
+}
+
+export type ReviewReportReason =
+  | "fake_review"
+  | "offensive"
+  | "unfair"
+  | "spam"
+  | "irrelevant"
+  | "other";
+
+export type ReviewReportStatus = "open" | "reviewing" | "actioned" | "dismissed";
+
+export interface ReviewReport {
+  id: string;
+  reviewId: string;
+  reason: ReviewReportReason;
+  detail: string;
+  reporterName: string;
+  priority: "low" | "medium" | "high";
+  status: ReviewReportStatus;
+  createdAt: string;
+}
+
+export interface ManagedReviewDetail {
+  review: ManagedReview;
+  reports: ReviewReport[];
+}
+
+export interface ReviewListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedReviewStatus | "all";
+  /** Exact star filter; "all" disables it. */
+  rating?: 1 | 2 | 3 | 4 | 5 | "all";
+  vendorId?: string | "all";
+  campusId?: string | "all";
+  purchase?: "all" | "verified" | "unverified";
+  /** Only rows with at least one report, regardless of status. */
+  reportedOnly?: boolean;
+}
