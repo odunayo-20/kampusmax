@@ -40,6 +40,10 @@ import {
 import { AdminCampusService, createMockCampusService } from "./campuses.service";
 import { AdminVendorService, createMockVendorService } from "./vendors.service";
 import {
+  AdminVendorManagementService,
+  createVendorManagementService,
+} from "./vendor-management.service";
+import {
   AdminCategoryService,
   AdminProductService,
   createMockCategoryService,
@@ -113,6 +117,12 @@ export const campusService: AdminCampusService =
 
 export const vendorService: AdminVendorService =
   createMockVendorService(mockVendors);
+
+/** /admin/vendors console (verification + store lifecycle). */
+export const vendorManagementService: AdminVendorManagementService =
+  createVendorManagementService();
+
+export type { ManagedVendorSortField } from "./vendor-management.service";
 
 export const productService: AdminProductService =
   createMockProductService(mockProducts);

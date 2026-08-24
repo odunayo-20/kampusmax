@@ -351,6 +351,183 @@ export interface AdminVendor {
 }
 
 // ------------------------------------------------------------
+// VENDOR MANAGEMENT (/admin/vendors console)
+// Two-axis lifecycle: verification (documents) x store status
+// (trading). The five console buckets are mutually exclusive:
+//   pending_verification | verified(active) | rejected |
+//   suspended | deactivated
+// ------------------------------------------------------------
+
+export type VendorVerificationStatus =
+  | "pending_verification"
+  | "verified"
+  | "rejected";
+
+export type VendorStoreLifecycle = "active" | "suspended" | "deactivated";
+
+/** Console bucket - collapses both axes into one of five queues. */
+export type VendorBucket =
+  | "pending_verification"
+  | "verified"
+  | "rejected"
+  | "suspended"
+  | "deactivated";
+
+export type VendorVerificationDocKind =
+  | "cac_certificate"
+  | "government_id"
+  | "address_proof"
+  | "bank_details"
+  | "campus_permit";
+
+export type VendorDocState = "submitted" | "approved" | "rejected" | "missing";
+
+export interface VendorVerificationDocument {
+  id: string;
+  kind: VendorVerificationDocKind;
+  label: string;
+  reference: string;
+  state: VendorDocState;
+  note?: string;
+}
+
+export interface VendorVerificationRecord {
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  bvnVerified: boolean;
+  documents: VendorVerificationDocument[];
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  rejectionReason: string | null;
+}
+
+export interface ManagedVendorOwner {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  isIdVerified: boolean;
+  joinedAt: string;
+  ordersCount: number;
+  totalSpent: number;
+}
+
+export interface ManagedVendor {
+  id: string;
+  storeName: string;
+  ownerId: string;
+  owner: ManagedVendorOwner;
+  campusId: string;
+  category: string;
+  description: string;
+  verificationStatus: VendorVerificationStatus;
+  storeStatus: VendorStoreLifecycle;
+  verification: VendorVerificationRecord;
+  productsCount: number;
+  ordersCount: number;
+  /** Lifetime GMV through the store. */
+  totalSales: number;
+  /** Net after platform commission. */
+  earnings: number;
+  walletBalance: number;
+  fulfillmentRate: number;
+  rating: number;
+  reviewsCount: number;
+  complaintsCount: number;
+  registeredAt: string;
+  lastActiveAt: string;
+}
+
+export type VendorActivityKind =
+  | "order"
+  | "product"
+  | "wallet"
+  | "moderation"
+  | "admin"
+  | "auth";
+
+export interface VendorActivityEvent {
+  id: string;
+  kind: VendorActivityKind;
+  message: string;
+  meta: string;
+  at: string;
+}
+
+export interface VendorProductRow {
+  id: string;
+  title: string;
+  price: number;
+  stock: number;
+  status: AdminProduct["status"];
+  soldCount: number;
+  createdAt: string;
+}
+
+export interface VendorOrderRow {
+  id: string;
+  customerName: string;
+  itemsSummary: string;
+  itemsCount: number;
+  total: number;
+  status: AdminOrder["status"];
+  paymentStatus: AdminOrder["paymentStatus"];
+  createdAt: string;
+}
+
+export interface VendorReviewRow {
+  id: string;
+  customerName: string;
+  targetName: string;
+  rating: number;
+  comment: string;
+  status: AdminReviewStatus;
+  createdAt: string;
+}
+
+export interface VendorComplaintRow {
+  id: string;
+  orderId: string;
+  customerName: string;
+  subject: string;
+  category: DisputeCategory;
+  priority: DisputePriority;
+  amountInDispute: number;
+  status: DisputeStatus;
+  openedAt: string;
+}
+
+export interface VendorEarningsSummary {
+  grossSales: number;
+  commissionRate: number;
+  commissionPaid: number;
+  netEarnings: number;
+  pendingPayout: number;
+  lastPayoutAt: string | null;
+}
+
+export interface VendorStatusCounts {
+  all: number;
+  pending_verification: number;
+  verified: number;
+  rejected: number;
+  suspended: number;
+  deactivated: number;
+}
+
+export interface ManagedVendorDetail {
+  vendor: ManagedVendor;
+  campus: Campus | null;
+  earnings: VendorEarningsSummary;
+  products: VendorProductRow[];
+  orders: VendorOrderRow[];
+  reviews: VendorReviewRow[];
+  complaints: VendorComplaintRow[];
+  activity: VendorActivityEvent[];
+}
+
+// ------------------------------------------------------------
 // CATEGORIES
 // ------------------------------------------------------------
 
