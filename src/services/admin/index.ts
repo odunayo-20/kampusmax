@@ -257,6 +257,15 @@ import {
 export const notificationManagementService: AdminNotificationManagementService =
   createMockNotificationManagementService();
 
+import {
+  AdminSettingsConfigService,
+  createMockSettingsConfigService,
+} from "./settings-config.service";
+
+/** /admin/settings console (sectioned config, in-memory persistence). */
+export const settingsConfigService: AdminSettingsConfigService =
+  createMockSettingsConfigService();
+
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);
 

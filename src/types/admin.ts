@@ -2171,3 +2171,104 @@ export interface NotificationListQuery extends ListQuery {
   status?: ManagedNotificationStatus | "all";
   campusId?: string | "all";
 }
+
+// ------------------------------------------------------------
+// PLATFORM SETTINGS (/admin/settings)
+//
+// Structured, sectioned config. The prototype keeps values in
+// memory only - the future backend persists these server-side.
+// ------------------------------------------------------------
+
+export type SettingsSectionKey =
+  | "general"
+  | "marketplace"
+  | "orders"
+  | "financial"
+  | "loyalty"
+  | "notifications"
+  | "security";
+
+export interface GeneralSettings {
+  platformName: string;
+  /** URL for now - file upload is mocked in the UI. */
+  logoUrl: string;
+  supportEmail: string;
+  supportPhone: string;
+}
+
+export type OrderCancellationPolicy =
+  | "anytime_before_delivery"
+  | "before_dispatch"
+  | "before_pickup_ready"
+  | "vendor_approval_required";
+
+export interface MarketplaceSettings {
+  commissionRate: number;
+  requireProductApproval: boolean;
+  requireVendorApproval: boolean;
+  cancellation: {
+    policy: OrderCancellationPolicy;
+    autoApproveCustomerCancellations: boolean;
+    cancellationWindowHours: number;
+  };
+}
+
+export interface OrdersSettings {
+  delivery: {
+    enableHostelDelivery: boolean;
+    deliveryFee: number;
+    freeDeliveryThreshold: number;
+  };
+  pickup: {
+    enablePickupStations: boolean;
+    pickupHoldHours: number;
+  };
+  timeouts: {
+    vendorAcceptMinutes: number;
+    customerCheckoutMinutes: number;
+  };
+}
+
+export type PayoutSchedule = "daily" | "twice_daily" | "weekly";
+
+export interface FinancialSettings {
+  platformFeeRate: number;
+  withdrawalMinimum: number;
+  withdrawalFee: number;
+  payoutSchedule: PayoutSchedule;
+  requireBvnForPayouts: boolean;
+}
+
+export interface LoyaltySettings {
+  pointsPerNaira: number;
+  maxRedemptionPercent: number;
+  pointsExpirationDays: number;
+  enabled: boolean;
+}
+
+export interface NotificationPreferences {
+  orderAlerts: boolean;
+  paymentFailureAlerts: boolean;
+  disputeEscalations: boolean;
+  newVendorSignups: boolean;
+  weeklyDigestEmail: boolean;
+  securityAlerts: boolean;
+}
+
+export interface SecuritySettings {
+  sessionTimeoutMinutes: number;
+  maxConcurrentSessions: number;
+  enforceTwoFactor: boolean;
+  passwordMinLength: number;
+  lockoutAfterFailedAttempts: number;
+}
+
+export interface PlatformSettingsConfig {
+  general: GeneralSettings;
+  marketplace: MarketplaceSettings;
+  orders: OrdersSettings;
+  financial: FinancialSettings;
+  loyalty: LoyaltySettings;
+  notifications: NotificationPreferences;
+  security: SecuritySettings;
+}
