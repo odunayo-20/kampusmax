@@ -9,6 +9,7 @@ import {
   Megaphone,
   Package,
   Scale,
+  ScrollText,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -94,6 +95,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "notifications", href: "/admin/notifications", label: "Notifications", icon: Bell },
       { key: "permissions", href: "/admin/permissions", label: "Roles & Permissions", icon: ShieldCheck },
       { key: "settings", href: "/admin/settings", label: "Settings", icon: Settings },
+      { key: "auditLogs", href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
     ],
   },
 ];

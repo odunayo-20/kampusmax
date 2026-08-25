@@ -27,7 +27,8 @@ export type AdminNavItemKey =
   | "disputes"
   | "notifications"
   | "settings"
-  | "permissions";
+  | "permissions"
+  | "auditLogs";
 
 /**
  * Which sections each role can see. CAMPUS_ADMIN is scoped to their

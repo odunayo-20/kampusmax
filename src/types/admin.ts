@@ -2352,3 +2352,67 @@ export function toPermissionIds(
   });
   return out;
 }
+
+// ------------------------------------------------------------
+// AUDIT LOGS (/admin/audit-logs)
+//
+// Read-only administrative audit interface. No backend logging is
+// implemented - rows are mock data and nothing writes here.
+// ------------------------------------------------------------
+
+export type AuditActionType =
+  | "create"
+  | "update"
+  | "delete"
+  | "approve"
+  | "reject"
+  | "suspend"
+  | "restore"
+  | "resolve"
+  | "publish"
+  | "send"
+  | "export";
+
+export type AuditResource =
+  | "vendor"
+  | "user"
+  | "product"
+  | "category"
+  | "withdrawal"
+  | "platform_setting"
+  | "campus_post"
+  | "dispute"
+  | "review"
+  | "announcement"
+  | "promotion"
+  | "order"
+  | "role_permissions"
+  | "reports";
+
+export type AuditResult = "success" | "failed" | "denied";
+
+export interface AuditLog {
+  id: string;
+  at: string;
+  adminId: string;
+  adminName: string;
+  adminRole: AdminRoleKey;
+  action: AuditActionType;
+  resource: AuditResource;
+  resourceId: string;
+  description: string;
+  /** Placeholder values - the real backend will capture these. */
+  ip: string;
+  device: string;
+  result: AuditResult;
+}
+
+export interface AuditLogListQuery extends ListQuery {
+  search?: string;
+  adminId?: string | "all";
+  action?: AuditActionType | "all";
+  resource?: AuditResource | "all";
+  result?: AuditResult | "all";
+  dateFrom?: string;
+  dateTo?: string;
+}

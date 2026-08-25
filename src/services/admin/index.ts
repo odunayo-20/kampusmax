@@ -274,6 +274,15 @@ import {
 /** /admin/permissions console (role matrices, in-memory persistence). */
 export const rbacService: AdminRbacService = createMockRbacService();
 
+import {
+  AuditLogService,
+  createMockAuditLogService,
+} from "./audit-logs.service";
+
+/** /admin/audit-logs console (read-only audit trail). */
+export const auditLogService: AuditLogService =
+  createMockAuditLogService();
+
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);
 
