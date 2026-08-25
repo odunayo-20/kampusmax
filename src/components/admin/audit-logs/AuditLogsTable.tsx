@@ -5,7 +5,10 @@ import {
   ScrollText,
 } from "lucide-react";
 import { Pagination } from "@/components/admin/Pagination";
-import { StatusBadge } from "@/components/admin/StatusBadge";
+import {
+  StatusBadge,
+  badgeVariantClasses,
+} from "@/components/admin/StatusBadge";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ErrorState } from "@/components/admin/ErrorState";
 import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
@@ -147,7 +150,7 @@ function AuditRow({ log: l, onView }: { log: AuditLog; onView: (l: AuditLog) => 
         <span
           className={cn(
             "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-            badgeClasses(auditActionVariant(l.action))
+            badgeVariantClasses(auditActionVariant(l.action))
           )}
         >
           <ActionIcon className="h-3 w-3" aria-hidden />
@@ -197,9 +200,7 @@ function AuditRow({ log: l, onView }: { log: AuditLog; onView: (l: AuditLog) => 
       </td>
     </tr>
   );
-}
-
-function MobileCard({ log: l, onView }: { log: AuditLog; onView: (l: AuditLog) => void }) {
+}function MobileCard({ log: l, onView }: { log: AuditLog; onView: (l: AuditLog) => void }) {
   const ActionIcon = AUDIT_ACTION_ICONS[l.action];
   const ResourceIcon = AUDIT_RESOURCE_ICONS[l.resource];
   return (
@@ -244,21 +245,6 @@ function MobileCard({ log: l, onView }: { log: AuditLog; onView: (l: AuditLog) =
 
 function resultLabel(result: AuditLog["result"]): string {
   return result.charAt(0).toUpperCase() + result.slice(1);
-}
-
-function badgeClasses(variant: string): string {
-  switch (variant) {
-    case "success":
-      return "bg-kampmax-success/10 text-kampmax-success";
-    case "error":
-      return "bg-kampmax-error/10 text-kampmax-error";
-    case "warning":
-      return "bg-kampmax-warning/10 text-amber-700";
-    case "blue":
-      return "bg-kampmax-blue/10 text-kampmax-blue";
-    default:
-      return "bg-kampmax-info/10 text-kampmax-info";
-  }
 }
 
 function actionTextClass(variant: string): string {

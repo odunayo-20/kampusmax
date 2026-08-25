@@ -287,7 +287,7 @@ export default function AdminPaymentDetailPage({ params }: { params: Promise<{ i
                 </span>
               </span>
               <Link
-                href={`/admin/users/${txn.customerId}`}
+                href={`/admin/users?q=${txn.customerId}`}
                 className="shrink-0 text-xs font-medium text-kampmax-blue hover:underline"
               >
                 View user

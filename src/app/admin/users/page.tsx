@@ -289,6 +289,7 @@ function AdminUsersPageInner() {
 
       {readyData && readyData.total > 0 && (
         <Pagination
+          unitLabel="users"
           page={readyData.page}
           pageSize={pageSize}
           total={readyData.total}

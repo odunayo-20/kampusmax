@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "@/lib/admin/admin-auth-context";
@@ -24,10 +25,13 @@ function NavGroups({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?:
           )}
           <ul className="space-y-0.5">
             {group.items.map((item) => {
+              // Segment-boundary match so /admin/campus doesn't also
+              // highlight for /admin/campuses (and vice versa).
               const active =
                 item.href === "/admin"
                   ? pathname === "/admin"
-                  : pathname.startsWith(item.href);
+                  : pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;
 
               return (
@@ -150,6 +154,15 @@ export function AdminSidebar() {
 /** Mobile drawer version of the same navigation. */
 export function AdminMobileSidebar() {
   const { mobileNavOpen, setMobileNavOpen } = useAdminUI();
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen, setMobileNavOpen]);
 
   if (!mobileNavOpen) return null;
 

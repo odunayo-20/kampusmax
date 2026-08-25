@@ -7,7 +7,10 @@ import {
   Send,
 } from "lucide-react";
 import { Pagination } from "@/components/admin/Pagination";
-import { StatusBadge } from "@/components/admin/StatusBadge";
+import {
+  StatusBadge,
+  badgeVariantClasses,
+} from "@/components/admin/StatusBadge";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ErrorState } from "@/components/admin/ErrorState";
 import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
@@ -266,7 +269,7 @@ function TypeBadge({ n, compact }: { n: ManagedNotification; compact?: boolean }
       <span
         className={cn(
           "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-          typeBadgeClasses(notificationTypeVariant(n.type))
+          badgeVariantClasses(notificationTypeVariant(n.type))
         )}
       >
         <Icon className="h-3 w-3" aria-hidden />
@@ -274,23 +277,6 @@ function TypeBadge({ n, compact }: { n: ManagedNotification; compact?: boolean }
       </span>
     </span>
   );
-}
-
-function typeBadgeClasses(variant: string): string {
-  switch (variant) {
-    case "error":
-      return "bg-kampmax-error/10 text-kampmax-error";
-    case "gold":
-      return "bg-kampmax-gold/15 text-kampmax-gold-dark";
-    case "blue":
-      return "bg-kampmax-blue/10 text-kampmax-blue";
-    case "info":
-      return "bg-kampmax-info/10 text-kampmax-info";
-    case "success":
-      return "bg-kampmax-success/10 text-kampmax-success";
-    default:
-      return "bg-kampmax-muted text-kampmax-text-secondary";
-  }
 }
 
 function RowActions({

@@ -8,7 +8,10 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { StatusBadge } from "@/components/admin/StatusBadge";
+import {
+  StatusBadge,
+  badgeVariantClasses,
+} from "@/components/admin/StatusBadge";
 import { cn, formatDateTime, timeAgo } from "@/lib/utils";
 import {
   AUDIT_ACTION_ICONS,
@@ -63,7 +66,7 @@ export function AuditLogDetailDialog({
               <span
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                  badgeClasses(auditActionVariant(log.action))
+                  badgeVariantClasses(auditActionVariant(log.action))
                 )}
               >
                 <ActionIcon className="h-3 w-3" aria-hidden />
@@ -239,19 +242,4 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function resultLabel(result: AuditLog["result"]): string {
   return result.charAt(0).toUpperCase() + result.slice(1);
-}
-
-function badgeClasses(variant: string): string {
-  switch (variant) {
-    case "success":
-      return "bg-kampmax-success/10 text-kampmax-success";
-    case "error":
-      return "bg-kampmax-error/10 text-kampmax-error";
-    case "warning":
-      return "bg-kampmax-warning/10 text-amber-700";
-    case "blue":
-      return "bg-kampmax-blue/10 text-kampmax-blue";
-    default:
-      return "bg-kampmax-info/10 text-kampmax-info";
-  }
 }

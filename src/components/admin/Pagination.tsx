@@ -12,6 +12,8 @@ interface PaginationProps {
   onPageSizeChange?: (pageSize: number) => void;
   /** Row range shown when the list is non-empty, e.g. "1–10 of 67". */
   className?: string;
+  /** Noun for the result summary line ("users", "reviews", …). Defaults to a neutral "results". */
+  unitLabel?: string;
 }
 
 function pageWindow(page: number, totalPages: number): (number | "…")[] {
@@ -40,6 +42,7 @@ export function Pagination({
   onPageChange,
   onPageSizeChange,
   className,
+  unitLabel = "results",
 }: PaginationProps) {
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
@@ -57,7 +60,8 @@ export function Pagination({
           <span className="font-medium tabular-nums text-kampmax-text">
             {start}–{end}
           </span>{" "}
-          of <span className="font-medium tabular-nums text-kampmax-text">{total.toLocaleString("en-NG")}</span> users
+          of <span className="font-medium tabular-nums text-kampmax-text">{total.toLocaleString("en-NG")}</span>{" "}
+          {unitLabel}
         </span>
         {onPageSizeChange && (
           <label className="ml-2 hidden items-center gap-1.5 sm:flex">

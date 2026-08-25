@@ -19,6 +19,11 @@ const VARIANTS: Record<BadgeVariant, string> = {
   blue: "bg-kampmax-blue/10 text-kampmax-blue",
 };
 
+/** Pill background/text classes for a variant - reuse for custom chips. */
+export function badgeVariantClasses(variant: BadgeVariant): string {
+  return VARIANTS[variant];
+}
+
 const DOTS: Record<BadgeVariant, string> = {
   success: "bg-kampmax-success",
   warning: "bg-kampmax-warning",

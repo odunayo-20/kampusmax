@@ -320,7 +320,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 </span>
               </span>
               <Link
-                href={`/admin/users/${order.customerId}`}
+                href={`/admin/users?q=${order.customerId}`}
                 className="shrink-0 text-xs font-medium text-kampmax-blue hover:underline"
               >
                 View user

@@ -53,6 +53,14 @@ export default function AdminDashboardPage() {
   const [operations, setOperations] = useState<OverviewState<OperationsQueue>>({ status: "loading" });
 
   const [range, setRange] = useState<ChartRange>("30d");
+  // Rendered client-side only so the static prerender never embeds
+  // a stale timestamp (avoids hydration mismatches).
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  useEffect(() => {
+    setUpdatedAt(
+      new Date().toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })
+    );
+  }, []);
   const [revenueSeries, setRevenueSeries] = useState<OverviewState<{ label: string; revenue: number; orders: number }[]>>({ status: "loading" });
   const [usersGrowth, setUsersGrowth] = useState<OverviewState<{ label: string; total: number; added: number }[]>>({ status: "loading" });
   const [vendorsGrowth, setVendorsGrowth] = useState<OverviewState<{ label: string; total: number; added: number }[]>>({ status: "loading" });
@@ -122,7 +130,7 @@ export default function AdminDashboardPage() {
         actions={
           <span className="inline-flex items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-3 py-1.5 text-xs text-kampmax-text-secondary">
             <Clock className="h-3.5 w-3.5" />
-            Updated {new Date().toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}
+            Updated {updatedAt ?? "just now"}
           </span>
         }
       />

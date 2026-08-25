@@ -378,19 +378,18 @@ function PromotionsConsole() {
       />
 
       {list && list.totalPages > 1 && (
-        <div className="mt-3 flex justify-center">
-          <Pagination
-            page={list.page}
-            pageSize={list.pageSize}
-            total={list.total}
-            totalPages={list.totalPages}
-            onPageChange={setPage}
-            onPageSizeChange={(n) => {
-              setPage(1);
-              setPageSize(n);
-            }}
-          />
-        </div>
+        <Pagination
+          className="mt-3 rounded-lg border border-kampmax-border bg-white"
+          page={list.page}
+          pageSize={list.pageSize}
+          total={list.total}
+          totalPages={list.totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={(n) => {
+            setPage(1);
+            setPageSize(n);
+          }}
+        />
       )}
 
       {/* Create / edit form */}
