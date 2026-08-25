@@ -266,6 +266,14 @@ import {
 export const settingsConfigService: AdminSettingsConfigService =
   createMockSettingsConfigService();
 
+import {
+  AdminRbacService,
+  createMockRbacService,
+} from "./rbac.service";
+
+/** /admin/permissions console (role matrices, in-memory persistence). */
+export const rbacService: AdminRbacService = createMockRbacService();
+
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);
 

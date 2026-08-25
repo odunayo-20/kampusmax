@@ -2272,3 +2272,83 @@ export interface PlatformSettingsConfig {
   notifications: NotificationPreferences;
   security: SecuritySettings;
 }
+
+// ------------------------------------------------------------
+// RBAC - ROLES & PERMISSIONS (/admin/permissions)
+//
+// Structured so a real NestJS RBAC backend can drop in later:
+// - Permission = `${resource}.${action}` strings (e.g.
+//   "products.approve") which map 1:1 to guard decorators.
+// - The matrix is per-role and only contains actions that are
+//   APPLICABLE for that resource (see RbacActionApplicability).
+// - No authorization is enforced in the prototype; this data is
+//   display/edit state only.
+// ------------------------------------------------------------
+
+export type AdminRoleKey = "SUPER_ADMIN" | "ADMIN" | "CAMPUS_ADMIN";
+
+export type RbacResource =
+  | "users"
+  | "campuses"
+  | "vendors"
+  | "products"
+  | "categories"
+  | "orders"
+  | "payments"
+  | "wallet"
+  | "withdrawals"
+  | "promotions"
+  | "campus_content"
+  | "reviews"
+  | "disputes"
+  | "notifications"
+  | "reports"
+  | "settings";
+
+export type RbacAction =
+  | "view"
+  | "create"
+  | "edit"
+  | "delete"
+  | "approve"
+  | "suspend"
+  | "manage";
+
+export interface ResourcePermission {
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+  approve: boolean;
+  suspend: boolean;
+  manage: boolean;
+}
+
+/** Matrix row per resource; inapplicable actions stay false. */
+export type RolePermissionMatrix = Record<RbacResource, ResourcePermission>;
+
+export interface RbacRole {
+  key: AdminRoleKey;
+  name: string;
+  description: string;
+  /** System roles cannot be deleted; permissions remain editable. */
+  isSystem: boolean;
+  membersCount: number;
+  permissions: RolePermissionMatrix;
+}
+
+/** Flat permission id used by the future API, e.g. "products.approve". */
+export type RbacPermissionId = `${RbacResource}.${RbacAction}`;
+
+export function toPermissionIds(
+  matrix: RolePermissionMatrix,
+  applicable: Record<RbacResource, readonly RbacAction[]>
+): RbacPermissionId[] {
+  const out: RbacPermissionId[] = [];
+  (Object.keys(matrix) as RbacResource[]).forEach((resource) => {
+    applicable[resource].forEach((action) => {
+      if (matrix[resource][action]) out.push(`${resource}.${action}`);
+    });
+  });
+  return out;
+}
