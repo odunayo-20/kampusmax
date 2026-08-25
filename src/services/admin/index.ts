@@ -248,6 +248,15 @@ import {
 export const analyticsService: AdminAnalyticsService =
   createMockAnalyticsService();
 
+import {
+  AdminNotificationManagementService,
+  createMockNotificationManagementService,
+} from "./notification-management.service";
+
+/** /admin/notifications console (broadcast composer + history). */
+export const notificationManagementService: AdminNotificationManagementService =
+  createMockNotificationManagementService();
+
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);
 

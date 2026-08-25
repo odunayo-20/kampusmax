@@ -2106,3 +2106,68 @@ export interface AnalyticsFilterOptions {
   vendors: { id: string; name: string }[];
   categories: { id: string; name: string }[];
 }
+
+// ------------------------------------------------------------
+// NOTIFICATION MANAGEMENT (/admin/notifications)
+// ------------------------------------------------------------
+
+export type ManagedNotificationType =
+  | "system"
+  | "order"
+  | "payment"
+  | "marketplace"
+  | "campus"
+  | "promotion"
+  | "security";
+
+export type ManagedNotificationAudience =
+  | "all_users"
+  | "customers"
+  | "vendors"
+  | "campus_admins";
+
+/**
+ * Delivery channels are UI-only in this prototype - selecting them
+ * records intent on the broadcast but nothing is actually delivered.
+ */
+export type NotificationDeliveryType = "in_app" | "push" | "email" | "sms";
+
+export type ManagedNotificationStatus = "draft" | "scheduled" | "sent";
+
+export interface ManagedNotification {
+  id: string;
+  type: ManagedNotificationType;
+  title: string;
+  message: string;
+  audience: ManagedNotificationAudience;
+  /** Optional campus scope narrowing the audience further. */
+  campusId: string | null;
+  deliveryTypes: NotificationDeliveryType[];
+  sentBy: string;
+  /** The time the broadcast went (or is scheduled to go) out. */
+  deliverAt: string;
+  recipients: number;
+  /** 0-100; only meaningful once sent. */
+  openRate: number;
+  status: ManagedNotificationStatus;
+  createdAt: string;
+}
+
+export interface NotificationComposerInput {
+  type: ManagedNotificationType;
+  title: string;
+  message: string;
+  audience: ManagedNotificationAudience;
+  campusId: string | null;
+  deliveryTypes: NotificationDeliveryType[];
+  /** Required when scheduling. */
+  scheduleAt?: string | null;
+}
+
+export interface NotificationListQuery extends ListQuery {
+  search?: string;
+  type?: ManagedNotificationType | "all";
+  audience?: ManagedNotificationAudience | "all";
+  status?: ManagedNotificationStatus | "all";
+  campusId?: string | "all";
+}
