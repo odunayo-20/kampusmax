@@ -8,29 +8,94 @@
    ═══════════════════════════════════════════════════════ */
 
 @theme {
-  --color-kampmax-navy: #0B1F3A;
-  --color-kampmax-navy-light: #132D52;
-  --color-kampmax-blue: #1769FF;
-  --color-kampmax-blue-light: #4A8AFF;
-  --color-kampmax-blue-dark: #0D4FD9;
-  --color-kampmax-gold: #F5B942;
-  --color-kampmax-gold-light: #F8CC75;
-  --color-kampmax-gold-dark: #D49A20;
-  --color-kampmax-bg: #F8FAFC;
+  /* ── Primary — #1769E0 ── */
+  --color-primary-950: #071A33;
+  --color-primary-900: #0B2345;
+  --color-primary-800: #103463;
+  --color-primary-700: #164A8A;
+  --color-primary-600: #1769E0;
+  --color-primary-500: #2F80ED;
+  --color-primary-400: #5BA3F5;
+  --color-primary-100: #E8F1FD;
+  --color-primary-50: #F3F7FD;
+  /* ── Accent Amber ── */
+  --color-accent-700: #B45309;
+  --color-accent-600: #D97706;
+  --color-accent-500: #F59E0B;
+  --color-accent-400: #FBBF24;
+  --color-accent-100: #FEF3C7;
+  --color-accent-50: #FFFBEB;
+  /* ── Neutral ── */
+  --color-neutral-950: #0A0F1A;
+  --color-neutral-900: #111827;
+  --color-neutral-800: #1F2937;
+  --color-neutral-700: #374151;
+  --color-neutral-600: #4B5563;
+  --color-neutral-500: #6B7280;
+  --color-neutral-400: #9CA3AF;
+  --color-neutral-300: #D1D5DB;
+  --color-neutral-200: #E5E7EB;
+  --color-neutral-100: #F3F4F6;
+  --color-neutral-50: #F9FAFB;
+  /* ── Semantic ── */
+  --color-success-700: #15803D;
+  --color-success-600: #16A34A;
+  --color-success-500: #22C55E;
+  --color-success-100: #DCFCE7;
+  --color-success-50: #F0FDF4;
+  --color-warning-700: #A16207;
+  --color-warning-600: #CA8A04;
+  --color-warning-500: #EAB308;
+  --color-warning-100: #FEF9C3;
+  --color-warning-50: #FEFCE8;
+  --color-error-700: #B91C1C;
+  --color-error-600: #DC2626;
+  --color-error-500: #EF4444;
+  --color-error-100: #FEE2E2;
+  --color-error-50: #FEF2F2;
+  --color-info-700: #0369A1;
+  --color-info-600: #0284C7;
+  --color-info-500: #0EA5E9;
+  --color-info-100: #E0F2FE;
+  --color-info-50: #F0F9FF;
+  /* ── Campus ── */
+  --color-campus-600: #2563EB;
+  --color-campus-500: #3B82F6;
+  --color-campus-100: #DBEAFE;
+  --color-campus-50: #EFF6FF;
+  /* ── Legacy Kampmax aliases (updated values) ── */
+  --color-kampmax-navy: #0B2345;
+  --color-kampmax-navy-light: #103463;
+  --color-kampmax-blue: #1769E0;
+  --color-kampmax-blue-light: #2F80ED;
+  --color-kampmax-blue-dark: #1258C7;
+  --color-kampmax-blue-active: #0F4CAD;
+  --color-kampmax-blue-disabled: #93BDF5;
+  --color-kampmax-gold: #F59E0B;
+  --color-kampmax-gold-light: #FBBF24;
+  --color-kampmax-gold-dark: #D97706;
+  --color-kampmax-bg: #F9FAFB;
   --color-kampmax-surface: #FFFFFF;
   --color-kampmax-text: #111827;
-  --color-kampmax-text-secondary: #64748B;
-  --color-kampmax-border: #E2E8F0;
+  --color-kampmax-text-secondary: #4B5563;
+  --color-kampmax-text-muted: #6B7280;
+  --color-kampmax-border: #E5E7EB;
+  --color-kampmax-border-strong: #D1D5DB;
   --color-kampmax-success: #16A34A;
   --color-kampmax-error: #DC2626;
   --color-kampmax-warning: #F59E0B;
-  --color-kampmax-info: #2563EB;
-  --color-kampmax-muted: #F1F5F9;
+  --color-kampmax-info: #0284C7;
+  --color-kampmax-muted: #F3F4F6;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* ── Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 10px;
 }
 
 /* ═══════════════════════════════════════════════════════

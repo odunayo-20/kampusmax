@@ -7,12 +7,12 @@ interface BadgeProps {
 }
 
 const variantStyles = {
-  default: "bg-kampmax-navy text-white",
-  success: "bg-kampmax-success/10 text-kampmax-success border border-kampmax-success/20",
-  warning: "bg-kampmax-warning/10 text-kampmax-warning border border-kampmax-warning/20",
-  error: "bg-kampmax-error/10 text-kampmax-error border border-kampmax-error/20",
-  info: "bg-kampmax-info/10 text-kampmax-info border border-kampmax-info/20",
-  outline: "bg-transparent border border-kampmax-border text-kampmax-text-secondary",
+  default: "bg-neutral-900 text-white",
+  success: "bg-success-50 text-success-700 border border-success-100",
+  warning: "bg-accent-50 text-accent-700 border border-accent-100",
+  error: "bg-error-50 text-error-700 border border-error-100",
+  info: "bg-info-50 text-info-700 border border-info-100",
+  outline: "bg-transparent border border-neutral-300 text-neutral-600",
 };
 
 export function Badge({ variant = "default", children, className }: BadgeProps) {
@@ -34,9 +34,9 @@ interface ConditionBadgeProps {
 }
 
 const conditionStyles = {
-  New: "bg-kampmax-blue/10 text-kampmax-blue border border-kampmax-blue/20",
-  Used: "bg-kampmax-warning/10 text-kampmax-warning border border-kampmax-warning/20",
-  Fair: "bg-kampmax-muted text-kampmax-text-secondary border border-kampmax-border",
+  New: "bg-primary-50 text-primary-700 border border-primary-100",
+  Used: "bg-accent-50 text-accent-700 border border-accent-100",
+  Fair: "bg-neutral-100 text-neutral-600 border border-neutral-200",
 };
 
 export function ConditionBadge({ condition }: ConditionBadgeProps) {
@@ -57,13 +57,13 @@ interface OrderStatusBadgeProps {
 }
 
 const orderStatusStyles: Record<string, string> = {
-  placed: "bg-kampmax-info/10 text-kampmax-info border border-kampmax-info/20",
-  confirmed: "bg-kampmax-blue/10 text-kampmax-blue border border-kampmax-blue/20",
-  preparing: "bg-kampmax-gold/10 text-kampmax-gold-dark border border-kampmax-gold/30",
-  ready: "bg-kampmax-gold/10 text-kampmax-gold-dark border border-kampmax-gold/30",
-  out_for_delivery: "bg-kampmax-info/10 text-kampmax-info border border-kampmax-info/20",
-  delivered: "bg-kampmax-success/10 text-kampmax-success border border-kampmax-success/20",
-  cancelled: "bg-kampmax-error/10 text-kampmax-error border border-kampmax-error/20",
+  placed: "bg-info-50 text-info-700 border border-info-100",
+  confirmed: "bg-primary-50 text-primary-700 border border-primary-100",
+  preparing: "bg-accent-50 text-accent-700 border border-accent-100",
+  ready: "bg-accent-50 text-accent-700 border border-accent-100",
+  out_for_delivery: "bg-info-50 text-info-700 border border-info-100",
+  delivered: "bg-success-50 text-success-700 border border-success-100",
+  cancelled: "bg-error-50 text-error-700 border border-error-100",
 };
 
 const orderStatusLabels: Record<string, string> = {

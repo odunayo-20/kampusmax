@@ -47,12 +47,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              "w-full h-11 px-3 text-sm bg-white border rounded-lg",
-              "placeholder:text-kampmax-text-secondary/60",
-              "focus:outline-none focus:ring-1 transition-colors",
+              "w-full h-11 px-3 text-sm bg-white border rounded-md",
+              "placeholder:text-neutral-400",
+              "focus:outline-none focus:ring-2 focus:ring-primary-600/20 transition-colors shadow-sm",
               error
-                ? "border-kampmax-error focus:ring-kampmax-error focus:border-kampmax-error"
-                : "border-kampmax-border focus:ring-kampmax-blue focus:border-kampmax-blue",
+                ? "border-error-600 focus:ring-error-600/20 focus:border-error-600"
+                : "border-neutral-200 focus:ring-primary-600/20 focus:border-primary-600",
               leftIcon && "pl-10",
               rightIcon && "pr-10",
               className

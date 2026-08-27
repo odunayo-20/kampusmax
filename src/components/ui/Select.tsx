@@ -48,11 +48,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={cn(
-              "w-full h-11 px-3 text-sm bg-white border rounded-lg appearance-none",
-              "focus:outline-none focus:ring-1 transition-colors",
+              "w-full h-11 px-3 text-sm bg-white border rounded-md appearance-none shadow-sm",
+              "focus:outline-none focus:ring-2 transition-colors",
               error
-                ? "border-kampmax-error focus:ring-kampmax-error focus:border-kampmax-error"
-                : "border-kampmax-border focus:ring-kampmax-blue focus:border-kampmax-blue",
+                ? "border-error-600 focus:ring-error-600/20 focus:border-error-600"
+                : "border-neutral-200 focus:ring-primary-600/20 focus:border-primary-600",
               leftIcon && "pl-10",
               className
             )}

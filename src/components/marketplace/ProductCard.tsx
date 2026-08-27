@@ -15,8 +15,8 @@ interface ProductCardProps {
 
 function conditionColor(condition: ProductCondition) {
   return condition === "New"
-    ? "bg-kampmax-blue/10 text-kampmax-blue"
-    : "bg-kampmax-gold/20 text-kampmax-gold-dark";
+    ? "bg-primary-50 text-primary-700 border border-primary-100"
+    : "bg-accent-50 text-accent-700 border border-accent-100";
 }
 
 function discountPercent(original: number, current: number) {
@@ -36,20 +36,22 @@ export function ProductCard({
     <Link
       href={`/marketplace/${product.id}`}
       className={cn(
-        "bg-white rounded-xl border border-kampmax-border overflow-hidden group hover:shadow-md transition-all duration-200 flex flex-col",
+        "bg-white rounded-[10px] border border-neutral-200 overflow-hidden group flex flex-col",
+        "hover:border-neutral-300 hover:shadow-[0_1px_2px_rgba(16,24,40,0.06)] transition-all duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-1",
         className
       )}
     >
-      <div className="relative aspect-square bg-kampmax-muted/50 overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center text-kampmax-text-secondary/40">
-          <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      <div className="relative aspect-[1/1] bg-neutral-50 overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center text-neutral-400/40">
+          <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.25} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
         </div>
 
         {hasDiscount && (
           <div className="absolute top-2 left-2">
-            <span className="bg-kampmax-error/100 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            <span className="bg-error-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
               -{discountPercent(product.originalPrice!, product.price)}%
             </span>
           </div>
@@ -58,14 +60,17 @@ export function ProductCard({
         <button
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             setSaved(!saved);
           }}
-          className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-colors"
+          aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={saved}
+          className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-neutral-200 hover:bg-white hover:border-neutral-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
         >
           <Heart
             className={cn(
-              "w-4 h-4 transition-colors",
-              saved ? "fill-kampmax-error text-kampmax-error" : "text-kampmax-text-secondary/60"
+              "w-3.5 h-3.5 transition-colors",
+              saved ? "fill-error-600 text-error-600" : "text-neutral-500"
             )}
           />
         </button>
@@ -73,7 +78,7 @@ export function ProductCard({
         <div className="absolute bottom-2 left-2">
           <span
             className={cn(
-              "text-[10px] font-semibold px-1.5 py-0.5 rounded",
+              "text-[10px] font-semibold px-1.5 py-0.5 rounded-md leading-none border",
               conditionColor(product.condition)
             )}
           >
@@ -85,23 +90,23 @@ export function ProductCard({
       <div className="p-3 flex flex-col flex-1">
         {vendorName && (
           <div className="flex items-center gap-1 mb-1">
-            <span className="text-[10px] text-kampmax-text-secondary truncate">
+            <span className="text-[11px] text-neutral-500 truncate">
               {vendorName}
             </span>
             {vendorVerified && (
-              <Verified className="w-3 h-3 text-kampmax-blue shrink-0" />
+              <Verified className="w-3 h-3 text-primary-600 shrink-0" />
             )}
           </div>
         )}
 
-        <h3 className="text-sm font-medium text-kampmax-text line-clamp-2 leading-snug mb-1 group-hover:text-kampmax-blue transition-colors">
+        <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2 leading-snug mb-1 group-hover:text-primary-600 transition-colors">
           {product.title}
         </h3>
 
         {product.location && (
           <div className="flex items-center gap-0.5 mb-1.5">
-            <MapPin className="w-3 h-3 text-kampmax-text-secondary/60 shrink-0" />
-            <span className="text-[10px] text-kampmax-text-secondary truncate">
+            <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
+            <span className="text-[11px] text-neutral-500 truncate">
               {product.location}
             </span>
           </div>
@@ -109,11 +114,11 @@ export function ProductCard({
 
         <div className="mt-auto">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-base font-bold text-kampmax-navy">
+            <span className="text-[15px] font-bold text-primary-900 tracking-tight">
               {formatNaira(product.price)}
             </span>
             {hasDiscount && (
-              <span className="text-xs text-kampmax-text-secondary/60 line-through">
+              <span className="text-xs text-neutral-400 line-through">
                 {formatNaira(product.originalPrice!)}
               </span>
             )}
@@ -123,19 +128,19 @@ export function ProductCard({
             <div className="flex items-center gap-2 mt-1">
               {product.rating && (
                 <div className="flex items-center gap-0.5">
-                  <Star className="w-3 h-3 fill-kampmax-gold text-kampmax-gold" />
-                  <span className="text-[10px] font-medium text-kampmax-text">
+                  <Star className="w-3 h-3 fill-accent-500 text-accent-500" />
+                  <span className="text-[11px] font-medium text-neutral-900">
                     {product.rating}
                   </span>
                   {product.ratingCount && (
-                    <span className="text-[10px] text-kampmax-text-secondary">
+                    <span className="text-[11px] text-neutral-500">
                       ({product.ratingCount})
                     </span>
                   )}
                 </div>
               )}
               {product.viewCount && (
-                <span className="text-[10px] text-kampmax-text-secondary">
+                <span className="text-[11px] text-neutral-500">
                   {product.viewCount} views
                 </span>
               )}

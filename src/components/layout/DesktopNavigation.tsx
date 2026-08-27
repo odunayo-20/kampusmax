@@ -33,8 +33,8 @@ export function DesktopNavigation() {
   }
 
   return (
-    <header className="hidden lg:block sticky top-0 z-40 bg-white border-b border-kampmax-border">
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-14 px-6">
+    <header className="hidden lg:block sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-kampmax-border">
+      <div className="max-w-[1280px] mx-auto flex items-center justify-between h-[60px] px-6">
         {/* Left: Logo + Nav */}
         <div className="flex items-center gap-8">
           <Link href="/home" className="flex items-center gap-1.5 mr-4">
@@ -53,8 +53,8 @@ export function DesktopNavigation() {
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                     active
-                      ? "bg-kampmax-blue/10 text-kampmax-blue"
-                      : "text-kampmax-text-secondary hover:text-kampmax-text hover:bg-kampmax-muted"
+                      ? "text-primary-600 bg-primary-50 font-semibold"
+                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                   )}
                 >
                   <link.icon className={cn("h-4 w-4", active && "stroke-[2.5px]")} />
@@ -69,32 +69,33 @@ export function DesktopNavigation() {
           <div className="flex items-center gap-2">
           <Link
             href="/search"
+            aria-label="Search"
             className={cn(
-              "h-9 w-9 flex items-center justify-center rounded-lg transition-colors",
-              "hover:bg-kampmax-muted",
-              isActive("/search") && "bg-kampmax-blue/10 text-kampmax-blue"
+              "h-9 w-9 flex items-center justify-center rounded-md transition-colors",
+              "hover:bg-neutral-100 text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600",
+              isActive("/search") && "bg-primary-50 text-primary-600"
             )}
           >
             <Search className="h-[18px] w-[18px]" />
           </Link>
 
-          <div className="flex items-center gap-1.5 text-sm text-kampmax-text-secondary mr-2 px-2 py-1 rounded-md bg-kampmax-muted">
-            <MapPin className="h-3.5 w-3.5 text-kampmax-blue" />
-            <span className="font-medium text-kampmax-text">{selectedCampus.abbreviation}</span>
-            <ChevronDown className="h-3 w-3 text-kampmax-text-secondary" />
+          <div className="flex items-center gap-1.5 text-sm text-neutral-600 mr-2 px-2.5 py-1.5 rounded-md bg-neutral-50 border border-neutral-200">
+            <MapPin className="h-3.5 w-3.5 text-primary-600" />
+            <span className="font-semibold text-neutral-900">{selectedCampus.abbreviation}</span>
+            <ChevronDown className="h-3 w-3 text-neutral-500" />
           </div>
 
           <Link
             href="/notifications"
             className={cn(
-              "relative h-9 w-9 flex items-center justify-center rounded-lg transition-colors",
-              "hover:bg-kampmax-muted",
-              isActive("/notifications") && "bg-kampmax-blue/10 text-kampmax-blue"
+              "relative h-9 w-9 flex items-center justify-center rounded-md transition-colors",
+              "hover:bg-neutral-100 text-neutral-600",
+              isActive("/notifications") && "bg-primary-50 text-primary-600"
             )}
           >
             <Bell className="h-[18px] w-[18px]" />
             {unreadCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-kampmax-error text-white text-[9px] font-bold rounded-full px-1">
+              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-error-600 text-white text-[9px] font-bold rounded-full px-1">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -103,27 +104,27 @@ export function DesktopNavigation() {
           <Link
             href="/cart"
             className={cn(
-              "relative h-9 w-9 flex items-center justify-center rounded-lg transition-colors",
-              "hover:bg-kampmax-muted",
-              isActive("/cart") && "bg-kampmax-blue/10 text-kampmax-blue"
+              "relative h-9 w-9 flex items-center justify-center rounded-md transition-colors",
+              "hover:bg-neutral-100 text-neutral-600",
+              isActive("/cart") && "bg-primary-50 text-primary-600"
             )}
           >
             <ShoppingCart className="h-[18px] w-[18px]" />
             {itemCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-kampmax-blue text-white text-[9px] font-bold rounded-full px-1">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-primary-600 text-white text-[9px] font-bold rounded-full px-1">
                 {itemCount > 9 ? "9+" : itemCount}
               </span>
             )}
           </Link>
 
-          <div className="w-px h-6 bg-kampmax-border mx-1" />
+          <div className="w-px h-6 bg-neutral-200 mx-1" />
 
           <Link
             href="/profile"
             className={cn(
-              "flex items-center gap-2 pl-2 pr-3 py-1 rounded-lg transition-colors",
-              "hover:bg-kampmax-muted",
-              isActive("/profile") && "bg-kampmax-blue/10"
+              "flex items-center gap-2 pl-2 pr-3 py-1 rounded-md transition-colors",
+              "hover:bg-neutral-100",
+              isActive("/profile") && "bg-primary-50"
             )}
           >
             <Avatar
@@ -131,7 +132,7 @@ export function DesktopNavigation() {
               size="sm"
               className="h-8 w-8 text-xs"
             />
-            <span className="text-sm font-medium text-kampmax-text max-w-[120px] truncate">
+            <span className="text-sm font-medium text-neutral-900 max-w-[120px] truncate">
               {user?.name || "Profile"}
             </span>
           </Link>

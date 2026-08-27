@@ -3,8 +3,8 @@
 import Link from "next/link";
 import {
   Search, TrendingUp, Star, Clock, Flame, Users, Zap,
-  Calendar, ShoppingBag, Wallet, MessageCircle, BookOpen,
-  MapPin, ChevronRight
+  Calendar, ShoppingBag, Wallet, MessageCircle,
+  MapPin, Store as StoreIcon
 } from "lucide-react";
 import { ProductCard, CategoryCard } from "@/components/marketplace";
 import { Button } from "@/components/ui";
@@ -25,14 +25,12 @@ import { getCategories } from "@/services/categories";
 import { getTopVendorsByCampus } from "@/services/users";
 import { getUpcomingEvents } from "@/services/events";
 import { getCampusPosts } from "@/services/posts";
-import { getUnreadNotificationCount } from "@/services/notifications";
 import { getTotalUnreadCount } from "@/services/messages";
 import { useCart } from "@/lib/cart-context";
 
 export default function HomePage() {
   const { selectedCampus } = useApp();
   const { user } = useAuth();
-  const { itemCount } = useCart();
   const campusId = selectedCampus.id;
 
   const featured = getFeaturedProductsByCampus(campusId).slice(0, 6);
@@ -43,37 +41,50 @@ export default function HomePage() {
   const vendors = getTopVendorsByCampus(campusId);
   const events = getUpcomingEvents(campusId).slice(0, 4);
   const posts = getCampusPosts(campusId).slice(0, 6);
-  const unreadNotifs = user ? getUnreadNotificationCount(user.id) : 0;
   const unreadMessages = user ? getTotalUnreadCount(user.id) : 0;
 
   const greeting = getGreeting();
+  const firstName = user?.name?.split(" ")[0] || "Student";
 
   return (
-    <PageContainer className="space-y-7">
-      {/* 1. Campus Greeting */}
-      <section>
-        <p className="text-sm text-kampmax-text-secondary">{greeting}, {user?.name?.split(" ")[0] || "Student"}</p>
-        <h1 className="text-xl font-bold text-kampmax-text">
-          {selectedCampus.abbreviation} Marketplace
-        </h1>
-        <p className="text-xs text-kampmax-text-secondary mt-0.5">
-          {selectedCampus.location}
-        </p>
-      </section>
-
-      {/* 2. Search */}
-      <section>
-        <Link href="/marketplace">
-          <div className="flex items-center gap-3 h-11 pl-3 pr-4 bg-white border border-kampmax-border rounded-lg text-kampmax-text-secondary text-sm hover:border-kampmax-blue/50 transition-colors">
-            <Search className="h-4 w-4" />
-            <span>Search products, vendors, food...</span>
+    <PageContainer className="space-y-6 lg:space-y-8">
+      {/* 1. Hero — strongest visual area: #F3F7FD / #0B2345 / #4B5563 / CTA #1769E0 */}
+      <section className="rounded-[14px] bg-primary-50 border border-primary-100 px-4 py-5 sm:px-6 sm:py-6">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-neutral-600">
+            {greeting}, {firstName} <span aria-hidden>👋</span>
+          </p>
+          <h1 className="text-[22px] font-extrabold tracking-tight text-primary-900 leading-none sm:text-[26px]">
+            Shop around <span className="text-primary-600">{selectedCampus.abbreviation}</span>
+          </h1>
+          <div className="flex items-center gap-1.5 text-xs text-neutral-600">
+            <MapPin className="h-3.5 w-3.5 text-primary-600 shrink-0" aria-hidden />
+            <span>{selectedCampus.location}</span>
+            <span className="hidden sm:inline-flex items-center gap-1.5">
+              <span className="h-1 w-1 rounded-full bg-neutral-300" aria-hidden />
+              <span>{popular.length + recommended.length + recent.length} products near you</span>
+            </span>
           </div>
-        </Link>
+        </div>
+        {/* 2. Search — prominent within hero, white card on #F3F7FD */}
+        <div className="mt-4">
+          <Link
+            href="/search"
+            aria-label="Search products, vendors, food and categories"
+            className="group flex items-center gap-3 h-[46px] pl-4 pr-4 bg-white border border-neutral-200 rounded-[10px] text-neutral-600 text-sm shadow-[0_1px_2px_rgba(16,24,40,0.06)] hover:border-primary-600/30 hover:shadow-[0_4px_12px_rgba(16,24,40,0.08)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-1"
+          >
+            <Search className="h-[18px] w-[18px] text-neutral-500 group-hover:text-primary-600 transition-colors shrink-0" aria-hidden />
+            <span className="truncate">Search products, vendors, food...</span>
+            <span className="ml-auto hidden sm:inline-flex text-[11px] font-medium px-2 py-1 rounded-md bg-neutral-50 text-neutral-600 border border-neutral-200">
+              Press / to search
+            </span>
+          </Link>
+        </div>
       </section>
 
-      {/* 3. Quick Actions */}
-      <section>
-        <div className="grid grid-cols-4 gap-2">
+      {/* 3. Quick Actions — feel like actions, not stats */}
+      <section aria-label="Quick actions">
+        <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
           <QuickAction
             href="/marketplace"
             icon={<ShoppingBag className="h-5 w-5" />}
@@ -85,7 +96,7 @@ export default function HomePage() {
             label="Sell"
           />
           <QuickAction
-            href="/wallet"
+            href="/profile/wallet"
             icon={<Wallet className="h-5 w-5" />}
             label="Wallet"
           />
@@ -98,60 +109,118 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. Categories */}
-      <section>
+      {/* 4. Categories — rebuilt with consistent lucide icons, no emojis */}
+      <section aria-label="Categories">
         <SectionHeader
-          title="Categories"
+          title="Browse categories"
           action={{ label: "See all", href: "/marketplace" }}
         />
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2.5 sm:gap-3 lg:grid-cols-8">
           {categories.slice(0, 8).map((cat) => (
             <CategoryCard key={cat.id} category={cat} />
           ))}
         </div>
       </section>
 
-      {/* 5. Deals & Discounts */}
-      {featured.length > 0 && (
-        <section>
+      {/* 5. Recommended for you — primary product discovery, grid (most attention) */}
+      {recommended.length > 0 ? (
+        <section aria-label="Recommended for you">
+          <SectionHeader
+            title="Recommended for you"
+            subtitle={`Picked for ${selectedCampus.abbreviation} students`}
+            icon={<Star className="h-4 w-4 text-accent-500" aria-hidden />}
+            action={{ label: "See all", href: "/marketplace" }}
+          />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            {recommended.slice(0, 8).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section aria-label="Recommended for you">
+          <SectionHeader
+            title="Recommended for you"
+            subtitle="Based on campus activity"
+            icon={<Star className="h-4 w-4 text-accent-500" aria-hidden />}
+          />
+          <div className="rounded-[10px] border border-dashed border-neutral-200 bg-white p-8 text-center">
+            <p className="text-sm font-medium text-neutral-900">No recommended products yet</p>
+            <p className="text-xs text-neutral-500 mt-1">Check back soon — we&apos;re curating picks for your campus.</p>
+          </div>
+        </section>
+      )}
+
+      {/* 6. Popular around campus — campus-aware, uses location state */}
+      {popular.length > 0 ? (
+        <section aria-label={`Popular around ${selectedCampus.abbreviation}`}>
+          <SectionHeader
+            title={`Popular around ${selectedCampus.abbreviation}`}
+            subtitle="Most viewed at your school"
+            icon={<Flame className="h-4 w-4 text-error-600" aria-hidden />}
+            action={{ label: "See all", href: "/marketplace" }}
+          />
+          {/* Mobile: horizontal scroll, Desktop: 4-col grid for better use of width */}
+          <div className="lg:hidden">
+            <HorizontalScroll>
+              {popular.map((product) => (
+                <ProductCardHorizontal key={product.id} product={product} />
+              ))}
+            </HorizontalScroll>
+          </div>
+          <div className="hidden lg:grid lg:grid-cols-4 lg:gap-4">
+            {popular.slice(0, 4).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* 7. Deals & Discounts — amber strategic: #FFFBEB / #F59E0B / #DC2626 */}
+      {featured.length > 0 ? (
+        <section aria-label="Deals and discounts" className="rounded-[14px] bg-accent-50 border border-accent-100 p-4 sm:p-5">
           <SectionHeader
             title="Deals & Discounts"
             subtitle="Campus-specific offers"
-            icon={<TrendingUp className="h-4 w-4 text-kampmax-gold" />}
+            icon={<TrendingUp className="h-4 w-4 text-accent-600" aria-hidden />}
             action={{ label: "View all", href: "/marketplace" }}
           />
-          <HorizontalScroll>
-            {featured.map((product) => (
-              <ProductCardHorizontal key={product.id} product={product} />
+          <div className="lg:hidden">
+            <HorizontalScroll>
+              {featured.map((product) => (
+                <ProductCardHorizontal key={product.id} product={product} />
+              ))}
+            </HorizontalScroll>
+          </div>
+          <div className="hidden lg:grid lg:grid-cols-4 lg:gap-4">
+            {featured.slice(0, 4).map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
-          </HorizontalScroll>
+          </div>
         </section>
-      )}
-
-      {/* 6. Popular Products */}
-      {popular.length > 0 && (
-        <section>
+      ) : (
+        <section aria-label="Deals and discounts">
           <SectionHeader
-            title="Popular on Campus"
-            subtitle="Most viewed at your school"
-            icon={<Flame className="h-4 w-4 text-kampmax-error" />}
-            action={{ label: "View all", href: "/marketplace" }}
+            title="Deals & Discounts"
+            subtitle="Campus-specific offers"
+            icon={<TrendingUp className="h-4 w-4 text-accent-600" aria-hidden />}
           />
-          <HorizontalScroll>
-            {popular.map((product) => (
-              <ProductCardHorizontal key={product.id} product={product} />
-            ))}
-          </HorizontalScroll>
+          <div className="rounded-[10px] border border-dashed border-neutral-200 bg-white p-8 text-center">
+            <p className="text-sm font-medium text-neutral-900">No deals available right now</p>
+            <p className="text-xs text-neutral-500 mt-1">Great offers from campus vendors will appear here.</p>
+          </div>
         </section>
       )}
 
-      {/* 7. Nearby Vendors */}
+      {/* Secondary sections — less visual prominence, keep existing functionality */}
+
+      {/* Campus Vendors */}
       {vendors.length > 0 && (
-        <section>
+        <section aria-label="Campus vendors">
           <SectionHeader
-            title="Campus Vendors"
+            title="Campus vendors"
             subtitle={`Shops at ${selectedCampus.abbreviation}`}
-            icon={<Store className="h-4 w-4 text-kampmax-blue" />}
+            icon={<StoreIcon className="h-4 w-4 text-kampmax-blue" aria-hidden />}
             action={{ label: "View all", href: "/marketplace" }}
           />
           <HorizontalScroll>
@@ -162,46 +231,36 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 8. Recently Added */}
+      {/* Just Listed */}
       {recent.length > 0 && (
-        <section>
+        <section aria-label="Just listed">
           <SectionHeader
-            title="Just Listed"
+            title="Just listed"
             subtitle="Fresh from campus sellers"
-            icon={<Clock className="h-4 w-4 text-kampmax-text-secondary" />}
+            icon={<Clock className="h-4 w-4 text-kampmax-text-secondary" aria-hidden />}
             action={{ label: "View all", href: "/marketplace" }}
           />
-          <HorizontalScroll>
-            {recent.map((product) => (
-              <ProductCardHorizontal key={product.id} product={product} />
-            ))}
-          </HorizontalScroll>
-        </section>
-      )}
-
-      {/* 9. Recommended */}
-      {recommended.length > 0 && (
-        <section>
-          <SectionHeader
-            title="Recommended for You"
-            subtitle="Based on campus activity"
-            icon={<Star className="h-4 w-4 text-kampmax-gold" />}
-            action={{ label: "View all", href: "/marketplace" }}
-          />
-          <div className="grid grid-cols-2 gap-3">
-            {recommended.slice(0, 4).map((product) => (
+          <div className="lg:hidden">
+            <HorizontalScroll>
+              {recent.map((product) => (
+                <ProductCardHorizontal key={product.id} product={product} />
+              ))}
+            </HorizontalScroll>
+          </div>
+          <div className="hidden lg:grid lg:grid-cols-4 lg:gap-4">
+            {recent.slice(0, 4).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </section>
       )}
 
-      {/* 10. Campus & Community Highlights */}
-      <section>
+      {/* Campus Highlights */}
+      <section aria-label="Campus highlights">
         <SectionHeader
-          title="Campus Highlights"
+          title="Campus highlights"
           subtitle={`From ${selectedCampus.abbreviation} community`}
-          icon={<Users className="h-4 w-4 text-kampmax-blue" />}
+          icon={<Users className="h-4 w-4 text-kampmax-blue" aria-hidden />}
           action={{ label: "View all", href: "/community" }}
         />
         {posts.length > 0 ? (
@@ -224,13 +283,13 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 11. Upcoming Events */}
+      {/* Upcoming Events */}
       {events.length > 0 && (
-        <section>
+        <section aria-label="Upcoming events">
           <SectionHeader
-            title="Upcoming Events"
+            title="Upcoming events"
             subtitle={`At ${selectedCampus.abbreviation}`}
-            icon={<Calendar className="h-4 w-4 text-kampmax-success" />}
+            icon={<Calendar className="h-4 w-4 text-kampmax-success" aria-hidden />}
             action={{ label: "View all", href: "/community" }}
           />
           <HorizontalScroll>
@@ -249,27 +308,4 @@ function getGreeting(): string {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
-}
-
-function Store(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-      <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
-      <path d="M2 7h20" />
-      <path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" />
-    </svg>
-  );
 }
