@@ -1,22 +1,29 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ShoppingBag, Loader2 } from "lucide-react";
 import { useCheckout } from "@/hooks/useCheckout";
 import { useCart } from "@/lib/cart-context";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/atoms/Button";
 import {
-  DeliverySection,
-  DeliveryMethodSection,
-  VendorOrderGroup,
-  PromoCodeSection,
-  LoyaltyPointsSection,
-  PaymentMethodSection,
-  OrderSummarySection,
-  ConfirmationSection,
+  CheckoutHeader,
+  CheckoutErrorBanner,
+  CustomerInformation,
+  CampusSelector,
+  SavedAddresses,
+  VendorCheckoutGroup,
+  CouponSection,
+  KampmaxCoinSection,
+  LoyaltySection,
+  PaymentMethod,
+  OrderSummary,
+  TrustInformation,
+  PlaceOrderButton,
+  OrderReview,
 } from "@/components/checkout";
+import { CHECKOUT_STATES } from "@/types/checkout";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -25,36 +32,54 @@ export default function CheckoutPage() {
     () => items.filter((i) => !i.savedForLater),
     [items]
   );
+  const checkout = useCheckout();
+
+  const [summaryCollapsed, setSummaryCollapsed] = useState(false);
 
   const {
-    form,
-    errors,
-    isPlacing,
-    checkoutSummary,
-    vendorGroupsResolved,
-    walletBalance,
-    loyaltyPoints,
-    maxLoyaltyPoints,
-    useAllPoints,
-    appliedPromo,
-    promoError,
-    setField,
-    applyPromoCode,
-    removePromoCode,
-    setLoyaltyPointsToUse,
-    toggleUseAllPoints,
+    state,
+    errorInfo,
+    session,
+    refreshSession,
+    flags,
+    customer,
+    setCustomerField,
+    customerErrors,
+    selectedAddress,
+    addresses,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    selectAddress,
+    selectedCampus,
+    changeCampus,
+    loadingVendorId,
+    selectDeliveryOption,
+    coupon,
+    applyCouponCode,
+    removeCoupon,
+    coin,
+    toggleUseCoin,
+    loyalty,
+    paymentMethod,
+    setPayment,
     placeOrder,
-  } = useCheckout();
+    isBusy,
+    summaryItemCount,
+    summaryVendorCount,
+    vendorNames,
+    isCustomer,
+  } = checkout;
 
-  async function handlePlaceOrder() {
-    const success = await placeOrder();
-    if (success) {
-      router.push("/orders");
-    }
-  }
+  const empty = activeItems.length === 0;
+  const loading = state === CHECKOUT_STATES.LOADING && !session;
 
-  // Empty cart guard
-  if (activeItems.length === 0 && !isPlacing) {
+  // The demo campus is always available; a real app would check backend
+  // delivery availability per (campus, vendor) and reflect it here.
+  const campusState: "available" | "loading" | "unavailable" | "error" =
+    loading ? "loading" : "available";
+
+  if (empty && !loading) {
     return (
       <PageContainer narrow>
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -78,84 +103,158 @@ export default function CheckoutPage() {
     );
   }
 
-  return (
-    <PageContainer narrow>
-      <div className="space-y-5">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 text-kampmax-text" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-kampmax-text">Checkout</h1>
-            <p className="text-xs text-kampmax-text-secondary">
-              {checkoutSummary.itemCount} {checkoutSummary.itemCount === 1 ? "item" : "items"}
-              {vendorGroupsResolved.length > 1 &&
-                ` from ${vendorGroupsResolved.length} vendors`}
-            </p>
-          </div>
+  if (loading || !session) {
+    return (
+      <PageContainer narrow>
+        <div className="flex items-center justify-center py-24 gap-3 text-kampmax-text-secondary">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">Preparing your checkout…</span>
         </div>
+      </PageContainer>
+    );
+  }
 
-        {/* 1. Delivery Method */}
-        <DeliveryMethodSection
-          form={form}
-          errors={errors}
-          onFieldChange={setField}
+  const sessionExpired = state === CHECKOUT_STATES.SESSION_EXPIRED;
+
+  return (
+    <PageContainer className="pb-28 lg:pb-6">
+      <div className="space-y-5">
+        <CheckoutHeader
+          itemCount={summaryItemCount}
+          vendorCount={summaryVendorCount}
         />
 
-        {/* 2. Delivery Details (address / campus / pickup) */}
-        <DeliverySection
-          form={form}
-          errors={errors}
-          onFieldChange={setField}
-        />
+        {errorInfo && (
+          <CheckoutErrorBanner
+            error={errorInfo}
+            variant={
+              state === CHECKOUT_STATES.PAYMENT_CANCELLED ? "warning" : "error"
+            }
+            onRefresh={
+              sessionExpired || state === CHECKOUT_STATES.NETWORK_ERROR
+                ? () => {
+                    refreshSession();
+                    checkout.transitionTo(CHECKOUT_STATES.READY);
+                  }
+                : undefined
+            }
+          />
+        )}
 
-        {/* 3. Vendor/Order Grouping */}
-        <VendorOrderGroup groups={vendorGroupsResolved} />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 items-start">
+          {/* ── Left: information & items ── */}
+          <div className="space-y-5 min-w-0">
+            <CustomerInformation
+              customer={customer}
+              isGuest={!isCustomer}
+              onChange={setCustomerField}
+              errors={customerErrors}
+            />
 
-        {/* 4. Promo Code */}
-        <PromoCodeSection
-          appliedPromo={appliedPromo}
-          promoError={promoError}
-          promoCode={form.promoCode}
-          onPromoCodeChange={(v) => setField("promoCode", v)}
-          onApply={applyPromoCode}
-          onRemove={removePromoCode}
-        />
+            <CampusSelector
+              campus={selectedCampus}
+              campusState={campusState}
+              onChange={(c) => changeCampus(c)}
+            />
 
-        {/* 5. Loyalty Points */}
-        <LoyaltyPointsSection
-          availablePoints={loyaltyPoints}
-          maxPoints={maxLoyaltyPoints}
-          pointsToUse={form.loyaltyPointsToUse}
-          useAllPoints={useAllPoints}
-          onPointsChange={setLoyaltyPointsToUse}
-          onToggleAll={toggleUseAllPoints}
-        />
+            <SavedAddresses
+              addresses={addresses}
+              selectedId={selectedAddress?.id ?? null}
+              onSelect={selectAddress}
+              onAdd={addAddress}
+              onUpdate={updateAddress}
+              onDelete={deleteAddress}
+            />
 
-        {/* 6. Payment Method */}
-        <PaymentMethodSection
-          form={form}
-          errors={errors}
-          walletBalance={walletBalance}
-          finalTotal={checkoutSummary.finalTotal}
-          onFieldChange={setField}
-        />
+            {/* ── Review before payment ── */}
+            <OrderReview
+              customer={customer}
+              campusName={selectedCampus.name}
+              address={selectedAddress}
+              vendorDeliveries={session.vendorGroups.flatMap((g) =>
+                g.selectedDelivery ? [g.selectedDelivery] : []
+              )}
+              vendorNames={vendorNames}
+            />
 
-        {/* 7. Order Summary */}
-        <OrderSummarySection summary={checkoutSummary} />
+            {/* ── Multi-vendor items & delivery ── */}
+            {session.vendorGroups.map((group) => (
+              <VendorCheckoutGroup
+                key={group.vendorId}
+                group={group}
+                loadingVendorId={loadingVendorId}
+                onChangeDelivery={selectDeliveryOption}
+                readonly={isBusy || sessionExpired}
+              />
+            ))}
 
-        {/* 8. Confirmation */}
-        <ConfirmationSection
-          finalTotal={checkoutSummary.finalTotal}
-          isPlacing={isPlacing}
-          paymentMethod={form.paymentMethod}
-          onPlaceOrder={handlePlaceOrder}
-        />
+            <CouponSection
+              coupon={coupon}
+              onApply={applyCouponCode}
+              onRemove={removeCoupon}
+              enabled={flags.couponValidationEnabled}
+            />
+
+            <KampmaxCoinSection
+              coin={coin}
+              onToggle={toggleUseCoin}
+            />
+
+            <LoyaltySection loyalty={loyalty} />
+
+            <PaymentMethod
+              paymentMethod={paymentMethod}
+              paystackEnabled={flags.paystackEnabled}
+              finalTotal={session.pricing.finalTotal}
+              onChange={setPayment}
+            />
+          </div>
+
+          {/* ── Right: sticky summary ── */}
+          <aside className="hidden lg:block lg:sticky lg:top-24 space-y-4">
+            <OrderSummary
+              session={session}
+              onRefresh={refreshSession}
+              errorMessage={
+                sessionExpired ? "Session expired — refresh to continue." : null
+              }
+            />
+            <TrustInformation />
+            <PlaceOrderButton
+              state={state}
+              disabled={
+                !selectedAddress || !customer.fullName || isBusy || sessionExpired
+              }
+              onClick={() => void placeOrder()}
+            />
+          </aside>
+        </div>
       </div>
+
+      {/* ── Mobile sticky CTA above the bottom nav ── */}
+      {state !== CHECKOUT_STATES.ORDER_CONFIRMATION && (
+        <div className="lg:hidden fixed inset-x-0 bottom-[60px] z-40 px-4 pb-3 bg-gradient-to-t from-white via-white/95 to-transparent pt-2">
+          <Button
+            onClick={() => setSummaryCollapsed(true)}
+            className="w-full mb-2 bg-kampmax-muted text-kampmax-text hover:bg-neutral-200"
+            variant="secondary"
+          >
+            {summaryCollapsed ? "Hide" : "Show"} order summary
+          </Button>
+          {summaryCollapsed && (
+            <div className="mb-2">
+              <OrderSummary session={session} collapsed={false} />
+            </div>
+          )}
+          <PlaceOrderButton
+            state={state}
+            disabled={
+              !selectedAddress || !customer.fullName || isBusy || sessionExpired
+            }
+            onClick={() => void placeOrder()}
+          />
+        </div>
+      )}
     </PageContainer>
   );
 }

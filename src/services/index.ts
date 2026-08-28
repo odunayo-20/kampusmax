@@ -114,3 +114,23 @@ export {
   removeRecentSearch,
   clearRecentSearches,
 } from "./search";
+export {
+  createCheckoutSession,
+  getCheckoutSession,
+  isCheckoutSessionExpired,
+  validateCheckout,
+  applyCoupon,
+  removeCoupon,
+  selectDelivery,
+  getDefaultSelectedDelivery,
+  initializePaystackPayment,
+  getPaymentStatus,
+  getCustomerInfo,
+  checkoutFeatureFlags,
+  estimateLoyaltyPointsEarned,
+  couponStatusLabel,
+  getSavedAddresses,
+  addAddress,
+  updateAddress,
+  deleteAddress,
+} from "./checkout";

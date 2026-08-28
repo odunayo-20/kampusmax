@@ -1,263 +1,516 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth-context";
+import { useApp } from "@/lib/app-context";
+import type { CartLineItem } from "@/types/cart";
+import type { SavedAddress } from "@/types";
 import {
-  CheckoutFormData,
-  CheckoutValidation,
-  CheckoutSummary,
-  DeliveryMethod,
-  PaymentMethod,
-  PickupLocation,
-  PromoCode,
-} from "@/types";
-import { useCart, VendorCartGroup } from "@/lib/cart-context";
-import { getVendorById } from "@/services/users";
-import { getWalletBalance } from "@/services/wallet";
+  createCheckoutSession,
+  getCheckoutSession,
+  isCheckoutSessionExpired,
+  validateCheckout,
+  applyCoupon,
+  removeCoupon as removeCouponService,
+  selectDelivery,
+  getDefaultSelectedDelivery,
+  initializePaystackPayment,
+  getPaymentStatus,
+  getCustomerInfo,
+  checkoutFeatureFlags,
+  estimateLoyaltyPointsEarned,
+  getSavedAddresses,
+  addAddress as addAddressService,
+  updateAddress as updateAddressService,
+  deleteAddress as deleteAddressService,
+} from "@/services/checkout";
+import type { AddressFormValues } from "@/components/checkout/AddressForm";
+import {
+  CHECKOUT_STATES,
+  CheckoutState,
+  CheckoutSession,
+  CheckoutCustomer,
+  CheckoutDeliveryMethod,
+  CheckoutPaymentMethod,
+  CheckoutErrorInfo,
+  CouponState,
+  KampmaxCoinState,
+  LoyaltySectionState,
+  VendorDeliveryOption,
+  VendorDeliverySelection,
+} from "@/types/checkout";
 
-// ── Mock promo codes (will be replaced by API) ──
-const VALID_PROMO_CODES: Record<string, PromoCode> = {
-  CAMPUS10: {
-    code: "CAMPUS10",
-    discountType: "percentage",
-    discountValue: 10,
-    maxDiscount: 2000,
-    minOrderAmount: 5000,
-    description: "10% off (up to ₦2,000)",
-    expiresAt: "2026-12-31",
-  },
-  WELCOME500: {
-    code: "WELCOME500",
-    discountType: "fixed",
-    discountValue: 500,
-    minOrderAmount: 3000,
-    description: "₦500 off your order",
-    expiresAt: "2026-12-31",
-  },
-  RUGIPO20: {
-    code: "RUGIPO20",
-    discountType: "percentage",
-    discountValue: 20,
-    maxDiscount: 5000,
-    minOrderAmount: 10000,
-    description: "20% off for RUGIPO students (up to ₦5,000)",
-    expiresAt: "2026-06-30",
-  },
+/** Record-friendly error bag for the shared inputs. */
+type CustomerErrorBag = Record<string, string | undefined>;
+
+// These are the *only* accepted state transitions, matching the module's spec.
+const ALLOWED: Record<string, string[]> = {
+  [CHECKOUT_STATES.IDLE]: [CHECKOUT_STATES.LOADING, CHECKOUT_STATES.READY, CHECKOUT_STATES.SESSION_EXPIRED],
+  [CHECKOUT_STATES.LOADING]: [CHECKOUT_STATES.READY, CHECKOUT_STATES.VALIDATION_FAILED, CHECKOUT_STATES.SESSION_EXPIRED, CHECKOUT_STATES.NETWORK_ERROR],
+  [CHECKOUT_STATES.VALIDATING]: [CHECKOUT_STATES.READY, CHECKOUT_STATES.VALIDATION_FAILED, CHECKOUT_STATES.SESSION_EXPIRED, CHECKOUT_STATES.NETWORK_ERROR],
+  [CHECKOUT_STATES.READY]: [CHECKOUT_STATES.VALIDATING, CHECKOUT_STATES.SESSION_EXPIRED],
+  [CHECKOUT_STATES.PAYMENT_INITIALIZING]: [CHECKOUT_STATES.PAYMENT_PENDING, CHECKOUT_STATES.PAYMENT_FAILED, CHECKOUT_STATES.PAYMENT_CANCELLED, CHECKOUT_STATES.SESSION_EXPIRED, CHECKOUT_STATES.NETWORK_ERROR, CHECKOUT_STATES.READY],
+  [CHECKOUT_STATES.PAYMENT_PENDING]: [CHECKOUT_STATES.PAYMENT_SUCCESS, CHECKOUT_STATES.PAYMENT_FAILED, CHECKOUT_STATES.PAYMENT_CANCELLED, CHECKOUT_STATES.SESSION_EXPIRED],
+  [CHECKOUT_STATES.PAYMENT_SUCCESS]: [CHECKOUT_STATES.ORDER_CONFIRMATION, CHECKOUT_STATES.NETWORK_ERROR, CHECKOUT_STATES.SESSION_EXPIRED],
+  [CHECKOUT_STATES.ORDER_CONFIRMATION]: [],
+  [CHECKOUT_STATES.VALIDATION_FAILED]: [CHECKOUT_STATES.READY, CHECKOUT_STATES.VALIDATING],
+  [CHECKOUT_STATES.PAYMENT_FAILED]: [CHECKOUT_STATES.PAYMENT_INITIALIZING, CHECKOUT_STATES.READY, CHECKOUT_STATES.SESSION_EXPIRED],
+  [CHECKOUT_STATES.PAYMENT_CANCELLED]: [CHECKOUT_STATES.PAYMENT_INITIALIZING, CHECKOUT_STATES.READY, CHECKOUT_STATES.SESSION_EXPIRED],
+  [CHECKOUT_STATES.SESSION_EXPIRED]: [CHECKOUT_STATES.LOADING, CHECKOUT_STATES.READY],
+  [CHECKOUT_STATES.NETWORK_ERROR]: [CHECKOUT_STATES.PAYMENT_INITIALIZING, CHECKOUT_STATES.READY, CHECKOUT_STATES.LOADING],
 };
 
-// ── Mock loyalty config ──
-const LOYALTY_RATE = 1; // 1 point = ₦1
-const LOYALTY_EARN_RATE = 0.05; // earn 5% of spend as points
-const MAX_LOYALTY_PERCENTAGE = 0.3; // max 30% of order can be paid with points
+export function useCheckout() {
+  const router = useRouter();
+  const { items, clearCart } = useCart();
+  const { status, user } = useAuth();
+  const { selectedCampus, setSelectedCampus } = useApp();
 
-const INITIAL_FORM: CheckoutFormData = {
-  deliveryMethod: "campus_pickup",
-  pickupLocation: "main_gate",
-  deliveryAddress: "",
-  campusId: "rugipo",
-  paymentMethod: "paystack",
-  promoCode: "",
-  loyaltyPointsToUse: 0,
-  notes: "",
-};
+  const flags = useMemo(() => checkoutFeatureFlags(), []);
 
-export function useCheckout(userId: string = "u1") {
-  const { items, vendorGroups, summary: cartSummary, clearCart } = useCart();
-  const [form, setForm] = useState<CheckoutFormData>(INITIAL_FORM);
-  const [errors, setErrors] = useState<CheckoutValidation>({});
-  const [isPlacing, setIsPlacing] = useState(false);
-  const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
-  const [promoError, setPromoError] = useState<string | null>(null);
-  const [loyaltyPoints, setLoyaltyPoints] = useState(1250); // mock balance
-  const [useAllPoints, setUseAllPoints] = useState(false);
+  // ── Core state (state machine) ──
+  const [state, setStateRaw] = useState<CheckoutState>(CHECKOUT_STATES.IDLE);
+  const [session, setSession] = useState<CheckoutSession | null>(null);
+  const [errorInfo, setErrorInfo] = useState<CheckoutErrorInfo | null>(null);
 
-  // ── Derived vendor data ──
-  const vendorGroupsResolved = useMemo(() => {
-    return vendorGroups.map((g) => {
-      const vendor = getVendorById(g.vendorId);
-      return {
-        ...g,
-        vendorName: vendor?.storeName || "Unknown Vendor",
-        vendorVerified: vendor?.verified || false,
-      };
-    });
-  }, [vendorGroups]);
+  // ── Form state ──
+  const [customer, setCustomer] = useState<CheckoutCustomer>({ fullName: "", email: "", phone: "" });
+  const [customerErrors, setCustomerErrors] = useState<CustomerErrorBag>({});
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [loadingVendorId, setLoadingVendorId] = useState<string | null>(null);
 
-  // ── Delivery fee ──
-  const deliveryFee = useMemo(() => {
-    if (form.deliveryMethod === "campus_pickup" || form.deliveryMethod === "meetup") return 0;
-    return 500;
-  }, [form.deliveryMethod]);
-
-  // ── Promo discount ──
-  const discountAmount = useMemo(() => {
-    if (!appliedPromo) return 0;
-    if (appliedPromo.discountType === "fixed") {
-      return appliedPromo.discountValue;
-    }
-    const raw = Math.round(cartSummary.itemsSubtotal * (appliedPromo.discountValue / 100));
-    return appliedPromo.maxDiscount ? Math.min(raw, appliedPromo.maxDiscount) : raw;
-  }, [appliedPromo, cartSummary.itemsSubtotal]);
-
-  // ── Loyalty points ──
-  const maxLoyaltyPoints = useMemo(() => {
-    const maxSpend = Math.round(cartSummary.itemsSubtotal * MAX_LOYALTY_PERCENTAGE);
-    return Math.min(maxSpend, loyaltyPoints);
-  }, [cartSummary.itemsSubtotal, loyaltyPoints]);
-
-  const loyaltyPointsToUse = useMemo(() => {
-    if (useAllPoints) return maxLoyaltyPoints;
-    return Math.min(form.loyaltyPointsToUse, maxLoyaltyPoints);
-  }, [useAllPoints, form.loyaltyPointsToUse, maxLoyaltyPoints]);
-
-  const loyaltyDiscount = loyaltyPointsToUse * LOYALTY_RATE;
-
-  // ── Final total ──
-  const finalTotal = useMemo(() => {
-    const sub = cartSummary.itemsSubtotal - discountAmount - loyaltyDiscount;
-    return Math.max(0, sub + deliveryFee + cartSummary.platformFee);
-  }, [cartSummary, discountAmount, loyaltyDiscount, deliveryFee]);
-
-  // ── Points earned ──
-  const loyaltyPointsEarned = useMemo(() => {
-    const eligibleSpend = Math.max(0, cartSummary.itemsSubtotal - discountAmount);
-    return Math.round(eligibleSpend * LOYALTY_EARN_RATE);
-  }, [cartSummary.itemsSubtotal, discountAmount]);
-
-  // ── Checkout summary ──
-  const checkoutSummary: CheckoutSummary = useMemo(
+  // ── Feature/state for the money features (display-only, backend-driven) ──
+  const [coupon, setCoupon] = useState<CouponState>({ code: "", status: "idle" });
+  const [coin, setCoin] = useState<KampmaxCoinState>({
+    enabledByBackend: flags.kampmaxCoinEnabled,
+    balance: 0,
+    useCoin: false,
+    appliedAmount: 0,
+    remainingBalance: 0,
+  });
+  const loyalty = useMemo<LoyaltySectionState>(
     () => ({
-      itemsSubtotal: cartSummary.itemsSubtotal,
-      platformFee: cartSummary.platformFee,
-      deliveryFee,
-      discountAmount,
-      loyaltyDiscount,
-      finalTotal,
-      itemCount: cartSummary.itemCount,
-      appliedPromo,
-      loyaltyPointsUsed: loyaltyPointsToUse,
-      loyaltyPointsEarned,
+      enabledByBackend: flags.loyaltyEnabled,
+      pointsEarned: estimateLoyaltyPointsEarned(session?.pricing?.itemsSubtotal ?? 0),
+      message:
+        "Points are calculated and credited by the server after the order is confirmed. Rates are not hard-coded on the client.",
     }),
-    [
-      cartSummary,
-      deliveryFee,
-      discountAmount,
-      loyaltyDiscount,
-      finalTotal,
-      appliedPromo,
-      loyaltyPointsToUse,
-      loyaltyPointsEarned,
-    ]
+    [flags.loyaltyEnabled, session]
   );
 
-  // ── Wallet balance ──
-  const walletBalance = useMemo(() => getWalletBalance(userId), [userId]);
+  const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("paystack");
 
-  // ── Form setters ──
-  const setField = useCallback(
-    <K extends keyof CheckoutFormData>(key: K, value: CheckoutFormData[K]) => {
-      setForm((prev) => ({ ...prev, [key]: value }));
-      // Clear related error
-      if (key in errors) {
-        setErrors((prev) => ({ ...prev, [key]: undefined }));
-      }
-    },
-    [errors]
-  );
+  // ── Guard against duplicate submits ──
+  const busyRef = useRef(false);
+  const isBusy =
+    state === CHECKOUT_STATES.LOADING ||
+    state === CHECKOUT_STATES.VALIDATING ||
+    state === CHECKOUT_STATES.PAYMENT_INITIALIZING ||
+    state === CHECKOUT_STATES.PAYMENT_PENDING;
 
-  // ── Promo code ──
-  const applyPromoCode = useCallback(() => {
-    const code = form.promoCode.trim().toUpperCase();
-    if (!code) {
-      setPromoError("Enter a promo code");
-      return;
-    }
-    const promo = VALID_PROMO_CODES[code];
-    if (!promo) {
-      setPromoError("Invalid promo code");
-      return;
-    }
-    if (promo.minOrderAmount && cartSummary.itemsSubtotal < promo.minOrderAmount) {
-      setPromoError(`Minimum order: ₦${promo.minOrderAmount.toLocaleString()}`);
-      return;
-    }
-    setAppliedPromo(promo);
-    setPromoError(null);
-  }, [form.promoCode, cartSummary.itemsSubtotal]);
-
-  const removePromoCode = useCallback(() => {
-    setAppliedPromo(null);
-    setForm((prev) => ({ ...prev, promoCode: "" }));
-    setPromoError(null);
+  // ── State setter enforcing the machine (safe/guarded) ──
+  const transitionTo = useCallback((next: CheckoutState) => {
+    setStateRaw((current) => {
+      const allowed = ALLOWED[current];
+      if (allowed && allowed.includes(next)) return next;
+      // Fall back to previous for anything we can't fold in.
+      return current;
+    });
   }, []);
 
-  // ── Loyalty points ──
-  const setLoyaltyPointsToUse = useCallback(
-    (pts: number) => {
-      setUseAllPoints(false);
-      setForm((prev) => ({ ...prev, loyaltyPointsToUse: pts }));
+  // ── Active cart lines (exclude saved-for-later) ──
+  const activeItems = useMemo(
+    () => items.filter((i) => !i.savedForLater) as CartLineItem[],
+    [items]
+  );
+
+  // Build/maintain the presentation session from the live cart.
+  useEffect(() => {
+    if (activeItems.length === 0) {
+      setSession(null);
+      return;
+    }
+    setSession(
+      createCheckoutSession({
+        items: activeItems,
+        campusId: selectedCampus.id,
+        customerId: user?.id,
+      })
+    );
+  }, [activeItems, selectedCampus.id, user?.id]);
+
+  useEffect(() => {
+    if (status === "authenticated" && user) {
+      const info = getCustomerInfo(user.id);
+      if (!customer.fullName) setCustomer((prev) => ({ ...prev, fullName: info.fullName }));
+      if (!customer.email) setCustomer((prev) => ({ ...prev, email: info.email }));
+      if (!customer.phone) setCustomer((prev) => ({ ...prev, phone: info.phone }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, user?.id]);
+
+  useEffect(() => {
+    setAddresses(getSavedAddresses());
+  }, []);
+
+  // Default the selected saved address to the "default" one if present.
+  useEffect(() => {
+    if (selectedAddressId || addresses.length === 0) return;
+    const def = addresses.find((a) => a.isDefault) || addresses[0];
+    if (def) setSelectedAddressId(def.id);
+  }, [addresses, selectedAddressId]);
+
+  // Prefill coin balance from the mock loyalty/wallet data for display only.
+  useEffect(() => {
+    if (!flags.kampmaxCoinEnabled) return;
+    // Balance is display-only; a real app loads it from the backend.
+    setCoin((prev) => ({ ...prev, balance: 1250, remainingBalance: 1250 }));
+  }, [flags.kampmaxCoinEnabled]);
+
+  // ── Session refresh ──
+  const refreshSession = useCallback(() => {
+    if (!session) return;
+    setSession(getCheckoutSession(session));
+  }, [session]);
+
+  // ── Computed: selected address object ──
+  const selectedAddress = useMemo(
+    () => addresses.find((a) => a.id === selectedAddressId) || null,
+    [addresses, selectedAddressId]
+  );
+
+  const vendorNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    session?.vendorGroups.forEach((g) => {
+      names[g.vendorId] = g.vendorName;
+    });
+    return names;
+  }, [session]);
+
+  // ── Delivery selection per vendor ──
+  const selectDeliveryOption = useCallback(
+    (vendorId: string, option: VendorDeliveryOption) => {
+      if (!session || busyRef.current) return;
+      setLoadingVendorId(vendorId);
+      const selection: VendorDeliverySelection = {
+        vendorId,
+        method: option.method,
+        optionId: option.id,
+        fee: option.fee,
+        estimatedDelivery: option.estimatedDelivery,
+      };
+      void selectDelivery(session, selection).then((res) => {
+        setLoadingVendorId(null);
+        setSession((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev };
+          next.vendorGroups = prev.vendorGroups.map((g) =>
+            g.vendorId === vendorId ? { ...g, selectedDelivery: selection } : g
+          );
+          next.deliveryTotal = next.vendorGroups.reduce(
+            (s, g) => s + (g.selectedDelivery?.fee ?? 0),
+            0
+          );
+          next.pricing = {
+            ...next.pricing,
+            deliveryTotal: next.deliveryTotal,
+            finalTotal: finalTotalFor(next),
+          };
+          void res;
+          return next;
+        });
+        refreshSession();
+      });
+    },
+    [session, refreshSession]
+  );
+
+  // ── Campus change: re-validate + reset delivery to defaults ──
+  const changeCampus = useCallback(
+    (campus: Parameters<typeof setSelectedCampus>[0]) => {
+      if (busyRef.current) return;
+      setSelectedCampus(campus);
+      setErrorInfo(null);
+      // Clear per-vendor delivery back to defaults so fees re-resolve for the
+      // new campus (display-only). Session rebuilt by the main effect.
+      setSession((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, campusId: campus.id };
+        next.vendorGroups = prev.vendorGroups.map((g) => ({
+          ...g,
+          selectedDelivery: getDefaultSelectedDelivery(g.vendorId),
+        }));
+        next.deliveryTotal = 0;
+        next.pricing = { ...next.pricing, deliveryTotal: 0, finalTotal: finalTotalFor(next) };
+        return next;
+      });
+    },
+    [setSelectedCampus]
+  );
+
+  // ── Customer + errors ──
+  const setCustomerField = useCallback(
+    <K extends keyof CheckoutCustomer>(field: K, value: string) => {
+      setCustomer((prev) => ({ ...prev, [field]: value }));
+      setCustomerErrors((prev) => ({ ...prev, [field]: undefined }));
     },
     []
   );
 
-  const toggleUseAllPoints = useCallback(() => {
-    setUseAllPoints((prev) => !prev);
-    if (!useAllPoints) {
-      setForm((prev) => ({ ...prev, loyaltyPointsToUse: maxLoyaltyPoints }));
-    } else {
-      setForm((prev) => ({ ...prev, loyaltyPointsToUse: 0 }));
-    }
-  }, [useAllPoints, maxLoyaltyPoints]);
-
-  // ── Validation ──
-  const validate = useCallback((): boolean => {
-    const errs: CheckoutValidation = {};
-
-    if (form.deliveryMethod === "delivery" && !form.deliveryAddress.trim()) {
-      errs.deliveryAddress = "Enter your delivery address";
-    }
-    if (form.deliveryMethod === "campus_pickup" && !form.pickupLocation) {
-      errs.pickupLocation = "Select a pickup location";
-    }
-    if (form.paymentMethod === "wallet" && walletBalance < finalTotal) {
-      errs.paymentMethod = `Insufficient wallet balance (₦${walletBalance.toLocaleString()})`;
-    }
-
-    setErrors(errs);
+  function validateCustomer(): boolean {
+    const errs: CustomerErrorBag = {};
+    if (!customer.fullName.trim()) errs.fullName = "Enter your full name";
+    if (!customer.email.trim()) errs.email = "Enter your email";
+    else if (!/^\S+@\S+\.\S+$/.test(customer.email)) errs.email = "Enter a valid email address";
+    if (!customer.phone.trim()) errs.phone = "Enter your phone number";
+    setCustomerErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [form, walletBalance, finalTotal]);
+  }
 
-  // ── Place order ──
+  // ── Address actions ──
+  const addAddress = useCallback((values: AddressFormValues) => {
+    const updated = addAddressService({
+      label: values.label,
+      address: values.address,
+      campusId: values.campusId,
+      contactName: values.contactName,
+      contactPhone: values.contactPhone,
+      notes: values.notes,
+      isDefault: values.isDefault,
+    });
+    setAddresses(getSavedAddresses());
+    setSelectedAddressId(updated.id);
+  }, []);
+
+  const updateAddress = useCallback((id: string, values: AddressFormValues) => {
+    updateAddressService(id, {
+      label: values.label,
+      address: values.address,
+      campusId: values.campusId,
+      contactName: values.contactName,
+      contactPhone: values.contactPhone,
+      notes: values.notes,
+      isDefault: values.isDefault,
+    });
+    setAddresses(getSavedAddresses());
+  }, []);
+
+  const deleteAddress = useCallback((id: string) => {
+    deleteAddressService(id);
+    setAddresses(getSavedAddresses());
+    setSelectedAddressId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  const selectAddress = useCallback((addr: SavedAddress) => {
+    setSelectedAddressId(addr.id);
+  }, []);
+
+  // ── Coupon (no fabricated success; backend required) ──
+  const applyCouponCode = useCallback(
+    async (code: string) => {
+      if (!session || !code.trim() || busyRef.current) return;
+      const normalized = code.trim().toUpperCase();
+      setCoupon({ code: normalized, status: "loading" });
+      const res = await applyCoupon(session, normalized);
+      if (res.data) {
+        setCoupon(res.data);
+      } else if (res.error) {
+        setCoupon({
+          code: normalized,
+          status: "not_applicable",
+          message: res.error.message,
+        });
+      }
+    },
+    [session]
+  );
+
+  const removeCoupon = useCallback(async () => {
+    const res = await removeCouponService();
+    if (res.data) setCoupon(res.data);
+  }, []);
+
+  const toggleUseCoin = useCallback((use: boolean) => {
+    setCoin((prev) => ({ ...prev, useCoin: use }));
+  }, []);
+
+  const setPayment = useCallback((m: CheckoutPaymentMethod) => {
+    setPaymentMethod(m);
+  }, []);
+
+  // ── Failure/expiry detection ──
+  useEffect(() => {
+    if (!session || isBusy) return;
+    if (isCheckoutSessionExpired(session)) {
+      setErrorInfo({
+        code: "session_expired",
+        message:
+          "Your checkout session has expired. Refresh to continue — your cart is saved.",
+      });
+      transitionTo(CHECKOUT_STATES.SESSION_EXPIRED);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, isBusy]);
+
+  // ── Kick off loading when there are items ──
+  useEffect(() => {
+    if (state === CHECKOUT_STATES.IDLE && activeItems.length > 0) {
+      transitionTo(CHECKOUT_STATES.LOADING);
+      // Simulate the server round-trip for building the presentation session.
+      const t = setTimeout(() => {
+        setErrorInfo(null);
+        transitionTo(CHECKOUT_STATES.READY);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, activeItems.length]);
+
+  // ── Place order → full flow ──
   const placeOrder = useCallback(async () => {
-    if (!validate()) return false;
+    if (busyRef.current || !session) return false;
+    if (!validateCustomer()) {
+      setErrorInfo({ code: "validation_failed", message: "Please fill in your contact details." });
+      setStateRaw((cur) => (cur === CHECKOUT_STATES.READY ? CHECKOUT_STATES.READY : cur));
+      return false;
+    }
+    if (!selectedAddress) {
+      setErrorInfo({ code: "validation_failed", message: "Please select or add a delivery address." });
+      return false;
+    }
 
-    setIsPlacing(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsPlacing(false);
+    // Duplicate-submit guard
+    if (busyRef.current) return false;
+    busyRef.current = true;
+
+    // 1. Server-side validation first (hard requirement — never trust client).
+    transitionTo(CHECKOUT_STATES.VALIDATING);
+    const vResult = await validateCheckout(session);
+    if (!vResult.ok && vResult.error?.code === "backend_required") {
+      // Backend not present: we must not fabricate a successful charge. Pause
+      // here in a clear, non-authoritative READY state.
+      busyRef.current = false;
+      transitionTo(CHECKOUT_STATES.READY);
+      setErrorInfo({
+        code: "backend_required",
+        message:
+          "This prototype has no checkout backend, so payment can't be completed. Your cart and details are saved — connect the backend to finish the order.",
+      });
+      return false;
+    }
+    if (!vResult.ok) {
+      busyRef.current = false;
+      transitionTo(CHECKOUT_STATES.VALIDATION_FAILED);
+      setErrorInfo(vResult.error || { message: "We couldn't validate your order." });
+      return false;
+    }
+
+    // 2. Initialise payment through the service (Paystack). Never fake a ref.
+    transitionTo(CHECKOUT_STATES.PAYMENT_INITIALIZING);
+    const initResult = await initializePaystackPayment(session);
+    if (!initResult.ok) {
+      busyRef.current = false;
+      transitionTo(CHECKOUT_STATES.PAYMENT_FAILED);
+      setErrorInfo(initResult.error || { message: "Payment could not be initialized." });
+      return false;
+    }
+
+    // 3. In a real app we'd launch the Paystack flow (authorizationUrl) which
+    //    returns with a reference, then verify via the backend.
+    transitionTo(CHECKOUT_STATES.PAYMENT_PENDING);
+    const reference = (initResult.data as { reference?: string } | undefined)?.reference || "";
+    const statusRes = await getPaymentStatus(reference);
+    if (!statusRes.ok) {
+      busyRef.current = false;
+      transitionTo(CHECKOUT_STATES.NETWORK_ERROR);
+      setErrorInfo(
+        statusRes.error || {
+          message: "We couldn't confirm your payment. Check your Orders page.",
+        }
+      );
+      return false;
+    }
+
+    // 4. Only verified success moves to confirmation and clears the cart.
+    transitionTo(CHECKOUT_STATES.PAYMENT_SUCCESS);
+    transitionTo(CHECKOUT_STATES.ORDER_CONFIRMATION);
+    busyRef.current = false;
     clearCart();
+    router.push("/orders");
     return true;
-  }, [validate, clearCart]);
+  }, [
+    session,
+    selectedAddress,
+    validateCustomer,
+    transitionTo,
+    clearCart,
+    router,
+  ]);
+
+  // ── Exposed summary helpers ──
+  const summaryItemCount = session?.pricing?.itemCount ?? 0;
+  const summaryVendorCount = session?.vendorGroups?.length ?? 0;
 
   return {
-    // State
-    form,
-    errors,
-    isPlacing,
-    checkoutSummary,
-    vendorGroupsResolved,
-    walletBalance,
-    loyaltyPoints,
-    maxLoyaltyPoints,
-    useAllPoints,
-    appliedPromo,
-    promoError,
+    // state machine
+    state,
+    errorInfo,
+    transitionTo,
 
-    // Actions
-    setField,
-    applyPromoCode,
-    removePromoCode,
-    setLoyaltyPointsToUse,
-    toggleUseAllPoints,
+    // session & summary
+    session,
+    refreshSession,
+    flags,
+
+    // customer / form
+    customer,
+    setCustomerField,
+    customerErrors,
+    selectedAddress,
+    selectedAddressId,
+    addresses,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    selectAddress,
+
+    // campus
+    selectedCampus,
+    changeCampus,
+
+    // delivery
+    loadingVendorId,
+    selectDeliveryOption,
+
+    // money features
+    coupon,
+    applyCouponCode,
+    removeCoupon,
+    coin,
+    toggleUseCoin,
+    loyalty,
+    paymentMethod,
+    setPayment,
+
+    // actions
     placeOrder,
+    isBusy,
+
+    // derived
+    summaryItemCount,
+    summaryVendorCount,
+    vendorNames,
+    isCustomer: status === "authenticated",
   };
+}
+
+// Compute the display final total from a session's current line items/delivery,
+// using only the same placeholder maths the service uses — never authoritative.
+// (local helper so placeOrder and delivery updates stay in sync for display)
+function finalTotalFor(s: CheckoutSession): number {
+  const fee = Math.max(50, Math.min(2000, Math.round(s.pricing.itemsSubtotal * 0.025)));
+  return Math.max(0, s.pricing.itemsSubtotal + s.pricing.deliveryTotal + fee - 0 - 0);
 }
