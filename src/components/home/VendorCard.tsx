@@ -12,7 +12,7 @@ interface VendorCardProps {
 export function VendorCard({ vendor, className }: VendorCardProps) {
   return (
     <Link
-      href={`/marketplace?vendor=${vendor.id}`}
+      href={vendor.slug ? `/store/${vendor.slug}` : `/marketplace?vendor=${vendor.id}`}
       className={cn(
         "flex-shrink-0 w-[200px] bg-white rounded-lg border border-kampmax-border p-3",
         "hover:border-kampmax-blue/50 hover:shadow-sm transition-all duration-200",

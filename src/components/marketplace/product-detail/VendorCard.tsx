@@ -13,6 +13,7 @@ interface VendorCardProps {
     rating: number;
     totalSales: number;
     responseTime?: string;
+    slug?: string;
   } | null | undefined;
   campusName: string;
   productLocation?: string;
@@ -56,7 +57,7 @@ export function VendorCard({ vendor, campusName, productLocation }: VendorCardPr
         </div>
       </div>
       <div className="mt-3 flex gap-2">
-        <Link href={`/marketplace?vendor=${vendor.id}`}>
+        <Link href={vendor.slug ? `/store/${vendor.slug}` : `/marketplace?vendor=${vendor.id}`}>
           <Button variant="outline" size="sm" className="w-full">
             <Store className="h-4 w-4 mr-1.5" /> Visit Store
           </Button>
