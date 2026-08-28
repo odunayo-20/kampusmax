@@ -7,3 +7,4 @@ export { PageContainer } from "./PageContainer";
 export { SectionHeader } from "./SectionHeader";
 export { Breadcrumbs, type BreadcrumbItem } from "./Breadcrumbs";
 export { HorizontalScroll } from "./HorizontalScroll";
+export { Footer } from "./footer/Footer";

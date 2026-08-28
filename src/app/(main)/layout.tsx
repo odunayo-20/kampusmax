@@ -6,6 +6,7 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { DesktopNavigation } from "@/components/layout/DesktopNavigation";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { useAuth } from "@/lib/auth-context";
+import { Footer } from "@/components/layout/footer/Footer";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {!isVendorSection && <DesktopNavigation />}
       <main className={isVendorSection ? "" : "pb-20 lg:pb-6"}>{children}</main>
       {!isVendorSection && <BottomNavigation />}
+      {!isVendorSection && <Footer />}
     </div>
   );
 }
