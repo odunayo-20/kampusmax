@@ -164,6 +164,8 @@ export interface User {
 export interface Vendor {
   id: string;
   userId: string;
+  /** Public-facing storefront slug (no internal DB id in public URLs). */
+  slug?: string;
   storeName: string;
   description: string;
   rating: number;

@@ -13,7 +13,7 @@ interface SavedItemCardProps {
 
 /** Product card for the "Saved for Later" list on the account. */
 export function SavedItemCard({ item }: SavedItemCardProps) {
-  const { addToCart, removeSavedItem } = useCart();
+  const { addItem, removeSavedItem } = useCart();
   const product = item.product;
   const vendor = product.vendorId ? getVendorById(product.vendorId) : undefined;
   const originalPrice = (product as Product).originalPrice;
@@ -43,16 +43,16 @@ export function SavedItemCard({ item }: SavedItemCardProps) {
         </h3>
         {vendor && (
           <p className="text-xs text-kampmax-text-secondary truncate">
-            {vendor.name}
+            {vendor.storeName}
           </p>
         )}
         <div className="flex items-baseline gap-2 mt-1">
           <span className="text-sm font-bold text-kampmax-navy">
             {formatNaira(
-              item.unitPrice ?? product.price
+              product.price
             )}
           </span>
-          {originalPrice && originalPrice > (item.unitPrice ?? product.price) && (
+          {originalPrice && originalPrice > product.price && (
             <span className="text-xs text-kampmax-text-muted line-through">
               {formatNaira(originalPrice)}
             </span>
@@ -62,7 +62,7 @@ export function SavedItemCard({ item }: SavedItemCardProps) {
         <div className="flex items-center gap-3 mt-2">
           <button
             type="button"
-            onClick={() => addToCart(product, item.quantity)}
+            onClick={() => addItem(product, item.quantity)}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-kampmax-blue hover:underline"
           >
             <ShoppingCart className="h-3.5 w-3.5" />

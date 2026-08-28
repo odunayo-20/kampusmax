@@ -127,7 +127,7 @@ export function ReviewsList({ reviews, awaiting }: ReviewsListProps) {
                     <span className="font-semibold text-kampmax-text">
                       Seller response:
                     </span>{" "}
-                    {r.vendorResponse}
+                    {r.vendorResponse.text}
                   </div>
                 )}
               </li>

@@ -78,6 +78,7 @@ export const vendors: Vendor[] = [
   {
     id: "v1",
     userId: "u3",
+    slug: "techhub-owo",
     storeName: "TechHub Owo",
     description:
       "Your one-stop shop for electronics and gadgets on campus. We sell phones, laptops, chargers, speakers, and more. All products tested and verified.",
@@ -90,6 +91,7 @@ export const vendors: Vendor[] = [
   {
     id: "v2",
     userId: "u2",
+    slug: "stylebychi",
     storeName: "StyleByChi",
     description:
       "Trendy fashion items for the modern campus student. Sneakers, hoodies, t-shirts, and accessories at student-friendly prices.",
@@ -102,6 +104,7 @@ export const vendors: Vendor[] = [
   {
     id: "v3",
     userId: "u5",
+    slug: "campusbites",
     storeName: "CampusBites",
     description:
       "Fresh, affordable meals delivered to your hostel or lecture hall. Rice, noodles, suya, and more. Fast delivery, great taste!",
@@ -114,6 +117,7 @@ export const vendors: Vendor[] = [
   {
     id: "v4",
     userId: "u6",
+    slug: "ife-bookstore",
     storeName: "IfeBookStore",
     description:
       "Textbooks and academic materials for all departments at OAU. New and used books at fair prices.",
@@ -126,6 +130,7 @@ export const vendors: Vendor[] = [
   {
     id: "v5",
     userId: "u7",
+    slug: "oau-merch",
     storeName: "OAU Merch Shop",
     description:
       "Official and custom OAU merchandise. T-shirts, hoodies, caps, and more. Show your purple pride!",
@@ -138,6 +143,7 @@ export const vendors: Vendor[] = [
   {
     id: "v6",
     userId: "u8",
+    slug: "ui-gadgets",
     storeName: "UI Gadgets",
     description:
       "Quality gadgets and electronics for UI students. Phones, laptops, accessories. Trade-in available.",
@@ -150,6 +156,7 @@ export const vendors: Vendor[] = [
   {
     id: "v7",
     userId: "u9",
+    slug: "lagos-campus-mall",
     storeName: "Lagos Campus Mall",
     description:
       "One-stop shop for UNILAG students. Electronics, fashion, food, and academic materials.",
@@ -167,6 +174,10 @@ export function getVendorByUserId(userId: string): Vendor | undefined {
 
 export function getVendorById(vendorId: string): Vendor | undefined {
   return vendors.find((v) => v.id === vendorId);
+}
+
+export function getVendorBySlug(slug: string): Vendor | undefined {
+  return vendors.find((v) => v.slug === slug);
 }
 
 export function getUserById(userId: string): User | undefined {

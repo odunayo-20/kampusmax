@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui";
@@ -9,8 +9,36 @@ import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { useAuth } from "@/lib/auth-context";
 
+/**
+ * Returns a safe destination after login. Only allows local, non-external
+ * paths (prevents open-redirect). Unknown params fall back to /home.
+ */
+function safeReturnTo(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/home";
+  // Only permit known customer-facing paths (storefronts are public).
+  if (raw.startsWith("/store/")) return raw;
+  if (
+    ["/home", "/marketplace", "/cart", "/orders", "/notifications"].some(
+      (p) => raw === p || raw.startsWith(`${p}/`)
+    )
+  ) {
+    return raw;
+  }
+  return "/home";
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = safeReturnTo(searchParams.get("returnTo"));
   const { login } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -47,7 +75,7 @@ export default function LoginPage() {
     try {
       const result = await login(email.trim(), password);
       if (result.success) {
-        router.push("/home");
+        router.push(returnTo);
       } else {
         setErrors({ general: result.message });
       }

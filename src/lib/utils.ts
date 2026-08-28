@@ -11,6 +11,19 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // ============================================================
+// SITE URL HELPERS
+// ============================================================
+
+/** Canonical site origin used for SEO metadata and shareable links. */
+export function getSiteBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  const configured = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) return configured;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "https://kampmax.example.com";
+}
+
+// ============================================================
 // NIGERIAN NAIRA FORMATTING
 // ============================================================
 

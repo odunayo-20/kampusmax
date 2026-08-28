@@ -29,7 +29,7 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
         <OrderCard
           key={order.id}
           order={order}
-          vendorName={getVendorByUserId(order.vendorId)?.name}
+          vendorName={getVendorByUserId(order.vendorId)?.storeName}
         />
       ))}
       <Link

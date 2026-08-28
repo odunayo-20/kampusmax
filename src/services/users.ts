@@ -5,6 +5,7 @@ import {
   vendors as mockVendors,
   getVendorByUserId as _getVendorByUserId,
   getVendorById as _getVendorById,
+  getVendorBySlug as _getVendorBySlug,
   getUserById as _getUserById,
 } from "@/data/users";
 
@@ -26,6 +27,10 @@ export function getVendors(): Vendor[] {
 
 export function getVendorById(id: string): Vendor | undefined {
   return _getVendorById(id);
+}
+
+export function getVendorBySlug(slug: string): Vendor | undefined {
+  return _getVendorBySlug(slug);
 }
 
 export function getVendorByUserId(userId: string): Vendor | undefined {
