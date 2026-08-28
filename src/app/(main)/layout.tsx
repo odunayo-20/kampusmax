@@ -7,6 +7,7 @@ import { DesktopNavigation } from "@/components/layout/DesktopNavigation";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { useAuth } from "@/lib/auth-context";
 import { Footer } from "@/components/layout/footer/Footer";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <main className={isVendorSection ? "" : "pb-20 lg:pb-6"}>{children}</main>
       {!isVendorSection && <BottomNavigation />}
       {!isVendorSection && <Footer />}
+      {!isVendorSection && <CartDrawer />}
     </div>
   );
 }

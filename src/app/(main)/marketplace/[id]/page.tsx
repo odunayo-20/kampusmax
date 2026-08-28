@@ -131,10 +131,26 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const missingGroups = variantGroups.filter((g) => !selectedVariants[g.id]).map((g) => g.name);
 
+  function buildVariantLabel(): string | undefined {
+    if (!variantGroups.length || !Object.keys(selectedVariants).length) return undefined;
+    const parts: string[] = [];
+    variantGroups.forEach((g) => {
+      const selId = selectedVariants[g.id];
+      const opt = g.options.find((o) => o.id === selId);
+      if (opt) parts.push(`${g.name}: ${opt.value}`);
+    });
+    return parts.length ? parts.join(" · ") : undefined;
+  }
+
   function handleAddToCart() {
     if (!product || !canAddToCart) return;
     const cartProduct = { ...product, price: effectivePrice };
-    addItem(cartProduct, quantity);
+    addItem(cartProduct, quantity, {
+      variantLabel: buildVariantLabel(),
+      selectedVariants,
+      unitPrice: effectivePrice,
+      openDrawer: true,
+    });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   }
@@ -143,7 +159,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (!product || !canAddToCart) return;
     setBuyLoading(true);
     const cartProduct = { ...product, price: effectivePrice };
-    addItem(cartProduct, quantity);
+    addItem(cartProduct, quantity, {
+      variantLabel: buildVariantLabel(),
+      selectedVariants,
+      unitPrice: effectivePrice,
+      openDrawer: false,
+    });
     setTimeout(() => {
       setBuyLoading(false);
       router.push("/checkout");

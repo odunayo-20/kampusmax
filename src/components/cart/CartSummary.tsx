@@ -23,6 +23,15 @@ export function CartSummary({ summary }: CartSummaryProps) {
           </span>
         </div>
 
+        {summary.discountTotal > 0 && (
+          <div className="flex justify-between">
+            <span className="text-kampmax-success">Discount</span>
+            <span className="text-kampmax-success tabular-nums">
+              -{formatNaira(summary.discountTotal)}
+            </span>
+          </div>
+        )}
+
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-1">
             <span className="text-kampmax-text-secondary">Platform fee</span>

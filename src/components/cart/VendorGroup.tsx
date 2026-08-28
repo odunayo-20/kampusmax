@@ -12,6 +12,9 @@ interface VendorGroupProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemove: (productId: string) => void;
   onSaveForLater: (productId: string) => void;
+  onUpdateToNewPrice?: (productId: string) => void;
+  /** productId currently being mutated */
+  pendingId?: string | null;
 }
 
 export function VendorGroup({
@@ -21,6 +24,8 @@ export function VendorGroup({
   onUpdateQuantity,
   onRemove,
   onSaveForLater,
+  onUpdateToNewPrice,
+  pendingId,
 }: VendorGroupProps) {
   return (
     <div className="bg-white rounded-xl border border-kampmax-border overflow-hidden">
@@ -52,11 +57,13 @@ export function VendorGroup({
       <div className="divide-y divide-kampmax-border">
         {group.items.map((item) => (
           <CartItemCard
-            key={item.product.id}
+            key={item.id || item.product.id}
             item={item}
+            pending={pendingId === item.product.id}
             onUpdateQuantity={onUpdateQuantity}
             onRemove={onRemove}
             onSaveForLater={onSaveForLater}
+            onUpdateToNewPrice={onUpdateToNewPrice}
           />
         ))}
       </div>
