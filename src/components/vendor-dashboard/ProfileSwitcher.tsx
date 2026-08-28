@@ -1,0 +1,208 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  ChevronDown,
+  User,
+  Store,
+  Briefcase,
+  Wrench,
+  Building2,
+  UserCheck,
+  Check,
+  LogOut,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { getVendorAccess, getVendorProfileSummary } from "@/services/vendor-dashboard";
+import { VendorStatusBadge } from "./VendorStatusBadge";
+
+interface ProfileEntry {
+  id: string;
+  label: string;
+  icon: typeof User;
+  active: boolean;
+  href?: string;
+  onboardLabel?: string;
+}
+
+/**
+ * Multi-profile switcher. Only shows active profiles as selectable; inactive
+ * profiles surface an onboarding action. Displaying a profile NEVER grants
+ * permissions — the backend remains authoritative.
+ */
+export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const { user } = useAuth();
+  const access = getVendorAccess();
+  const vendor = getVendorProfileSummary();
+
+  const profiles: ProfileEntry[] = [
+    { id: "customer", label: "Customer", icon: User, active: true, href: "/home" },
+    {
+      id: "vendor",
+      label: "Vendor",
+      icon: Store,
+      active: access.kind === "approved",
+      href: "/vendor",
+      onboardLabel: "Become a Vendor",
+    },
+    { id: "freelancer", label: "Freelancer", icon: Briefcase, active: false, onboardLabel: "Become a Freelancer" },
+    { id: "service", label: "Service Provider", icon: Wrench, active: false, onboardLabel: "Offer Services" },
+    { id: "employer", label: "Employer", icon: Building2, active: false, onboardLabel: "Become an Employer" },
+    { id: "ambassador", label: "Ambassador", icon: UserCheck, active: false, onboardLabel: "Become an Ambassador" },
+  ];
+
+  const current = profiles.find((p) => p.id === "vendor" && p.active) ? profiles[1] : profiles[0];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-white hover:bg-white/10"
+      >
+        <User className="h-4 w-4" aria-hidden />
+        <span className="hidden sm:inline">{current.label}</span>
+        <ChevronDown className="h-4 w-4" aria-hidden />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden />
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-40 mt-2 w-72 rounded-xl border border-kampmax-border bg-white p-2 shadow-xl"
+          >
+            <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              Current Profile
+            </p>
+            <ProfileRow
+              label={vendor ? "Vendor" : current.label}
+              icon={current.icon}
+              sub={vendor?.storeName ?? user?.name}
+              onNavigate={() => {
+                setOpen(false);
+                onClosed?.();
+                if (current.href) router.push(current.href);
+              }}
+            />
+
+            <p className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+              Switch Profile
+            </p>
+            <div className="space-y-0.5">
+              {profiles.map((p) => {
+                const Icon = p.icon;
+                if (p.active) {
+                  return (
+                    <button
+                      key={p.id}
+                      role="menuitem"
+                      onClick={() => {
+                        setOpen(false);
+                        onClosed?.();
+                        if (p.href) router.push(p.href);
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+                      <span className="flex-1 text-left">{p.label}</span>
+                      <Check className="h-4 w-4 text-success-600" aria-hidden />
+                    </button>
+                  );
+                }
+                if (p.id === "vendor" && vendor) {
+                  return (
+                    <div key={p.id} className="flex items-center gap-2.5 rounded-lg px-3 py-2">
+                      <Icon className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+                      <span className="flex-1 text-sm text-neutral-700">Vendor</span>
+                      <VendorStatusBadge status={access.status ?? "DRAFT"} />
+                    </div>
+                  );
+                }
+                return (
+                  <Link
+                    key={p.id}
+                    href="/account/profiles/vendor/onboarding"
+                    onClick={() => {
+                      setOpen(false);
+                      onClosed?.();
+                    }}
+                    role="menuitem"
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-500 hover:bg-neutral-50"
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-neutral-300" aria-hidden />
+                    <span className="flex-1 text-left">{p.onboardLabel ?? p.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 border-t border-kampmax-border" />
+            <button
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onClosed?.();
+                router.push("/profile");
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+            >
+              <User className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+              Account Settings
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onClosed?.();
+                router.push("/home");
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+            >
+              <LogOut className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+              Return to Customer Account
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProfileRow({
+  label,
+  icon: Icon,
+  sub,
+  onNavigate,
+}: {
+  label: string;
+  icon: typeof User;
+  sub?: string;
+  onNavigate: () => void;
+}) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onNavigate}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-neutral-50",
+        "ring-1 ring-primary-600"
+      )}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100 text-primary-700">
+        <Icon className="h-5 w-5" aria-hidden />
+      </div>
+      <span className="flex-1 text-left">
+        <span className="block text-sm font-semibold text-neutral-900">{label}</span>
+        {sub && <span className="block text-xs text-neutral-500 truncate">{sub}</span>}
+      </span>
+    </button>
+  );
+}

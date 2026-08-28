@@ -166,6 +166,23 @@ export const vendors: Vendor[] = [
     campusId: "unilag",
     specialties: ["Electronics", "Fashion", "Food"],
   },
+  {
+    // Owner of the default seller dashboard demo (u1 = Adebayo, approved vendor)
+    id: "v8",
+    userId: "u1",
+    slug: "adebayo-gadgets",
+    storeName: "Adebayo's Gadgets",
+    description:
+      "Gadgets, electronics and campus essentials from a fellow student. Affordable, tested, and delivered with a smile.",
+    rating: 4.7,
+    totalSales: 45,
+    verified: true,
+    campusId: "rugipo",
+    specialties: ["Electronics", "Gadgets", "Accessories"],
+    coverImage: "",
+    responseTime: "Within 30 minutes",
+    joinDate: "2025-02-01T09:00:00Z",
+  },
 ];
 
 export function getVendorByUserId(userId: string): Vendor | undefined {

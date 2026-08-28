@@ -110,7 +110,7 @@ export function getDocumentRequirements() {
 
 export function createApplication(): { created: boolean; id: string } {
   const uid = ownerId();
-  if (store[uid]) return { created: false, id: store[uid].id! };
+  if (store[uid]) return { created: false, id: store[uid].applicationId ?? "" };
   const now = new Date().toISOString();
   const app: VendorOnboardingDraft = {
     applicationId: `app_${uid}_${Date.now()}`,
@@ -140,7 +140,7 @@ export function createApplication(): { created: boolean; id: string } {
     },
   };
   store[uid] = app;
-  return { created: true, id: app.id! };
+  return { created: true, id: app.applicationId ?? "" };
 }
 
 export function saveDraft(
