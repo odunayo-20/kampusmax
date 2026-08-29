@@ -1,149 +1,254 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Package, Pencil, Trash2 } from "lucide-react";
-import { cn, formatNaira } from "@/lib/utils";
-import { getVendorProducts, deleteVendorProduct } from "@/services/vendor";
-import { VendorProduct, VendorProductStatus } from "@/types";
+import { Suspense } from "react";
+import {
+  getVendorProducts,
+  getVendorProductCounts,
+  getCategoriesForVendor,
+  getCampusesForVendor,
+  setProductPublishedStatus,
+  archiveVendorProduct,
+  restoreVendorProduct,
+  deleteVendorProduct,
+} from "@/services/vendor-products";
+import { ProductHeader } from "@/components/vendor-products/ProductHeader";
+import { ProductToolbar } from "@/components/vendor-products/ProductToolbar";
+import { ProductFilters } from "@/components/vendor-products/ProductFilters";
+import { ProductsTable } from "@/components/vendor-products/ProductsTable";
+import { ProductGrid } from "@/components/vendor-products/ProductGrid";
+import { ProductPagination } from "@/components/vendor-products/ProductPagination";
+import { BulkActions } from "@/components/vendor-products/BulkActions";
+import type { Product } from "@/types";
+import type { ProductPublishStatus, ProductStockStatus, ProductSortField } from "@/types/vendor-products";
 
-const statusConfig: Record<VendorProductStatus, { label: string; color: string }> = {
-  active: { label: "Active", color: "bg-kampmax-success/10 text-kampmax-success" },
-  draft: { label: "Draft", color: "bg-kampmax-muted text-kampmax-text-secondary" },
-  sold_out: { label: "Sold Out", color: "bg-kampmax-error/10 text-kampmax-error" },
-  archived: { label: "Archived", color: "bg-kampmax-warning/10 text-kampmax-warning" },
-};
+const PAGE_SIZE = 20;
 
-export default function VendorProductsPage() {
+export default function VendorProductsPage({ params }: { params: Promise<{}> }) {
+  use(params);
   const router = useRouter();
-  const [products, setProducts] = useState<VendorProduct[]>(getVendorProducts);
+
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<VendorProductStatus | "all">("all");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [sort, setSort] = useState<ProductSortField>("newest");
+  const [statusFilter, setStatusFilter] = useState<ProductPublishStatus | "all">("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState<ProductStockStatus | "all">("all");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
 
-  const filtered = products.filter((p) => {
-    const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = filter === "all" || p.status === filter;
-    return matchesSearch && matchesFilter;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [statusCounts, setStatusCounts] = useState<Record<ProductPublishStatus | "all", number>>({
+    all: 0,
+    draft: 0,
+    pending_review: 0,
+    active: 0,
+    inactive: 0,
+    rejected: 0,
+    archived: 0,
   });
+  const [categories] = useState(() => getCategoriesForVendor());
+  const [campuses] = useState(() => getCampusesForVendor());
 
-  function handleDelete(id: string) {
-    deleteVendorProduct(id);
-    setProducts(getVendorProducts());
-    setDeletingId(null);
-  }
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  useEffect(() => {
+    setSelectedIds([]);
+    const selected = new Set(selectedIds);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const query = {
+          search,
+          status: statusFilter,
+          categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+          stockStatus: stockFilter === "all" ? undefined : stockFilter,
+          minPrice: priceMin ? Number(priceMin) : undefined,
+          maxPrice: priceMax ? Number(priceMax) : undefined,
+          sort,
+          page,
+          pageSize: PAGE_SIZE,
+        };
+        const result = getVendorProducts(query);
+        setProducts(result.items);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
+
+        const counts = getVendorProductCounts();
+        setStatusCounts(counts);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [page, search, sort, statusFilter, categoryFilter, stockFilter, priceMin, priceMax]);
+
+  const handleBulkPublish = async () => {
+    setBulkActionLoading(true);
+    try {
+      for (const id of selectedIds) {
+        const product = products.find((p) => p.id === id);
+        if (product && product.publishedStatus !== "active") {
+          setProductPublishedStatus(id, "active");
+        }
+      }
+      setSelectedIds([]);
+      setPage(1);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkUnpublish = async () => {
+    setBulkActionLoading(true);
+    try {
+      for (const id of selectedIds) {
+        const product = products.find((p) => p.id === id);
+        if (product && product.publishedStatus === "active") {
+          setProductPublishedStatus(id, "inactive");
+        }
+      }
+      setSelectedIds([]);
+      setPage(1);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    setBulkActionLoading(true);
+    try {
+      for (const id of selectedIds) {
+        const product = products.find((p) => p.id === id);
+        if (product && product.publishedStatus !== "archived") {
+          archiveVendorProduct(id);
+        }
+      }
+      setSelectedIds([]);
+      setPage(1);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-kampmax-text">Products</h1>
-          <p className="text-sm text-kampmax-text-secondary">
-            {products.length} product{products.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <button
-          onClick={() => router.push("/vendor/products/new")}
-          className="flex items-center gap-2 px-4 py-2 bg-kampmax-blue text-white text-sm font-semibold rounded-lg"
-        >
-          <Plus className="h-4 w-4" /> Add Product
-        </button>
-      </div>
+      <ProductHeader totalCount={total} onAddProduct={() => router.push("/vendor/products/new")} />
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kampmax-text-secondary" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products..."
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-kampmax-border text-sm bg-white focus:outline-none focus:border-kampmax-blue"
+      <ProductToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        sortValue={sort}
+        onSortChange={(v) => { setSort(v as ProductSortField); setPage(1); }}
+        hasActiveFilters={
+          statusFilter !== "all" ||
+          categoryFilter !== "all" ||
+          stockFilter !== "all" ||
+          Boolean(priceMin) ||
+          Boolean(priceMax)
+        }
+        onClearFilters={() => {
+          setStatusFilter("all");
+          setCategoryFilter("all");
+          setStockFilter("all");
+          setPriceMin("");
+          setPriceMax("");
+          setPage(1);
+        }}
+      />
+
+      <ProductFilters
+        statusFilter={statusFilter}
+        onStatusChange={(v) => { setStatusFilter(v); setPage(1); }}
+        categoryFilter={categoryFilter}
+        onCategoryChange={(v) => { setCategoryFilter(v); setPage(1); }}
+        stockFilter={stockFilter}
+        onStockChange={(v) => { setStockFilter(v); setPage(1); }}
+        priceMin={priceMin}
+        onPriceMinChange={setPriceMin}
+        priceMax={priceMax}
+        onPriceMaxChange={setPriceMax}
+        categories={categories}
+        statusCounts={statusCounts}
+      />
+
+      <div className="hidden md:block">
+        <ProductsTable
+          products={products}
+          onView={(p) => router.push(`/vendor/products/${p.id}`)}
+          onEdit={(p) => router.push(`/vendor/products/${p.id}/edit`)}
+          onPublish={(p) => {
+            setProductPublishedStatus(p.id, "active");
+            setPage(1);
+          }}
+          onArchive={(p) => {
+            archiveVendorProduct(p.id);
+            setPage(1);
+          }}
+          onRestore={(p) => {
+            restoreVendorProduct(p.id);
+            setPage(1);
+          }}
+          onDelete={(p) => {
+            deleteVendorProduct(p.id);
+            setPage(1);
+          }}
+          bulkAction={{
+            selectedIds,
+            onSelectAll: (checked) => setSelectedIds(checked ? products.map((p) => p.id) : []),
+            onSelectionChange: setSelectedIds,
+            onBulkPublish: handleBulkPublish,
+            onBulkUnpublish: handleBulkUnpublish,
+            onBulkArchive: handleBulkArchive,
+          }}
         />
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        {(["all", "active", "draft", "sold_out", "archived"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-              filter === f
-                ? "bg-kampmax-navy text-white"
-                : "bg-white text-kampmax-text-secondary border border-kampmax-border"
-            )}
-          >
-            {f === "all" ? "All" : statusConfig[f].label}
-          </button>
-        ))}
+      <div className="md:hidden">
+        <ProductGrid
+          products={products}
+          onView={(p) => router.push(`/vendor/products/${p.id}`)}
+          onEdit={(p) => router.push(`/vendor/products/${p.id}/edit`)}
+          onPublish={(p) => {
+            setProductPublishedStatus(p.id, "active");
+            setPage(1);
+          }}
+          onArchive={(p) => {
+            archiveVendorProduct(p.id);
+            setPage(1);
+          }}
+          onRestore={(p) => {
+            restoreVendorProduct(p.id);
+            setPage(1);
+          }}
+          onDelete={(p) => {
+            deleteVendorProduct(p.id);
+            setPage(1);
+          }}
+        />
       </div>
 
-      {/* Product List */}
-      {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-kampmax-border p-8 text-center">
-          <Package className="h-10 w-10 text-kampmax-text-secondary mx-auto mb-3" />
-          <p className="text-sm font-medium text-kampmax-text">No products found</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-xl border border-kampmax-border p-4"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-16 h-16 rounded-lg bg-kampmax-muted flex items-center justify-center flex-shrink-0">
-                  <Package className="h-6 w-6 text-kampmax-text-secondary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium", statusConfig[product.status].color)}>
-                      {statusConfig[product.status].label}
-                    </span>
-                    {product.stock <= 3 && product.status === "active" && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-kampmax-warning/10 text-kampmax-warning">
-                        Low Stock
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm font-semibold text-kampmax-text truncate">
-                    {product.title}
-                  </p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-kampmax-text-secondary">
-                    <span className="font-bold text-kampmax-text">{formatNaira(product.price)}</span>
-                    <span>{product.stock} in stock</span>
-                    <span>{product.soldCount} sold</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-3">
-                <button
-                  onClick={() => router.push(`/vendor/products/${product.id}/edit`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-kampmax-muted text-xs font-medium text-kampmax-text hover:bg-kampmax-muted/80"
-                >
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-                {deletingId === product.id ? (
-                  <div className="flex items-center gap-2 ml-auto">
-                    <span className="text-xs text-kampmax-error">Delete?</span>
-                    <button onClick={() => handleDelete(product.id)} className="text-xs text-kampmax-error font-medium">Yes</button>
-                    <button onClick={() => setDeletingId(null)} className="text-xs text-kampmax-text-secondary">No</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setDeletingId(product.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-kampmax-error hover:bg-kampmax-error/10 ml-auto"
-                  >
-                    <Trash2 className="h-3 w-3" /> Delete
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ProductPagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
+
+      <BulkActions
+        selectedCount={selectedIds.length}
+        onBulkPublish={handleBulkPublish}
+        onBulkUnpublish={handleBulkUnpublish}
+        onBulkArchive={handleBulkArchive}
+        onClearSelection={() => setSelectedIds([])}
+        disabled={bulkActionLoading}
+      />
     </div>
   );
 }

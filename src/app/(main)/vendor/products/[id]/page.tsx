@@ -2,20 +2,15 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { getVendorProductById, updateVendorProduct, setProductPublishedStatus, archiveVendorProduct, restoreVendorProduct, deleteVendorProduct } from "@/services/vendor-products";
-import { ProductForm } from "@/components/vendor-products/ProductForm";
+import { getVendorProductById, setProductPublishedStatus, archiveVendorProduct, restoreVendorProduct, deleteVendorProduct } from "@/services/vendor-products";
+import { ProductDetail } from "@/components/vendor-products/ProductDetail";
 import type { Product } from "@/types";
 
-export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const product = getVendorProductById(id);
-
-  const handleSave = async (data: any) => {
-    await updateVendorProduct(id, data);
-    router.push(`/vendor/products/${id}`);
-  };
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handlePublish = async () => {
     await setProductPublishedStatus(id, "active");
@@ -34,7 +29,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const handleRestore = async () => {
     await restoreVendorProduct(id);
-    router.push(`/vendor/products/${id}`);
+    router.refresh();
   };
 
   const handleDelete = async () => {
@@ -42,14 +37,18 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     router.push("/vendor/products");
   };
 
+  const handleInventory = () => {
+    router.push(`/vendor/products/${id}/inventory`);
+  };
+
   if (!product) {
     return (
-      <div className="space-y-4 max-w-2xl">
+      <div className="space-y-4 max-w-4xl">
         <div className="flex items-center gap-3">
           <button onClick={() => router.back()} className="w-9 h-9 rounded-lg bg-kampmax-muted flex items-center justify-center">
-            <ArrowLeft className="h-5 w-5 text-kampmax-text" />
+            <svg className="h-5 w-5 text-kampmax-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <h1 className="text-xl font-bold text-kampmax-text">Edit Product</h1>
+          <h1 className="text-xl font-bold text-kampmax-text">Product Details</h1>
         </div>
         <div className="bg-white rounded-xl border border-kampmax-border p-8 text-center">
           <p className="text-sm text-kampmax-text">Product not found</p>
@@ -62,18 +61,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-lg bg-kampmax-muted flex items-center justify-center">
-          <ArrowLeft className="h-5 w-5 text-kampmax-text" />
-        </button>
-        <h1 className="text-xl font-bold text-kampmax-text">Edit Product</h1>
-      </div>
-
-      <ProductForm
-        initialData={product}
-        onSave={handleSave}
-        onCancel={() => router.push(`/vendor/products/${id}`)}
+    <div className="space-y-4 max-w-6xl">
+      <ProductDetail
+        product={product}
+        onEdit={() => router.push(`/vendor/products/${id}/edit`)}
+        onPublish={handlePublish}
+        onUnpublish={handleUnpublish}
+        onArchive={handleArchive}
+        onRestore={handleRestore}
+        onDelete={handleDelete}
+        onInventory={handleInventory}
       />
     </div>
   );

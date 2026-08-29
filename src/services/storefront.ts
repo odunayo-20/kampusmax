@@ -19,6 +19,16 @@ import { storefrontMeta, VERIFICATION_LABEL, AVAILABILITY_LABEL } from "@/data/s
 import type { Product } from "@/types";
 import type { ReviewSortOption } from "@/types";
 
+export function isProductPublishable(p: Product): boolean {
+  const pubStatus = p.publishedStatus ?? "active";
+  return p.status === "available" && pubStatus === "active";
+}
+
+export function hasStock(p: Product): boolean {
+  if (p.stock === undefined) return true;
+  return p.stock > 0;
+}
+
 // ============================================================
 // PUBLIC VENDOR STOREFRONT SERVICE (repository)
 // ============================================================
@@ -56,7 +66,8 @@ export function isUnavailable(storefront: Storefront): boolean {
 function buildStorefront(vendor: NonNullable<ReturnType<typeof getVendorById>>): Storefront {
   const meta = storefrontMeta[vendor.id];
   const campus = getCampusById(vendor.campusId);
-  const products = getProductsByVendor(vendor.id);
+  const allProducts = getProductsByVendor(vendor.id);
+  const publishableProducts = allProducts.filter(isProductPublishable);
   const summary = getReviewSummary(vendor.id, "vendor");
 
   return {
@@ -72,7 +83,7 @@ function buildStorefront(vendor: NonNullable<ReturnType<typeof getVendorById>>):
     rating: summary.averageRating || vendor.rating,
     reviewCount: summary.totalReviews,
     attestation: { followers: meta?.followers ?? 0 },
-    productsCount: products.length,
+    productsCount: publishableProducts.length,
     campusId: vendor.campusId,
     campusName: campus?.name || vendor.campusId,
     campuses: [{ id: vendor.campusId, name: campus?.name || vendor.campusId }],
@@ -133,7 +144,7 @@ export function getStoreNavigationSections(store: Storefront): StoreNavigationSe
 export function getStoreCategories(store: Storefront): StoreCategory[] {
   const map = new Map<string, StoreCategory>();
   getProductsByVendor(store.vendorId).forEach((p) => {
-    if (p.status !== "available") return;
+    if (!isProductPublishable(p)) return;
     // Only include real categories
     const cat = getCategoryById(p.categoryId);
     if (!cat) return;
@@ -151,7 +162,7 @@ export function getStoreProducts(
   const page = Math.max(1, query.page || 1);
   const pageSize = Math.max(1, query.pageSize || 20);
 
-  let items = getProductsByVendor(store.vendorId);
+  let items = getProductsByVendor(store.vendorId).filter(isProductPublishable);
 
   // Scope searches to THIS store only.
   if (query.search) {
@@ -213,7 +224,7 @@ export function getStoreProducts(
 
 /**
  * Whether a customer can add a product to the cart from the storefront.
- * Blocked when the product isn't available OR the store isn't active.
+ * Blocked when the product isn't available OR the store isn't active OR not published OR out of stock.
  */
 export function canAddToCart(store: Storefront, product: Product): {
   allowed: boolean;
@@ -222,8 +233,11 @@ export function canAddToCart(store: Storefront, product: Product): {
   if (!store || isUnavailable(store)) {
     return { allowed: false, reason: "This store is currently unavailable." };
   }
-  if (product.status !== "available") {
+  if (!isProductPublishable(product)) {
     return { allowed: false, reason: "This item is currently unavailable." };
+  }
+  if (!hasStock(product)) {
+    return { allowed: false, reason: "This item is out of stock." };
   }
   return { allowed: true };
 }

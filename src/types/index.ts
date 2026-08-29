@@ -8,6 +8,40 @@ export type ProductCondition = "New" | "Used" | "Fair";
 
 export type ProductStatus = "available" | "sold" | "removed";
 
+export type ProductPublishStatus =
+  | "draft"
+  | "pending_review"
+  | "active"
+  | "inactive"
+  | "rejected"
+  | "archived";
+
+export interface ProductVariantOption {
+  id: string;
+  value: string;
+  priceModifier?: number;
+  stock?: number;
+  image?: string;
+  available?: boolean;
+}
+
+export interface ProductVariantGroup {
+  id: string;
+  name: string;
+  required: boolean;
+  options: ProductVariantOption[];
+}
+
+export interface ProductVariant {
+  id: string;
+  sku: string;
+  title: string;
+  price?: number;
+  stock?: number;
+  image?: string;
+  attributes: Record<string, string>;
+}
+
 export type OrderStatus =
   | "placed"
   | "confirmed"
@@ -208,6 +242,21 @@ export interface Product {
   saveCount?: number;
   rating?: number;
   ratingCount?: number;
+  soldCount?: number;
+  sku?: string;
+  stock?: number;
+  reservedStock?: number;
+  lowStockThreshold?: number;
+  costPrice?: number;
+  publishedStatus?: ProductPublishStatus;
+  updatedAt?: string;
+  archivedAt?: string;
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
+  variantGroups?: ProductVariantGroup[];
+  allowDelivery?: boolean;
+  allowPickup?: boolean;
+  deliveryFee?: number;
 }
 
 // ============================================================
