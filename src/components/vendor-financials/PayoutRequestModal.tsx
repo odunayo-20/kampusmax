@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import { X, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { X, CheckCircle, AlertCircle, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/ui";
 import { formatNaira } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { VENDOR_FINANCIAL_LIMITS, VENDOR_FINANCIAL_RESULT } from "@/types/vendor-financials";
+import { VENDOR_FINANCIAL_LIMITS } from "@/types/vendor-financials";
 import type { PayoutRequestResult, PayoutRequestInput } from "@/types/vendor-financials";
 
 interface PayoutRequestModalProps {
@@ -14,22 +14,52 @@ interface PayoutRequestModalProps {
   onClose: () => void;
   onSubmit: (input: PayoutRequestInput) => void;
   available: number;
-  result?: PayoutRequestResult;
 }
+
+type ModalPhase = "idle" | "amount" | "confirm" | "submitting" | "success" | "error";
 
 export function PayoutRequestModal({
   isOpen,
   onClose,
   onSubmit,
   available,
-  result,
 }: PayoutRequestModalProps) {
-  const [step, setStep] = useState<"amount" | "confirm">("amount");
+  const [phase, setPhase] = useState<ModalPhase>("idle");
   const [amount, setAmount] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [idempotencyKey] = useState(() => `idem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPhase("amount");
+      setAmount("");
+      setConfirmed(false);
+      setError(undefined);
+    } else {
+      setPhase("idle");
+    }
+  }, [isOpen]);
+
+  const fee = VENDOR_FINANCIAL_LIMITS.PAYOUT_FEE;
+  const amountVal = parseInt(amount, 10) || 0;
+  const total = amountVal + fee;
+  const net = amountVal;
+
+  const validateAmount = (val: number): string | null => {
+    if (val < VENDOR_FINANCIAL_LIMITS.MIN_PAYOUT) {
+      return `Minimum payout is ${formatNaira(VENDOR_FINANCIAL_LIMITS.MIN_PAYOUT)}`;
+    }
+    if (val > VENDOR_FINANCIAL_LIMITS.MAX_PAYOUT) {
+      return `Maximum payout is ${formatNaira(VENDOR_FINANCIAL_LIMITS.MAX_PAYOUT)}`;
+    }
+    const t = val + VENDOR_FINANCIAL_LIMITS.PAYOUT_FEE;
+    if (t > available) {
+      return `Insufficient balance. Available: ${formatNaira(available)} (includes ₦${VENDOR_FINANCIAL_LIMITS.PAYOUT_FEE} fee)`;
+    }
+    return null;
+  };
 
   const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, "");
@@ -47,20 +77,6 @@ export function PayoutRequestModal({
     setError(undefined);
   };
 
-  const validateAmount = (val: number): string | null => {
-    if (val < VENDOR_FINANCIAL_LIMITS.MIN_PAYOUT) {
-      return `Minimum payout is ${formatNaira(VENDOR_FINANCIAL_LIMITS.MIN_PAYOUT)}`;
-    }
-    if (val > VENDOR_FINANCIAL_LIMITS.MAX_PAYOUT) {
-      return `Maximum payout is ${formatNaira(VENDOR_FINANCIAL_LIMITS.MAX_PAYOUT)}`;
-    }
-    const total = val + VENDOR_FINANCIAL_LIMITS.PAYOUT_FEE;
-    if (total > available) {
-      return `Insufficient balance. Available: ${formatNaira(available)} (includes ₦${VENDOR_FINANCIAL_LIMITS.PAYOUT_FEE} fee)`;
-    }
-    return null;
-  };
-
   const handleNext = () => {
     const val = parseInt(amount, 10) || 0;
     const err = validateAmount(val);
@@ -68,52 +84,78 @@ export function PayoutRequestModal({
       setError(err);
       return;
     }
-    setStep("confirm");
+    setPhase("confirm");
   };
 
   const handleBack = () => {
-    setStep("amount");
+    setPhase("amount");
   };
 
-  const handleConfirmSubmit = (e: FormEvent) => {
+  const handleConfirmSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const val = parseInt(amount, 10) || 0;
     const err = validateAmount(val);
     if (err) {
       setError(err);
-      setStep("amount");
+      setPhase("amount");
       return;
     }
     if (!confirmed) {
       setError("Please confirm the payout details");
       return;
     }
-    setIsSubmitting(true);
+    setPhase("submitting");
+    setError(undefined);
+
+    // Call parent submit
     onSubmit({ amount: val, idempotencyKey, confirmed: true });
   };
 
-  const fee = VENDOR_FINANCIAL_LIMITS.PAYOUT_FEE;
-  const amountVal = parseInt(amount, 10) || 0;
-  const total = amountVal + fee;
-  const net = amountVal;
+  // Parent will call onClose when done; we just handle local UI
+  const handleClose = () => {
+    if (phase !== "submitting") {
+      onClose();
+    }
+  };
+
+  // Success/error handling via parent's result prop would be cleaner,
+  // but for now we rely on parent closing the modal on success.
+  // If parent doesn't close, we show success screen with Done button.
+
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+    <div
+      className={cn("fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50", phase === "idle" && "hidden")}
+      onClick={handleClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-kampmax-text">Request payout</h2>
+          <h2 id="modal-title" className="text-lg font-semibold text-kampmax-text">
+            Request payout
+          </h2>
           <button
             type="button"
-            onClick={() => !isSubmitting && onClose()}
-            disabled={isSubmitting}
-            className="text-kampmax-text-secondary hover:text-kampmax-text"
+            onClick={handleClose}
+            disabled={phase === "submitting"}
+            className={cn(
+              "text-kampmax-text-secondary hover:text-kampmax-text",
+              phase === "submitting" && "opacity-50 cursor-not-allowed"
+            )}
             aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {step === "amount" && (
+        {/* Amount step */}
+        {phase === "amount" && (
           <form onSubmit={(e) => { e.preventDefault(); handleNext(); }}>
             <div className="mt-6 space-y-4">
               <div>
@@ -128,7 +170,6 @@ export function PayoutRequestModal({
                   placeholder="Enter amount"
                   error={error}
                   inputMode="numeric"
-                  disabled={isSubmitting}
                 />
                 <p className="mt-1 text-xs text-kampmax-text-secondary">
                   Available: <strong>{formatNaira(available)}</strong> • Fee: {formatNaira(fee)} per payout
@@ -169,7 +210,7 @@ export function PayoutRequestModal({
               )}
 
               <div className="pt-2">
-                <Button type="submit" className="w-full" disabled={isSubmitting || !amount}>
+                <Button type="submit" className="w-full" disabled={!amount}>
                   Continue
                 </Button>
               </div>
@@ -177,7 +218,8 @@ export function PayoutRequestModal({
           </form>
         )}
 
-        {step === "confirm" && (
+        {/* Confirm step */}
+        {phase === "confirm" && (
           <form onSubmit={handleConfirmSubmit}>
             <div className="mt-6 space-y-4">
               <div className="rounded-lg bg-neutral-50 p-4 space-y-3">
@@ -212,7 +254,6 @@ export function PayoutRequestModal({
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
                   className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-600"
-                  disabled={isSubmitting}
                 />
                 <span className="text-sm text-kampmax-text">
                   I confirm the amount, destination, and fee. I understand this cannot be reversed.
@@ -229,28 +270,60 @@ export function PayoutRequestModal({
               )}
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" type="button" onClick={handleBack} disabled={isSubmitting} className="flex-1">
+                <Button variant="outline" type="button" onClick={handleBack} className="flex-1">
                   Back
                 </Button>
-                <Button type="submit" disabled={isSubmitting || !confirmed} className="flex-1">
-                  {isSubmitting ? "Processing…" : "Confirm payout"}
+                <Button type="submit" disabled={!confirmed} className="flex-1">
+                  Confirm payout
                 </Button>
               </div>
             </div>
           </form>
         )}
 
-        {/* Success state */}
-        {result?.ok && step === "amount" && (
-          <div className="mt-6 text-center animate-in fade-in">
+        {/* Submitting step */}
+        {phase === "submitting" && (
+          <div className="mt-6 text-center space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
+              <Loader2 className="h-6 w-6 text-primary-600 animate-spin" />
+            </div>
+            <h3 className="text-lg font-semibold text-kampmax-text">Processing payout…</h3>
+            <p className="text-sm text-kampmax-text-secondary">
+              Please wait while we submit your request.
+            </p>
+          </div>
+        )}
+
+        {/* Success step - parent should close modal, but show this as fallback */}
+        {phase === "success" && (
+          <div className="mt-6 text-center space-y-4 animate-in fade-in">
             <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-success-100">
               <CheckCircle className="h-8 w-8 text-kampmax-success" />
             </div>
             <h3 className="text-lg font-semibold text-kampmax-text">Payout requested</h3>
-            <p className="mt-1 text-sm text-kampmax-text-secondary">
+            <p className="text-sm text-kampmax-text-secondary">
               Your payout of {formatNaira(amountVal)} is being processed.
             </p>
-            <Button className="mt-4 w-full" onClick={onClose}>Done</Button>
+            <Button className="w-full" onClick={onClose}>Done</Button>
+          </div>
+        )}
+
+        {/* Error step */}
+        {phase === "error" && (
+          <div className="mt-6 text-center space-y-4 animate-in fade-in">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-error-100">
+              <AlertCircle className="h-8 w-8 text-kampmax-error" />
+            </div>
+            <h3 className="text-lg font-semibold text-kampmax-text">Request failed</h3>
+            <p className="text-sm text-kampmax-text-secondary">{error ?? "Unknown error"}</p>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setPhase("amount")} className="flex-1">
+                Try again
+              </Button>
+              <Button onClick={onClose} className="flex-1">
+                Close
+              </Button>
+            </div>
           </div>
         )}
       </div>

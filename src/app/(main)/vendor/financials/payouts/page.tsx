@@ -7,7 +7,7 @@ import { PayoutsTable } from "@/components/vendor-financials/PayoutsTable";
 import { PayoutRequestModal } from "@/components/vendor-financials/PayoutRequestModal";
 import { VendorPagination } from "@/components/vendor-shared/VendorPagination";
 import { FinancialsSkeleton } from "@/components/vendor-financials/FinancialsSkeleton";
-import { getPayouts, getPayoutAccount, requestPayout, getFinancialOverview, computeAvailable } from "@/services/vendor-financials";
+import { getPayouts, getPayoutAccount, requestPayout, getFinancialOverview } from "@/services/vendor-financials";
 import type { VendorPayout, VendorPayoutStatus, PayoutRequestResult } from "@/types/vendor-financials";
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -22,8 +22,6 @@ export default function PayoutsPage() {
   const [available, setAvailable] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<PayoutRequestResult | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -60,18 +58,16 @@ export default function PayoutsPage() {
   };
 
   const handleModalSubmit = (input: { amount: number; idempotencyKey: string; confirmed: boolean }) => {
-    setSubmitting(true);
     const res = requestPayout(input);
-    setResult(res);
     if (res.ok) {
       fetchData();
+      setModalOpen(false);
     }
-    setSubmitting(false);
+    // Modal handles error state internally
   };
 
   const handleModalClose = () => {
     setModalOpen(false);
-    setResult(null);
   };
 
   if (loading) return <FinancialsSkeleton />;
@@ -126,7 +122,6 @@ export default function PayoutsPage() {
         onClose={handleModalClose}
         onSubmit={handleModalSubmit}
         available={available}
-        result={result ?? undefined}
       />
     </div>
   );
