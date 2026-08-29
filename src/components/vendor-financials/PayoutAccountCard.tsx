@@ -4,6 +4,7 @@ import { Building, CheckCircle, AlertCircle, XCircle, Lock } from "lucide-react"
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { cn } from "@/lib/utils";
 import { payoutAccountStatusLabel, payoutAccountStatusVariant } from "./financials-meta";
+import { formatDate } from "@/lib/utils";
 import type { VendorPayoutAccount } from "@/types/vendor-financials";
 
 interface PayoutAccountCardProps {
@@ -53,11 +54,7 @@ export function PayoutAccountCard({ account, onRequestPayout, canRequest }: Payo
 
         {account.verifiedAt && (
           <p className="mt-3 text-xs text-kampmax-text-secondary">
-            Verified {new Date(account.verifiedAt).toLocaleDateString("en-NG", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
+            Verified {formatDate(account.verifiedAt)}
           </p>
         )}
 
