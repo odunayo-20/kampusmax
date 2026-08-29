@@ -62,7 +62,7 @@ export function VendorSidebar({ storeName, permissions, status }: VendorSidebarP
     {
       title: "Growth",
       items: [
-        { href: "/vendor/promotions", label: "Promotions", icon: Megaphone, permission: "canManagePromotions", placeholder: true },
+        { href: "/vendor/promotions", label: "Promotions", icon: Megaphone, permission: "canManagePromotions" },
         { href: "/vendor/analytics", label: "Analytics", icon: BarChart3, permission: "canViewAnalytics", placeholder: true },
         { href: "/vendor/wallet", label: "Wallet", icon: Wallet, placeholder: true },
         { href: "/vendor/earnings", label: "Earnings", icon: Wallet, placeholder: true },

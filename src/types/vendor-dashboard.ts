@@ -74,7 +74,7 @@ export const VENDOR_PERMISSIONS: VendorPermissions = {
   canManageOrders: true,
   canManageCustomers: true,
   canManageReviews: true,
-  canManagePromotions: false,
+  canManagePromotions: true,
   canViewAnalytics: true,
   canManageStaff: false,
   canViewFinancials: false,
