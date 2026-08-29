@@ -2,182 +2,187 @@
 
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Phone, MapPin, Package, Check, X } from "lucide-react";
-import { cn, formatNaira, formatDate } from "@/lib/utils";
-import { getVendorOrderById, updateVendorOrderStatus } from "@/services/vendor";
-import { OrderStatus } from "@/types";
+import { ArrowLeft } from "lucide-react";
+import {
+  getVendorOrderDetail,
+  getVendorOrderActions,
+  getVendorOrderPermissions,
+  acceptVendorOrder,
+  cancelVendorOrder,
+  processVendorOrder,
+  readyVendorOrder,
+  shipVendorOrder,
+  outForDeliveryVendorOrder,
+  deliverVendorOrder,
+  completeVendorOrder,
+  respondToDispute,
+  addVendorOrderNote,
+} from "@/services/vendor-orders";
+import { OrderActionsBar } from "@/components/vendor-orders/OrderActionBar";
+import { OrderTimeline } from "@/components/vendor-orders/OrderTimeline";
+import {
+  SummarySection,
+  CustomerSection,
+  ItemsSection,
+  TotalsSection,
+  DeliverySection,
+  StoreLine,
+} from "@/components/vendor-orders/OrderDetailSections";
+import {
+  EscrowPanel,
+  DisputePanel,
+  RefundPanel,
+} from "@/components/vendor-orders/OrderStatusPanels";
+import { OrderNotesPanel } from "@/components/vendor-orders/OrderNotesPanel";
+import type { VendorOrder, VendorOrderActionView, VendorOrderResult } from "@/types/vendor-orders";
 
-const statusConfig: Record<OrderStatus, { label: string; color: string }> = {
-  placed: { label: "Placed", color: "bg-kampmax-muted text-kampmax-text-secondary" },
-  confirmed: { label: "Confirmed", color: "bg-kampmax-info/10 text-kampmax-info" },
-  preparing: { label: "Preparing", color: "bg-kampmax-info/10 text-kampmax-info" },
-  ready: { label: "Ready for Pickup", color: "bg-kampmax-gold/10 text-kampmax-gold" },
-  out_for_delivery: { label: "Out for Delivery", color: "bg-kampmax-blue/10 text-kampmax-blue" },
-  delivered: { label: "Delivered", color: "bg-kampmax-success/10 text-kampmax-success" },
-  cancelled: { label: "Cancelled", color: "bg-kampmax-error/10 text-kampmax-error" },
-};
-
-const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
-  placed: "confirmed",
-  confirmed: "preparing",
-  preparing: "ready",
-  ready: "out_for_delivery",
-  out_for_delivery: "delivered",
+const TRANSITIONS: Record<
+  string,
+  (order: VendorOrder, payload?: Record<string, string>) => VendorOrderResult
+> = {
+  accept: (o) => acceptVendorOrder(o.id),
+  cancel: (o, p) => cancelVendorOrder(o.id, p?.reason ?? ""),
+  process: (o) => processVendorOrder(o.id),
+  ready_for_pickup: (o) => readyVendorOrder(o.id),
+  ship: (o, p) => shipVendorOrder(o.id, { carrier: p?.carrier ?? "", trackingNumber: p?.trackingNumber ?? "" }),
+  out_for_delivery: (o) => outForDeliveryVendorOrder(o.id),
+  deliver: (o) => deliverVendorOrder(o.id),
+  complete: (o) => completeVendorOrder(o.id),
 };
 
 export default function VendorOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [order, setOrder] = useState(getVendorOrderById(id));
+  const [detail, setDetail] = useState(() => getVendorOrderDetail(id));
+  const [permissions] = useState(() => getVendorOrderPermissions());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  if (!order) {
+  if (!detail) {
     return (
       <div className="space-y-4">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-lg bg-kampmax-muted flex items-center justify-center">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Go back"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-white border border-kampmax-border"
+        >
           <ArrowLeft className="h-5 w-5 text-kampmax-text" />
         </button>
-        <div className="bg-white rounded-xl border border-kampmax-border p-8 text-center">
-          <p className="text-sm text-kampmax-text">Order not found</p>
+        <div className="rounded-xl border border-kampmax-border bg-white p-10 text-center">
+          <p className="text-sm font-medium text-kampmax-text">Order not found</p>
+          <p className="mt-1 text-xs text-kampmax-text-secondary">
+            It may belong to another store or no longer exist.
+          </p>
         </div>
       </div>
     );
   }
 
-  function handleStatusUpdate(newStatus: OrderStatus) {
-    updateVendorOrderStatus(order!.id, newStatus);
-    setOrder(getVendorOrderById(order!.id));
-  }
+  const { order } = detail;
+  const actions = getVendorOrderActions(order, permissions);
 
-  const expectedNext = nextStatus[order.status];
-  const isCancellable = order.status === "placed" || order.status === "confirmed";
+  const runTransition = async (action: VendorOrderActionView, payload?: Record<string, string>) => {
+    if (action.key === "message_customer") {
+      router.push("/chat");
+      return { ok: true, code: "ok" as const };
+    }
+    const transition = TRANSITIONS[action.key];
+    if (!transition) return { ok: false, code: "invalid_transition" as const, error: "Unsupported action." };
+
+    setBusy(true);
+    setError("");
+    try {
+      const result = transition(order, payload);
+      if (result.ok && result.order) {
+        setDetail({ ...detail, order: result.order });
+      } else if (!result.ok && result.error) {
+        setError(result.error);
+      }
+      return result;
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <div className="space-y-4 max-w-2xl mx-auto">
+    <div className="space-y-4 max-w-4xl">
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-lg bg-kampmax-muted flex items-center justify-center">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Go back"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-white border border-kampmax-border"
+        >
           <ArrowLeft className="h-5 w-5 text-kampmax-text" />
         </button>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-lg font-bold text-kampmax-text">{order.id}</h1>
-          <p className="text-xs text-kampmax-text-secondary">
-            {formatDate(order.createdAt)}
-          </p>
+          <StoreLine order={order} />
         </div>
-        <span className={cn("ml-auto text-[10px] px-2 py-1 rounded font-medium", statusConfig[order.status].color)}>
-          {statusConfig[order.status].label}
-        </span>
       </div>
 
-      {/* Status Actions */}
-      {expectedNext && order.status !== "delivered" && order.status !== "cancelled" && (
-        <div className="flex gap-2">
-          <button onClick={() => handleStatusUpdate(expectedNext)}
-            className="flex-1 py-3 rounded-xl bg-kampmax-blue text-white text-sm font-semibold flex items-center justify-center gap-2">
-            <Check className="h-4 w-4" />
-            Mark as {statusConfig[expectedNext].label}
-          </button>
-          {isCancellable && (
-            <button onClick={() => handleStatusUpdate("cancelled")}
-              className="py-3 px-4 rounded-xl border border-kampmax-error text-kampmax-error text-sm font-semibold flex items-center gap-2">
-              <X className="h-4 w-4" />
-              Cancel
-            </button>
-          )}
+      {error && (
+        <div className="rounded-lg border border-kampmax-error/30 bg-kampmax-error/5 px-3 py-2 text-xs font-medium text-kampmax-error">
+          {error}
         </div>
       )}
 
-      {/* Buyer Info */}
-      <div className="bg-white rounded-xl border border-kampmax-border p-4">
-        <h3 className="text-xs font-semibold text-kampmax-text-secondary uppercase tracking-wider mb-3">Buyer</h3>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-kampmax-navy text-white flex items-center justify-center text-sm font-bold">
-            {order.buyerName.charAt(0)}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-kampmax-text">{order.buyerName}</p>
-            <p className="text-xs text-kampmax-text-secondary">{order.buyerPhone}</p>
-          </div>
-          <a href={`tel:${order.buyerPhone.replace(/\s/g, "")}`}
-            className="w-9 h-9 rounded-lg bg-kampmax-blue/10 text-kampmax-blue flex items-center justify-center">
-            <Phone className="h-4 w-4" />
-          </a>
+      <SummarySection order={order} parent={detail.parent} />
+
+      <OrderActionsBar order={order} actions={actions} busy={busy} onAction={runTransition} />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <CustomerSection order={order} />
+          <ItemsSection order={order} />
+          <TotalsSection order={order} />
+          <DeliverySection order={order} />
+          <OrderTimeline events={order.timeline} />
+        </div>
+        <div className="space-y-4">
+          <EscrowPanel order={order} />
+          <DisputePanel
+            order={order}
+            busy={busy}
+            onRespond={async (response) => {
+              setBusy(true);
+              setError("");
+              try {
+                const result = respondToDispute(order.id, response);
+                if (result.ok && result.order) {
+                  setDetail({ ...detail, order: result.order });
+                } else if (!result.ok && result.error) {
+                  setError(result.error);
+                }
+                return result;
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+          <RefundPanel order={order} />
+          <OrderNotesPanel
+            order={order}
+            busy={busy}
+            onAdd={async (body) => {
+              setBusy(true);
+              setError("");
+              try {
+                const result = addVendorOrderNote(order.id, body);
+                if (result.ok && result.order) {
+                  setDetail({ ...detail, order: result.order });
+                } else if (!result.ok && result.error) {
+                  setError(result.error);
+                }
+                return result;
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
         </div>
       </div>
-
-      {/* Items */}
-      <div className="bg-white rounded-xl border border-kampmax-border p-4">
-        <h3 className="text-xs font-semibold text-kampmax-text-secondary uppercase tracking-wider mb-3">Items</h3>
-        <div className="space-y-2">
-          {order.items.map((item, i) => (
-            <div key={i} className="flex items-center gap-3 py-2">
-              <div className="w-10 h-10 rounded-lg bg-kampmax-muted flex items-center justify-center flex-shrink-0">
-                <Package className="h-4 w-4 text-kampmax-text-secondary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-kampmax-text truncate">{item.productTitle}</p>
-                <p className="text-xs text-kampmax-text-secondary">{item.quantity}× {formatNaira(item.unitPrice)}</p>
-              </div>
-              <span className="text-sm font-bold text-kampmax-text">{formatNaira(item.quantity * item.unitPrice)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Delivery / Pickup */}
-      <div className="bg-white rounded-xl border border-kampmax-border p-4">
-        <h3 className="text-xs font-semibold text-kampmax-text-secondary uppercase tracking-wider mb-3">
-          {order.deliveryMethod === "campus_pickup" ? "Pickup Details" : "Delivery Details"}
-        </h3>
-        <div className="flex items-start gap-3">
-          <MapPin className="h-4 w-4 text-kampmax-text-secondary mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm text-kampmax-text">
-              {order.deliveryMethod === "campus_pickup"
-                ? order.pickupLocation
-                : order.deliveryAddress}
-            </p>
-            <p className="text-xs text-kampmax-text-secondary mt-0.5 capitalize">
-              {order.deliveryMethod.replace("_", " ")}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment */}
-      <div className="bg-white rounded-xl border border-kampmax-border p-4">
-        <h3 className="text-xs font-semibold text-kampmax-text-secondary uppercase tracking-wider mb-3">Payment</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-kampmax-text-secondary">Subtotal</span>
-            <span className="text-kampmax-text">{formatNaira(order.subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-kampmax-text-secondary">Platform Fee (5%)</span>
-            <span className="text-kampmax-text">{formatNaira(order.platformFee)}</span>
-          </div>
-          <div className="border-t border-kampmax-border pt-2 flex justify-between text-sm">
-            <span className="font-semibold text-kampmax-text">Your Earning</span>
-            <span className="font-bold text-kampmax-success">{formatNaira(order.vendorEarning)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-kampmax-text-secondary">
-            <span>Payment: {order.paymentMethod.replace("_", " ")}</span>
-            <span className={cn(
-              "font-medium",
-              order.paymentStatus === "paid" ? "text-kampmax-success" : order.paymentStatus === "refunded" ? "text-kampmax-warning" : "text-kampmax-text-secondary"
-            )}>
-              {order.paymentStatus}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Notes */}
-      {order.notes && (
-        <div className="bg-white rounded-xl border border-kampmax-border p-4">
-          <h3 className="text-xs font-semibold text-kampmax-text-secondary mb-2">Notes</h3>
-          <p className="text-sm text-kampmax-text">{order.notes}</p>
-        </div>
-      )}
     </div>
   );
 }

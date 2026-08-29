@@ -1,102 +1,146 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ShoppingCart } from "lucide-react";
-import { cn, formatNaira } from "@/lib/utils";
-import { getVendorOrders } from "@/services/vendor";
-import { VendorOrder, OrderStatus } from "@/types";
+import { ShoppingCart } from "lucide-react";
+import { listVendorOrders, getVendorOrderCounts } from "@/services/vendor-orders";
+import { OrderHeader } from "@/components/vendor-orders/OrderHeader";
+import { OrdersToolbar } from "@/components/vendor-orders/OrdersToolbar";
+import { OrdersFilters } from "@/components/vendor-orders/OrdersFilters";
+import { OrdersTable } from "@/components/vendor-orders/OrdersTable";
+import { OrdersGrid } from "@/components/vendor-orders/OrdersGrid";
+import { OrdersPagination } from "@/components/vendor-orders/OrdersPagination";
+import { OrderListSkeleton } from "@/components/vendor-orders/OrderSkeleton";
+import type {
+  VendorFulfillmentStatus,
+  VendorPaymentStatus,
+  VendorDeliveryMethod,
+  VendorOrderSortField,
+} from "@/types/vendor-orders";
 
-const statusConfig: Record<OrderStatus, { label: string; color: string }> = {
-  placed: { label: "Placed", color: "bg-kampmax-muted text-kampmax-text-secondary" },
-  confirmed: { label: "Confirmed", color: "bg-kampmax-info/10 text-kampmax-info" },
-  preparing: { label: "Preparing", color: "bg-kampmax-info/10 text-kampmax-info" },
-  ready: { label: "Ready", color: "bg-kampmax-gold/10 text-kampmax-gold" },
-  out_for_delivery: { label: "Out for Delivery", color: "bg-kampmax-blue/10 text-kampmax-blue" },
-  delivered: { label: "Delivered", color: "bg-kampmax-success/10 text-kampmax-success" },
-  cancelled: { label: "Cancelled", color: "bg-kampmax-error/10 text-kampmax-error" },
-};
+const PAGE_SIZE = 12;
 
-export default function VendorOrdersPage() {
+export default function VendorOrdersPage({ params }: { params: Promise<{}> }) {
+  use(params);
   const router = useRouter();
-  const [orders] = useState<VendorOrder[]>(getVendorOrders);
+
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "active" | "completed" | "cancelled">("all");
+  const [sort, setSort] = useState<VendorOrderSortField>("newest");
+  const [fulfillmentStatus, setFulfillmentStatus] = useState<VendorFulfillmentStatus | "all">("all");
+  const [paymentStatus, setPaymentStatus] = useState<VendorPaymentStatus | "all">("all");
+  const [deliveryMethod, setDeliveryMethod] = useState<VendorDeliveryMethod | "all">("all");
+  const [issues, setIssues] = useState<"all" | "with_issues">("all");
+  const [loading, setLoading] = useState(true);
 
-  const activeStatuses: OrderStatus[] = ["placed", "confirmed", "preparing", "ready", "out_for_delivery"];
+  const counts = useMemo(() => getVendorOrderCounts(), []);
 
-  const filtered = orders.filter((o) => {
-    const matchesSearch =
-      o.id.toLowerCase().includes(search.toLowerCase()) ||
-      o.buyerName.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter =
-      filter === "all" ||
-      (filter === "active" && activeStatuses.includes(o.status)) ||
-      (filter === "completed" && o.status === "delivered") ||
-      (filter === "cancelled" && o.status === "cancelled");
-    return matchesSearch && matchesFilter;
-  });
+  const result = useMemo(
+    () =>
+      listVendorOrders({
+        search: search || undefined,
+        fulfillmentStatus,
+        paymentStatus,
+        deliveryMethod,
+        issues,
+        sort,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
+    [search, sort, fulfillmentStatus, paymentStatus, deliveryMethod, issues, page]
+  );
 
-  const counts = {
-    all: orders.length,
-    active: orders.filter((o) => activeStatuses.includes(o.status)).length,
-    completed: orders.filter((o) => o.status === "delivered").length,
-    cancelled: orders.filter((o) => o.status === "cancelled").length,
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 250);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const hasActiveFilters =
+    search !== "" ||
+    fulfillmentStatus !== "all" ||
+    paymentStatus !== "all" ||
+    deliveryMethod !== "all" ||
+    issues !== "all";
+
+  const clearFilters = () => {
+    setSearch("");
+    setFulfillmentStatus("all");
+    setPaymentStatus("all");
+    setDeliveryMethod("all");
+    setIssues("all");
+    setPage(1);
   };
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-kampmax-text">Orders</h1>
-        <p className="text-sm text-kampmax-text-secondary">Manage your incoming and past orders</p>
-      </div>
+      <OrderHeader counts={counts} onViewAll={() => router.push("/vendor/orders")} />
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kampmax-text-secondary" />
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by order ID or buyer..."
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-kampmax-border text-sm bg-white focus:outline-none focus:border-kampmax-blue" />
-      </div>
+      <OrdersToolbar
+        searchValue={search}
+        onSearchChange={(v) => {
+          setSearch(v);
+          setPage(1);
+        }}
+        sortValue={sort}
+        onSortChange={(v) => {
+          setSort(v);
+          setPage(1);
+        }}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={clearFilters}
+      />
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {(["all", "active", "completed", "cancelled"] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={cn("px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors",
-              filter === f ? "bg-kampmax-navy text-white" : "bg-white text-kampmax-text-secondary border border-kampmax-border"
-            )}>
-            {f.charAt(0).toUpperCase() + f.slice(1)} ({counts[f]})
-          </button>
-        ))}
-      </div>
+      <OrdersFilters
+        fulfillmentStatus={fulfillmentStatus}
+        onFulfillmentChange={(v) => {
+          setFulfillmentStatus(v);
+          setPage(1);
+        }}
+        paymentStatus={paymentStatus}
+        onPaymentChange={(v) => {
+          setPaymentStatus(v);
+          setPage(1);
+        }}
+        deliveryMethod={deliveryMethod}
+        onDeliveryChange={(v) => {
+          setDeliveryMethod(v);
+          setPage(1);
+        }}
+        issues={issues}
+        onIssuesChange={(v) => {
+          setIssues(v);
+          setPage(1);
+        }}
+        counts={counts}
+      />
 
-      {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-kampmax-border p-8 text-center">
-          <ShoppingCart className="h-10 w-10 text-kampmax-text-secondary mx-auto mb-3" />
+      {loading ? (
+        <OrderListSkeleton />
+      ) : result.items.length === 0 ? (
+        <div className="rounded-xl border border-kampmax-border bg-white p-10 text-center">
+          <ShoppingCart className="mx-auto mb-3 h-10 w-10 text-kampmax-text-secondary" aria-hidden />
           <p className="text-sm font-medium text-kampmax-text">No orders found</p>
+          <p className="mt-1 text-xs text-kampmax-text-secondary">
+            Try adjusting your search or filters.
+          </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((order) => (
-            <button key={order.id} onClick={() => router.push(`/vendor/orders/${order.id}`)}
-              className="w-full bg-white rounded-xl border border-kampmax-border p-4 text-left hover:bg-kampmax-muted/50 transition-colors">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-sm font-semibold text-kampmax-text truncate min-w-0">{order.id}</span>
-                <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium", statusConfig[order.status].color)}>
-                  {statusConfig[order.status].label}
-                </span>
-              </div>
-              <p className="text-sm text-kampmax-text mb-1">{order.buyerName}</p>
-              <p className="text-xs text-kampmax-text-secondary truncate mb-2">
-                {order.items.map((i) => `${i.quantity}× ${i.productTitle}`).join(", ")}
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-kampmax-text">{formatNaira(order.subtotal)}</span>
-                <span className="text-[11px] text-kampmax-text-secondary">
-                  {new Date(order.createdAt).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="hidden md:block">
+            <OrdersTable orders={result.items} onView={(o) => router.push(`/vendor/orders/${o.id}`)} />
+          </div>
+          <div className="md:hidden">
+            <OrdersGrid orders={result.items} onView={(o) => router.push(`/vendor/orders/${o.id}`)} />
+          </div>
+
+          <OrdersPagination
+            page={result.page}
+            totalPages={result.totalPages}
+            total={result.total}
+            pageSize={result.pageSize}
+            onPageChange={setPage}
+          />
+        </>
       )}
     </div>
   );
