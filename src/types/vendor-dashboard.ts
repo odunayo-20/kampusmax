@@ -77,7 +77,7 @@ export const VENDOR_PERMISSIONS: VendorPermissions = {
   canManagePromotions: true,
   canViewAnalytics: true,
   canManageStaff: false,
-  canViewFinancials: false,
+  canViewFinancials: true,
 };
 
 // ── Profile segmentation ─────────────────────────────────────
@@ -149,7 +149,8 @@ export interface VendorNotification {
     | "review_received"
     | "store_warning"
     | "verification_update"
-    | "platform_announcement";
+    | "platform_announcement"
+    | "payout_update";
   title: string;
   body: string;
   href?: string;

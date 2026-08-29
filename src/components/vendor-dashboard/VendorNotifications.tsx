@@ -15,6 +15,7 @@ const KIND_DOT: Record<VendorNotification["kind"], string> = {
   store_warning: "bg-warning-600",
   verification_update: "bg-success-600",
   platform_announcement: "bg-neutral-400",
+  payout_update: "bg-kampmax-blue",
 };
 
 export function VendorNotifications() {
