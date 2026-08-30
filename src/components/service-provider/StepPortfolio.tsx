@@ -118,92 +118,76 @@ export function StepPortfolio({ draft, onUpdate }: StepPortfolioProps) {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {portfolio.map((item, index) => (
-            <div key={index} className="relative group rounded-xl border border-kampmax-border bg-white overflow-hidden">
-              <div className="aspect-square relative overflow-hidden">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.title || `Portfolio item ${index + 1}`}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-neutral-100">
-                    <Camera className="h-10 w-10 text-neutral-300" />
+            <div key={index} className="rounded-xl border border-kampmax-border bg-white overflow-hidden">
+              <div className="grid sm:grid-cols-[220px_1fr]">
+                <div className="relative group aspect-square sm:aspect-auto bg-neutral-100 min-h-[160px]">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.title || `Portfolio item ${index + 1}`}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Camera className="h-10 w-10 text-neutral-300" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openPreview(index)}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-kampmax-text hover:bg-neutral-100"
+                      aria-label="View full size"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/90 text-white hover:bg-red-600"
+                      aria-label="Remove item"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
                   </div>
-                )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-4">
-                  <button
-                    type="button"
-                    onClick={() => openPreview(index)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-kampmax-text hover:bg-neutral-100"
-                    aria-label="View full size"
-                  >
-                    <Camera className="h-5 w-5" />
-                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Remove item"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
 
-              <div className="p-4 space-y-3">
-                <Input
-                  value={item.title}
-                  onChange={(e) => updateItem(index, { title: e.target.value.trim() })}
-                  placeholder="Title (e.g., iPhone 13 Screen Replacement)"
-                  maxLength={80}
-                />
-                <textarea
-                  value={item.description}
-                  onChange={(e) => updateItem(index, { description: e.target.value.trim() })}
-                  placeholder="Describe the project..."
-                  rows={2}
-                  className="w-full px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600/20 resize-y"
-                  maxLength={300}
-                />
-                <Select
-                  value={item.categoryId}
-                  onChange={(e) => updateItem(index, { categoryId: e.target.value })}
-                >
-                  <option value="cat1">Beauty & Personal Care</option>
-                  <option value="cat2">Education & Tutoring</option>
-                  <option value="cat3">Technology & IT</option>
-                  <option value="cat4">Repairs & Maintenance</option>
-                  <option value="cat5">Creative & Design</option>
-                  <option value="cat6">Home Services</option>
-                  <option value="cat7">Transportation</option>
-                  <option value="cat8">Food & Catering</option>
-                  <option value="cat9">Events & Entertainment</option>
-                  <option value="cat10">Fitness & Wellness</option>
-                  <option value="cat11">Professional Services</option>
-                  <option value="cat12">Printing & Stationery</option>
-                </Select>
-              </div>
-
-              <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  onClick={() => openPreview(index)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-kampmax-text hover:bg-white"
-                  aria-label="View full size"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/90 text-white hover:bg-red-600"
-                  aria-label="Remove item"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="p-4 space-y-3 min-w-0">
+                  <Input
+                    value={item.title}
+                    onChange={(e) => updateItem(index, { title: e.target.value.trim() })}
+                    placeholder="Title (e.g., iPhone 13 Screen Replacement)"
+                    maxLength={80}
+                  />
+                  <textarea
+                    value={item.description}
+                    onChange={(e) => updateItem(index, { description: e.target.value.trim() })}
+                    placeholder="Describe the project..."
+                    rows={2}
+                    className="w-full px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600/20 resize-y"
+                    maxLength={300}
+                  />
+                  <Select
+                    value={item.categoryId}
+                    onChange={(e) => updateItem(index, { categoryId: e.target.value })}
+                  >
+                    <option value="">Select category</option>
+                    <option value="cat1">Beauty & Personal Care</option>
+                    <option value="cat2">Education & Tutoring</option>
+                    <option value="cat3">Technology & IT</option>
+                    <option value="cat4">Repairs & Maintenance</option>
+                    <option value="cat5">Creative & Design</option>
+                    <option value="cat6">Home Services</option>
+                    <option value="cat7">Transportation</option>
+                    <option value="cat8">Food & Catering</option>
+                    <option value="cat9">Events & Entertainment</option>
+                    <option value="cat10">Fitness & Wellness</option>
+                    <option value="cat11">Professional Services</option>
+                    <option value="cat12">Printing & Stationery</option>
+                  </Select>
+                </div>
               </div>
             </div>
           ))}

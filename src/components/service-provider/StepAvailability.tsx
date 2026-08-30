@@ -82,7 +82,7 @@ export function StepAvailability({ draft, onUpdate }: StepAvailabilityProps) {
               <div
                 key={day.index}
                 className={cn(
-                  "flex items-center gap-4 p-4 rounded-lg border transition-colors",
+                  "grid gap-3 p-4 rounded-lg border transition-colors sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-5",
                   isAvailable ? "border-primary-200 bg-primary-50" : "border-neutral-200 bg-neutral-50"
                 )}
               >
@@ -90,7 +90,7 @@ export function StepAvailability({ draft, onUpdate }: StepAvailabilityProps) {
                   type="button"
                   onClick={() => handleDayToggle(day.index)}
                   className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-medium",
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg font-medium",
                     isAvailable
                       ? "bg-primary-600 text-white"
                       : "bg-neutral-200 text-neutral-400 hover:bg-neutral-300"
@@ -99,7 +99,7 @@ export function StepAvailability({ draft, onUpdate }: StepAvailabilityProps) {
                 >
                   {day.short}
                 </button>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0">
                   <p className={cn("font-medium", isAvailable ? "text-kampmax-text" : "text-neutral-400")}>
                     {day.label}
                   </p>
@@ -109,30 +109,32 @@ export function StepAvailability({ draft, onUpdate }: StepAvailabilityProps) {
                     </p>
                   )}
                 </div>
-                {isAvailable && (
-                  <div className="flex items-center gap-3">
+                {isAvailable ? (
+                  <div className="flex flex-wrap items-center justify-start gap-3 sm:justify-end">
                     <div className="flex items-center gap-2">
-                      <Sun className="h-4 w-4 text-kampmax-text-secondary" />
+                      <Sun className="h-4 w-4 text-kampmax-text-secondary shrink-0" />
                       <Input
                         type="time"
                         value={openTime}
                         onChange={(e) => handleTimeChange(day.index, "openTime", e.target.value)}
-                        className="w-32"
+                        className="w-28 sm:w-32"
                       />
                     </div>
                     <span className="text-kampmax-text-secondary">to</span>
                     <div className="flex items-center gap-2">
-                      <Moon className="h-4 w-4 text-kampmax-text-secondary" />
+                      <Moon className="h-4 w-4 text-kampmax-text-secondary shrink-0" />
                       <Input
                         type="time"
                         value={closeTime}
                         onChange={(e) => handleTimeChange(day.index, "closeTime", e.target.value)}
-                        className="w-32"
+                        className="w-28 sm:w-32"
                       />
                     </div>
                   </div>
+                ) : (
+                  <span className="text-sm text-neutral-400 sm:justify-self-end">Unavailable</span>
                 )}
-</div>
+              </div>
             );
           })}
         </div>

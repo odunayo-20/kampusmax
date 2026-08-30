@@ -210,7 +210,7 @@ function ServiceCard({
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-kampmax-text mb-1.5">
               Pricing Model
@@ -226,35 +226,51 @@ function ServiceCard({
             </Select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-kampmax-text mb-1.5">
-              Price (₦) <span className="text-kampmax-error">*</span>
-            </label>
-            <Input
-              type="number"
-              min="0"
-              value={service.price}
-              onChange={(e) => onUpdate({ price: parseInt(e.target.value) || 0 })}
-              placeholder="0"
-              inputMode="numeric"
-            />
-          </div>
-
-          {service.pricingModel === "range" && (
+          {service.pricingModel === "range" ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-kampmax-text mb-1.5">
+                  Price (₦) <span className="text-kampmax-error">*</span>
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={service.price}
+                  onChange={(e) => onUpdate({ price: parseInt(e.target.value) || 0 })}
+                  placeholder="0"
+                  inputMode="numeric"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-kampmax-text mb-1.5">
+                  Max Price (₦)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={service.priceMax ?? 0}
+                  onChange={(e) => onUpdate({ priceMax: parseInt(e.target.value) || undefined })}
+                  placeholder="Max"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+          ) : (
             <div>
               <label className="block text-sm font-medium text-kampmax-text mb-1.5">
-                Max Price (₦)
+                Price (₦) <span className="text-kampmax-error">*</span>
               </label>
               <Input
                 type="number"
                 min="0"
-                value={service.priceMax ?? 0}
-                onChange={(e) => onUpdate({ priceMax: parseInt(e.target.value) || undefined })}
-                placeholder="Max price"
+                value={service.price}
+                onChange={(e) => onUpdate({ price: parseInt(e.target.value) || 0 })}
+                placeholder="0"
                 inputMode="numeric"
               />
             </div>
           )}
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
@@ -303,7 +319,6 @@ function ServiceCard({
           </div>
         </div>
       </div>
-    </div>
     );
   }
   // View mode

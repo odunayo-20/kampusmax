@@ -215,70 +215,78 @@ export function StepVerification({ draft, onUpdate, onSubmitVerification }: Step
               return (
                 <div
                   key={doc.documentType}
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-lg border",
-                    getDocStatusColor(status)
-                  )}
+                  className={cn("rounded-lg border", getDocStatusColor(status))}
                 >
-                  <div className="flex items-center gap-3">
-                    {getDocStatusIcon(status)}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-kampmax-text">{doc.label}</h4>
-                        {doc.required && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-error-100 text-error-700">
-                            Required
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-kampmax-text-secondary">
-                        {doc.maxSizeMb}MB max • {doc.acceptedFormats.join(", ").toUpperCase()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium",
-                      getDocStatusColor(status)
-                    )}>
-                      {getDocStatusLabel(status)}
-                    </span>
-                    {status === "not_uploaded" || status === "rejected" || status === "requires_replacement" ? (
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept={doc.acceptedFormats.map((f) => `.${f}`).join(",")}
-                          onChange={(e) => handleFileUpload(e, doc.documentType)}
-                          disabled={isUploading}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <Button
-                          variant={isUploading ? "outline" : "primary"}
-                          size="sm"
-                          disabled={isUploading}
-                        >
-                          {isUploading ? (
-                            <>
-                              <div className="h-4 w-4 animate-spin border-2 border-white border-t-transparent rounded-full mr-2" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Upload
-                            </>
+                  <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {getDocStatusIcon(status)}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-kampmax-text">{doc.label}</h4>
+                          {doc.required && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-error-100 text-error-700">
+                              Required
+                            </span>
                           )}
-                        </Button>
+                        </div>
+                        <p className="text-xs text-kampmax-text-secondary">
+                          {doc.maxSizeMb}MB max • {doc.acceptedFormats.join(", ").toUpperCase()}
+                        </p>
                       </div>
-                    ) : status === "uploaded" ? (
-                      <Button variant="ghost" size="sm" onClick={() => handleFileUpload({ target: { files: [] } } as any, doc.documentType)}>
-                        Replace
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" disabled>
-                        {status === "under_review" ? "Under Review" : "Approved"}
-                      </Button>
-                    )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+                      <span className={cn(
+                        "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium",
+                        getDocStatusColor(status)
+                      )}>
+                        {getDocStatusLabel(status)}
+                      </span>
+                      {status === "not_uploaded" || status === "rejected" || status === "requires_replacement" ? (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept={doc.acceptedFormats.map((f) => `.${f}`).join(",")}
+                            onChange={(e) => handleFileUpload(e, doc.documentType)}
+                            disabled={isUploading}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Button
+                            variant={isUploading ? "outline" : "primary"}
+                            size="sm"
+                            disabled={isUploading}
+                          >
+                            {isUploading ? (
+                              <>
+                                <div className="h-4 w-4 animate-spin border-2 border-white border-t-transparent rounded-full mr-2" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Upload
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      ) : status === "uploaded" ? (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept={doc.acceptedFormats.map((f) => `.${f}`).join(",")}
+                            onChange={(e) => handleFileUpload(e, doc.documentType)}
+                            disabled={isUploading}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Button variant="ghost" size="sm" disabled={isUploading}>
+                            Replace
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="outline" size="sm" disabled>
+                          {status === "under_review" ? "Under Review" : "Approved"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
