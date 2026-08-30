@@ -15,10 +15,12 @@ import { useAuth } from "@/lib/auth-context";
  */
 function safeReturnTo(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/home";
-  // Only permit known customer-facing paths (storefronts are public).
+  // Only permit known customer-facing paths (storefronts & the service
+  // marketplace are public).
   if (raw.startsWith("/store/")) return raw;
+  if (raw.startsWith("/services/")) return raw;
   if (
-    ["/home", "/marketplace", "/cart", "/orders", "/notifications"].some(
+    ["/home", "/marketplace", "/cart", "/orders", "/notifications", "/services"].some(
       (p) => raw === p || raw.startsWith(`${p}/`)
     )
   ) {
