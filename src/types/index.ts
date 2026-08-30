@@ -65,6 +65,7 @@ export type NotificationType =
   | "payments"
   | "account"
   | "promotion"
+  | "booking_update"
   | "system";
 
 export type NotificationCategory =
@@ -74,7 +75,8 @@ export type NotificationCategory =
   | "campus"
   | "payments"
   | "account"
-  | "promotions";
+  | "promotions"
+  | "bookings";
 
 export type PostType =
   | "discussion"

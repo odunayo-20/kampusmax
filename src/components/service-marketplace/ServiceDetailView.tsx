@@ -37,7 +37,6 @@ import { ServiceFavoriteButton } from "./ServiceFavoriteButton";
 import { ServiceShareButton } from "./ServiceShareButton";
 import { ServiceReportModal } from "./ServiceReportModal";
 import { RequestQuoteModal } from "./RequestQuoteModal";
-import { BookingSheet } from "./BookingSheet";
 import { ServiceCard } from "./ServiceCard";
 import { ProviderCard } from "./ProviderCard";
 
@@ -58,9 +57,10 @@ export function ServiceDetailView({
   const pathname = usePathname();
   const { status } = useAuth();
 
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  const isQuoteOnly = service.pricingModel === "quote";
 
   const categories = useMemo(() => getServiceCategories(), []);
   const serviceCategory = categories.find((c) => c.id === service.categoryId);
@@ -303,22 +303,29 @@ export function ServiceDetailView({
             </div>
 
             <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (requireLogin()) setBookingOpen(true);
-                }}
-                className="w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700"
-              >
-                <CalendarClock className="h-4 w-4" aria-hidden />
-                Book this service
-              </button>
+              {!isQuoteOnly && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (requireLogin()) router.push(`/services/${service.id}/book`);
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700"
+                >
+                  <CalendarClock className="h-4 w-4" aria-hidden />
+                  Book this service
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   if (requireLogin()) setQuoteOpen(true);
                 }}
-                className="w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-xl border border-neutral-200 text-neutral-700 text-sm font-semibold hover:bg-neutral-100"
+                className={cn(
+                  "w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-xl text-sm font-semibold",
+                  isQuoteOnly
+                    ? "bg-primary-600 text-white hover:bg-primary-700"
+                    : "border border-neutral-200 text-neutral-700 hover:bg-neutral-100"
+                )}
               >
                 <Sparkles className="h-4 w-4" aria-hidden />
                 Request a quote
@@ -419,16 +426,6 @@ export function ServiceDetailView({
       )}
 
       {/* Modals */}
-      <BookingSheet
-        isOpen={bookingOpen}
-        onClose={() => setBookingOpen(false)}
-        serviceName={service.name}
-        providerDisplayName={provider.displayName}
-        onRequestQuote={() => {
-          setBookingOpen(false);
-          setQuoteOpen(true);
-        }}
-      />
       <RequestQuoteModal
         isOpen={quoteOpen}
         onClose={() => setQuoteOpen(false)}

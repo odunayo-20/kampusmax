@@ -13,6 +13,7 @@ import {
   Bell,
   Trash2,
   ChevronRight,
+  CalendarCheck,
 } from "lucide-react";
 
 interface NotificationItemProps {
@@ -61,6 +62,11 @@ const categoryConfig: Record<
     icon: Tag,
     bg: "bg-kampmax-error/10",
     color: "text-kampmax-error",
+  },
+  bookings: {
+    icon: CalendarCheck,
+    bg: "bg-primary-100",
+    color: "text-primary-700",
   },
 };
 

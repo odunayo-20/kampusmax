@@ -22,6 +22,7 @@ const SERVICE_PROVIDER_DASHBOARD_SECTIONS = [
   "/service-provider/availability",
   "/service-provider/portfolio",
   "/service-provider/reviews",
+  "/service-provider/bookings",
   "/service-provider/settings",
 ];
 

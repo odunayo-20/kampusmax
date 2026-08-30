@@ -11,6 +11,7 @@ import {
   User,
   Tag,
   Layers,
+  CalendarCheck,
 } from "lucide-react";
 
 interface CategoryFilterProps {
@@ -33,6 +34,7 @@ const catIcons: Record<string, typeof Package> = {
   payments: CreditCard,
   account: User,
   promotions: Tag,
+  bookings: CalendarCheck,
 };
 
 export function CategoryFilter({

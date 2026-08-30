@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/services/users";
 import { getSpProfileByUserId } from "@/data/service-provider";
 import { ensureSpDashboardContext } from "@/data/service-provider-dashboard";
+import { getProviderBookingStats } from "@/data/booking";
 import {
   SERVICE_PROVIDER_SERVICE_STATUS,
   SERVICE_PROVIDER_VERIFICATION_STATUS,
@@ -219,6 +220,19 @@ function pushNotification(
   if (ctx.notifications.length > 20) ctx.notifications.length = 20;
 }
 
+/**
+ * Booking module integration: notify the provider's dashboard feed when a
+ * booking event happens (kind is always the booking topic).
+ */
+export function pushSpBookingNotification(title: string, body: string, href?: string): void {
+  pushNotification({ kind: "booking_request", title, body, href });
+}
+
+/** Booking module integration: record a booking event on the dashboard activity feed. */
+export function recordSpBookingActivity(title: string, message: string, href?: string): void {
+  recordActivity({ kind: "booking_request", title, message, href });
+}
+
 // ── Dashboard overview ───────────────────────────────────────
 
 export function getSpDashboard(): {
@@ -228,6 +242,7 @@ export function getSpDashboard(): {
 } | null {
   if (!hasDashboardAccess()) return null;
   const ctx = ownerContext();
+  const bookingStats = getProviderBookingStats(ctx.providerId);
   const metrics: ServiceProviderDashboardMetric[] = [
     {
       key: "active_services",
@@ -247,9 +262,11 @@ export function getSpDashboard(): {
     {
       key: "upcoming_bookings",
       label: "Upcoming Bookings",
-      valueLabel: String(ctx.metrics.upcomingBookings),
+      valueLabel: String(bookingStats.upcoming),
       tone: "info",
-      sublabel: "Bookings arrive in the next module",
+      sublabel: bookingStats.pending
+        ? `${bookingStats.pending} awaiting confirmation · ${bookingStats.upcomingToday} today`
+        : `${bookingStats.upcomingToday} today`,
     },
     {
       key: "average_rating",
