@@ -167,13 +167,13 @@ export function StepPortfolio({ draft, onUpdate }: StepPortfolioProps) {
               <div className="p-4 space-y-3 flex-1">
                 <Input
                   value={item.title}
-                  onChange={(e) => updateItem(index, { title: e.target.value.trim() })}
+                  onChange={(e) => updateItem(index, { title: e.target.value })}
                   placeholder="Title (e.g., iPhone 13 Screen Replacement)"
                   maxLength={80}
                 />
                 <textarea
                   value={item.description}
-                  onChange={(e) => updateItem(index, { description: e.target.value.trim() })}
+                  onChange={(e) => updateItem(index, { description: e.target.value })}
                   placeholder="Describe the project..."
                   rows={2}
                   className="w-full px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600/20 resize-y"

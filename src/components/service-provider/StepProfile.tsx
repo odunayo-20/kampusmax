@@ -176,7 +176,7 @@ export function StepProfile({ draft, onUpdate }: StepProfileProps) {
           id="displayName"
           value={draft?.profile?.displayName ?? ""}
           onChange={(e) => {
-            const name = e.target.value.trim();
+            const name = e.target.value;
             onUpdate({
               profile: { ...draft?.profile, displayName: name },
               provider: { ...draft?.provider, displayName: name },
@@ -199,7 +199,7 @@ export function StepProfile({ draft, onUpdate }: StepProfileProps) {
         <Input
           id="tagline"
           value={draft?.profile?.tagline ?? ""}
-          onChange={(e) => onUpdate({ profile: { ...draft?.profile, tagline: e.target.value.trim() } })}
+          onChange={(e) => onUpdate({ profile: { ...draft?.profile, tagline: e.target.value } })}
           placeholder="e.g., Your campus tech expert"
           maxLength={100}
         />
@@ -216,7 +216,7 @@ export function StepProfile({ draft, onUpdate }: StepProfileProps) {
         <textarea
           id="bio"
           value={draft?.provider?.bio ?? ""}
-          onChange={(e) => onUpdate({ provider: { ...draft?.provider, bio: e.target.value.trim() } })}
+          onChange={(e) => onUpdate({ provider: { ...draft?.provider, bio: e.target.value } })}
           placeholder="Tell customers about yourself, your experience, and what makes your service special..."
           rows={4}
           className="w-full h-28 px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 resize-y"
@@ -235,7 +235,7 @@ export function StepProfile({ draft, onUpdate }: StepProfileProps) {
         <textarea
           id="description"
           value={draft?.profile?.description ?? ""}
-          onChange={(e) => onUpdate({ profile: { ...draft?.profile, description: e.target.value.trim() } })}
+          onChange={(e) => onUpdate({ profile: { ...draft?.profile, description: e.target.value } })}
           placeholder="Describe your services, who you serve, and what makes your service different..."
           rows={5}
           className="w-full h-32 px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 resize-y"

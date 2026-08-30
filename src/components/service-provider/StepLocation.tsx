@@ -219,7 +219,7 @@ export function StepLocation({ draft, onUpdate }: StepLocationProps) {
         </label>
         <Input
           value={location?.address ?? ""}
-          onChange={(e) => onUpdate({ location: { ...location, address: e.target.value.trim() } })}
+          onChange={(e) => onUpdate({ location: { ...location, address: e.target.value } })}
           placeholder="e.g., Engineering Block, RUGIPO Campus, Owo"
         />
         <p className="mt-1 text-xs text-kampmax-text-secondary">

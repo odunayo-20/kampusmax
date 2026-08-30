@@ -83,7 +83,7 @@ const STEP_COMPONENTS: Record<number, React.ComponentType<any>> = {
 
 const STEP_VALIDATION: Record<number, (draft: ServiceProviderOnboardingDraft | null) => boolean> = {
   1: (d) => !!d?.provider?.type,
-  2: (d) => !!d?.provider?.displayName && !!d?.profile?.displayName,
+  2: (d) => !!d?.provider?.displayName?.trim() && !!d?.profile?.displayName?.trim(),
   3: (d) => !!d?.category?.primaryCategoryId,
   4: (d) => (d?.services?.length ?? 0) > 0,
   5: (d) => !!d?.location?.primaryCampusId,

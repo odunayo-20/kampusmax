@@ -167,7 +167,7 @@ function ServiceCard({
             </label>
             <Input
               value={service.name}
-              onChange={(e) => onUpdate({ name: e.target.value.trim() })}
+              onChange={(e) => onUpdate({ name: e.target.value })}
               placeholder="e.g., Phone Screen Replacement"
               required
             />
@@ -203,7 +203,7 @@ function ServiceCard({
           </label>
           <textarea
             value={service.description}
-            onChange={(e) => onUpdate({ description: e.target.value.trim() })}
+            onChange={(e) => onUpdate({ description: e.target.value })}
             placeholder="Describe what this service includes..."
             rows={3}
             className="w-full px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600/20"
