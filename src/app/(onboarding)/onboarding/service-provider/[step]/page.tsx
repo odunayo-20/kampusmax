@@ -227,7 +227,7 @@ export default function ServiceProviderOnboardingStepPage() {
         setCompletedSteps(allSteps);
         persistProgress(allSteps);
         persistDraft(draft);
-        router.push("/account/profiles/service-provider");
+        router.push("/service-provider");
       } else {
         setError(res.message);
       }
@@ -271,7 +271,7 @@ export default function ServiceProviderOnboardingStepPage() {
 
   // Status-based redirect for blocking statuses
   if (draft && ["PENDING_REVIEW", "APPROVED", "REJECTED", "SUSPENDED"].includes(draft.status)) {
-    router.push("/account/profiles/service-provider");
+    router.push("/service-provider");
     return null;
   }
 

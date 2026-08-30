@@ -11,6 +11,29 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // ============================================================
+// SECTION SHELLS
+// ============================================================
+
+/** Dashboard sub-paths (not the public /service-provider/[slug] profile). */
+const SERVICE_PROVIDER_DASHBOARD_SECTIONS = [
+  "/service-provider",
+  "/service-provider/profile",
+  "/service-provider/services",
+  "/service-provider/availability",
+  "/service-provider/portfolio",
+  "/service-provider/reviews",
+  "/service-provider/settings",
+];
+
+/** True when the pathname belongs to the full-screen Service Provider dashboard shell. */
+export function isServiceProviderDashboardPath(pathname: string): boolean {
+  if (pathname === SERVICE_PROVIDER_DASHBOARD_SECTIONS[0]) return true;
+  return SERVICE_PROVIDER_DASHBOARD_SECTIONS.some((section) =>
+    pathname.startsWith(`${section}/`)
+  );
+}
+
+// ============================================================
 // SITE URL HELPERS
 // ============================================================
 

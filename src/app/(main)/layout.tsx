@@ -8,14 +8,17 @@ import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { useAuth } from "@/lib/auth-context";
 import { Footer } from "@/components/layout/footer/Footer";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { isServiceProviderDashboardPath } from "@/lib/utils";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { status } = useAuth();
 
-  // Vendor pages render their own full-screen shell (sidebar/header)
+  // Dashboard sections render their own full-screen shell (sidebar/header)
   const isVendorSection = pathname.startsWith("/vendor");
+  const isServiceProviderSection = isServiceProviderDashboardPath(pathname);
+  const isDashboardSection = isVendorSection || isServiceProviderSection;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -37,12 +40,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-kampmax-bg">
-      {!isVendorSection && <MobileHeader />}
-      {!isVendorSection && <DesktopNavigation />}
-      <main className={isVendorSection ? "" : "pb-20 lg:pb-6"}>{children}</main>
-      {!isVendorSection && <BottomNavigation />}
-      {!isVendorSection && <Footer />}
-      {!isVendorSection && <CartDrawer />}
+      {!isDashboardSection && <MobileHeader />}
+      {!isDashboardSection && <DesktopNavigation />}
+      <main className={isDashboardSection ? "" : "pb-20 lg:pb-6"}>{children}</main>
+      {!isDashboardSection && <BottomNavigation />}
+      {!isDashboardSection && <Footer />}
+      {!isDashboardSection && <CartDrawer />}
     </div>
   );
 }
