@@ -402,13 +402,14 @@ export function StepReview({ draft, onEditStep, onSubmit, canSubmit, isSubmittin
             key={section.key}
             className="rounded-xl border border-kampmax-border bg-white overflow-hidden"
           >
-            <button
-              type="button"
-              onClick={() => toggleSection(section.key)}
-              className="w-full flex items-center justify-between p-4 hover:bg-neutral-50 transition-colors"
-              aria-expanded={openSection === section.key}
-            >
-              <div className="flex items-center gap-3">
+            <div className="w-full flex items-center justify-between p-4 hover:bg-neutral-50 transition-colors">
+              <button
+                type="button"
+                onClick={() => toggleSection(section.key)}
+                className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                aria-expanded={openSection === section.key}
+                aria-controls={`review-section-${section.key}`}
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
                   <section.icon className="h-5 w-5 text-kampmax-text-secondary" />
                 </div>
@@ -416,8 +417,8 @@ export function StepReview({ draft, onEditStep, onSubmit, canSubmit, isSubmittin
                   <p className="font-medium text-kampmax-text">{section.label}</p>
                   <p className="text-sm text-kampmax-text-secondary">Click to review</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
+              </button>
+              <div className="flex items-center gap-2 pl-3">
                 <ChevronRight
                   className={cn(
                     "h-5 w-5 text-kampmax-text-secondary transition-transform",
@@ -427,21 +428,23 @@ export function StepReview({ draft, onEditStep, onSubmit, canSubmit, isSubmittin
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={() =>
                     onEditStep(
                       sections.findIndex((s) => s.key === section.key) + 1
-                    );
-                  }}
+                    )
+                  }
                 >
                   <Edit className="h-3.5 w-3.5 mr-1" />
                   Edit
                 </Button>
               </div>
-            </button>
+            </div>
 
             {openSection === section.key && (
-              <div className="border-t border-kampmax-border p-4 animate-in fade-in">
+              <div
+                id={`review-section-${section.key}`}
+                className="border-t border-kampmax-border p-4 animate-in fade-in"
+              >
                 {section.content}
               </div>
             )}

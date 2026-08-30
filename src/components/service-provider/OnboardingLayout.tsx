@@ -11,6 +11,7 @@ import type { ServiceProviderOnboardingDraft, ServiceProviderOnboardingStepId, S
 interface OnboardingLayoutProps {
   children: React.ReactNode;
   draft: ServiceProviderOnboardingDraft | null;
+  completedSteps?: ServiceProviderOnboardingStepId[];
   onSaveDraft: () => Promise<void>;
   onNext: () => void;
   onBack: () => void;
@@ -25,6 +26,7 @@ interface OnboardingLayoutProps {
 export function OnboardingLayout({
   children,
   draft,
+  completedSteps,
   onSaveDraft,
   onNext,
   onBack,
@@ -38,12 +40,17 @@ export function OnboardingLayout({
   const router = useRouter();
   const currentStep = draft?.currentStep ?? 1;
   const status = draft?.status ?? "DRAFT";
-  const completedSteps: ServiceProviderOnboardingStepId[] = [];
 
-  // Calculate completed steps (all steps < currentStep, plus any explicitly completed)
-  for (let i = 1; i < currentStep; i++) {
-    completedSteps.push(i as ServiceProviderOnboardingStepId);
-  }
+  const stepList: ServiceProviderOnboardingStepId[] =
+    completedSteps && completedSteps.length > 0
+      ? completedSteps
+      : (() => {
+          const seed: ServiceProviderOnboardingStepId[] = [];
+          for (let i = 1; i < currentStep; i++) {
+            seed.push(i as ServiceProviderOnboardingStepId);
+          }
+          return seed;
+        })();
 
   const isBlocking = status && ["PENDING_REVIEW", "APPROVED", "REJECTED", "SUSPENDED"].includes(status);
 
@@ -90,7 +97,7 @@ export function OnboardingLayout({
             Back to Profiles
           </Link>
 
-          <OnboardingStepIndicator currentStep={currentStep} completedSteps={completedSteps} />
+          <OnboardingStepIndicator currentStep={currentStep} completedSteps={stepList} />
 
           <div className="mt-6">
             <h1 className="text-2xl font-bold text-kampmax-text">
@@ -110,7 +117,7 @@ export function OnboardingLayout({
               <OnboardingProgress
                 currentStep={currentStep}
                 status={draft?.status ?? "DRAFT"}
-                completedSteps={completedSteps}
+                completedSteps={stepList}
               />
             </div>
           </aside>

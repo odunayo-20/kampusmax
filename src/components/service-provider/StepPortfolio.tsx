@@ -44,14 +44,17 @@ export function StepPortfolio({ draft, onUpdate }: StepPortfolioProps) {
   };
 
   const addPortfolioItem = () => {
+    const current = draft?.portfolio ?? portfolio;
+    if (current.length >= 10) return;
     const newItem: ServiceProviderPortfolioItemDraft = {
       image: "",
       title: "",
       description: "",
       categoryId: draft?.category?.primaryCategoryId ?? "",
     };
-    setPortfolio((prev) => [...prev, newItem]);
-    onUpdate({ portfolio: [...portfolio, newItem] });
+    const next = [...current, newItem];
+    setPortfolio(next);
+    onUpdate({ portfolio: next });
   };
 
   const updateItem = (index: number, updates: Partial<ServiceProviderPortfolioItemDraft>) => {
@@ -89,19 +92,27 @@ export function StepPortfolio({ draft, onUpdate }: StepPortfolioProps) {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-kampmax-text">Portfolio</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-kampmax-text">Portfolio</h2>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full bg-primary-100 text-primary-700">
+              {portfolio.length}/10
+            </span>
+          </div>
           <p className="mt-1 text-sm text-kampmax-text-secondary">
             Showcase your work. Add photos of completed projects to build trust with customers.
           </p>
         </div>
-        {portfolio.length < 10 && (
-          <Button variant="outline" onClick={addPortfolioItem} disabled={portfolio.length >= 10}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Portfolio Item
-          </Button>
-        )}
+        <Button
+          variant={portfolio.length >= 10 ? "outline" : "primary"}
+          onClick={addPortfolioItem}
+          disabled={portfolio.length >= 10}
+          className="self-start sm:self-auto"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {portfolio.length >= 10 ? "Limit Reached" : "Add Portfolio Item"}
+        </Button>
       </div>
 
       {/* Portfolio Grid */}
@@ -120,74 +131,72 @@ export function StepPortfolio({ draft, onUpdate }: StepPortfolioProps) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {portfolio.map((item, index) => (
-            <div key={index} className="rounded-xl border border-kampmax-border bg-white overflow-hidden">
-              <div className="grid sm:grid-cols-[220px_1fr]">
-                <div className="relative group aspect-square sm:aspect-auto bg-neutral-100 min-h-[160px]">
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.title || `Portfolio item ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Camera className="h-10 w-10 text-neutral-300" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openPreview(index)}
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-kampmax-text hover:bg-neutral-100"
-                      aria-label="View full size"
-                    >
-                      <Camera className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/90 text-white hover:bg-red-600"
-                      aria-label="Remove item"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+            <div key={index} className="rounded-xl border border-kampmax-border bg-white overflow-hidden flex flex-col">
+              <div className="relative group aspect-[4/3] bg-neutral-100 overflow-hidden">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.title || `Portfolio item ${index + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Camera className="h-10 w-10 text-neutral-300" />
                   </div>
-                </div>
-
-                <div className="p-4 space-y-3 min-w-0">
-                  <Input
-                    value={item.title}
-                    onChange={(e) => updateItem(index, { title: e.target.value.trim() })}
-                    placeholder="Title (e.g., iPhone 13 Screen Replacement)"
-                    maxLength={80}
-                  />
-                  <textarea
-                    value={item.description}
-                    onChange={(e) => updateItem(index, { description: e.target.value.trim() })}
-                    placeholder="Describe the project..."
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600/20 resize-y"
-                    maxLength={300}
-                  />
-                  <Select
-                    value={item.categoryId}
-                    onChange={(e) => updateItem(index, { categoryId: e.target.value })}
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPreview(index)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-kampmax-text hover:bg-neutral-100"
+                    aria-label="View full size"
                   >
-                    <option value="">Select category</option>
-                    <option value="cat1">Beauty & Personal Care</option>
-                    <option value="cat2">Education & Tutoring</option>
-                    <option value="cat3">Technology & IT</option>
-                    <option value="cat4">Repairs & Maintenance</option>
-                    <option value="cat5">Creative & Design</option>
-                    <option value="cat6">Home Services</option>
-                    <option value="cat7">Transportation</option>
-                    <option value="cat8">Food & Catering</option>
-                    <option value="cat9">Events & Entertainment</option>
-                    <option value="cat10">Fitness & Wellness</option>
-                    <option value="cat11">Professional Services</option>
-                    <option value="cat12">Printing & Stationery</option>
-                  </Select>
+                    <Camera className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/90 text-white hover:bg-red-600"
+                    aria-label="Remove item"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
                 </div>
+              </div>
+
+              <div className="p-4 space-y-3 flex-1">
+                <Input
+                  value={item.title}
+                  onChange={(e) => updateItem(index, { title: e.target.value.trim() })}
+                  placeholder="Title (e.g., iPhone 13 Screen Replacement)"
+                  maxLength={80}
+                />
+                <textarea
+                  value={item.description}
+                  onChange={(e) => updateItem(index, { description: e.target.value.trim() })}
+                  placeholder="Describe the project..."
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600/20 resize-y"
+                  maxLength={300}
+                />
+                <Select
+                  value={item.categoryId}
+                  onChange={(e) => updateItem(index, { categoryId: e.target.value })}
+                >
+                  <option value="">Select category</option>
+                  <option value="cat1">Beauty & Personal Care</option>
+                  <option value="cat2">Education & Tutoring</option>
+                  <option value="cat3">Technology & IT</option>
+                  <option value="cat4">Repairs & Maintenance</option>
+                  <option value="cat5">Creative & Design</option>
+                  <option value="cat6">Home Services</option>
+                  <option value="cat7">Transportation</option>
+                  <option value="cat8">Food & Catering</option>
+                  <option value="cat9">Events & Entertainment</option>
+                  <option value="cat10">Fitness & Wellness</option>
+                  <option value="cat11">Professional Services</option>
+                  <option value="cat12">Printing & Stationery</option>
+                </Select>
               </div>
             </div>
           ))}

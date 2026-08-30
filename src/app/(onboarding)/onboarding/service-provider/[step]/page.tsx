@@ -14,8 +14,59 @@ import { StepPortfolio } from "@/components/service-provider/StepPortfolio";
 import { StepVerification } from "@/components/service-provider/StepVerification";
 import { StepReview } from "@/components/service-provider/StepReview";
 import { createSpApplication, getSpOnboardingDraft, getSpOnboardingStatus, saveSpDraft, submitSpApplication } from "@/services/service-provider";
-import { SERVICE_PROVIDER_ONBOARDING_STATUS, SERVICE_PROVIDER_ONBOARDING_STEPS, SERVICE_PROVIDER_ONBOARDING_STEP } from "@/types/service-provider";
+import { SERVICE_PROVIDER_ONBOARDING_STATUS, SERVICE_PROVIDER_ONBOARDING_STEPS, SERVICE_PROVIDER_ONBOARDING_STEP, isSpBlockingStatus } from "@/types/service-provider";
 import type { ServiceProviderOnboardingDraft, ServiceProviderOnboardingStepId } from "@/types/service-provider";
+
+const DRAFT_STORAGE_KEY = "kampmax:sp:onboarding:draft";
+const PROGRESS_STORAGE_KEY = "kampmax:sp:onboarding:progress";
+
+function loadStoredDraft(): ServiceProviderOnboardingDraft | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as ServiceProviderOnboardingDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistDraft(d: ServiceProviderOnboardingDraft | null) {
+  if (!d) return;
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(d));
+  } catch {
+    return;
+  }
+}
+
+function loadStoredProgress(): ServiceProviderOnboardingStepId[] {
+  try {
+    if (typeof window === "undefined") return [];
+    const raw = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as number[];
+    return parsed.filter((n) => n >= 1 && n <= 10) as ServiceProviderOnboardingStepId[];
+  } catch {
+    return [];
+  }
+}
+
+function persistProgress(steps: ServiceProviderOnboardingStepId[]) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(steps));
+  } catch {
+    return;
+  }
+}
+
+function syncStoreWithDraft(next: ServiceProviderOnboardingDraft) {
+  saveSpDraft({
+    ...next,
+    currentStep: next.currentStep as ServiceProviderOnboardingStepId,
+  });
+}
 
 const STEP_COMPONENTS: Record<number, React.ComponentType<any>> = {
   1: StepProviderType,
@@ -56,26 +107,47 @@ export default function ServiceProviderOnboardingStepPage() {
   const currentStep = parseInt(stepParam, 10) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
   const [draft, setDraft] = useState<ServiceProviderOnboardingDraft | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<ServiceProviderOnboardingStepId[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load draft on mount
+  // Load draft on mount (restores any saved draft + progress across refreshes)
   useEffect(() => {
     const loadDraft = async () => {
       setLoading(true);
       try {
         const res = createSpApplication();
-        if (res.created) {
-          // First time - redirect to step 1
-          if (currentStep !== 1) {
-            router.push("/onboarding/service-provider/1");
-            return;
+        const fresh = getSpOnboardingDraft();
+        const saved = loadStoredDraft();
+
+        if (saved && saved.userId === fresh?.userId) {
+          if (isSpBlockingStatus(saved.status)) {
+            setDraft(saved);
+          } else {
+            syncStoreWithDraft(saved);
+            setDraft(getSpOnboardingDraft() ?? saved);
+            persistDraft(getSpOnboardingDraft() ?? saved);
           }
+        } else {
+          setDraft(fresh);
+          persistDraft(fresh);
         }
-        const data = getSpOnboardingDraft();
-        setDraft(data);
+
+        const savedProgress = loadStoredProgress();
+        if (savedProgress.length > 0) {
+          setCompletedSteps(savedProgress);
+        } else {
+          const seed: ServiceProviderOnboardingStepId[] = [];
+          for (let i = 1; i < currentStep; i++) seed.push(i as ServiceProviderOnboardingStepId);
+          setCompletedSteps(seed);
+        }
+
+        if (res.created && currentStep !== 1) {
+          router.push("/onboarding/service-provider/1");
+          return;
+        }
       } catch (e) {
         setError("Failed to load application");
       } finally {
@@ -92,14 +164,21 @@ export default function ServiceProviderOnboardingStepPage() {
     }
   }, [loading, currentStep, router]);
 
+  const markStepCompleted = (step: number) => {
+    const next = Array.from(new Set([...completedSteps, step as ServiceProviderOnboardingStepId]));
+    setCompletedSteps(next);
+    persistProgress(next);
+  };
+
   const handleSaveDraft = useCallback(async () => {
     if (!draft) return;
     setSaving(true);
     setError(null);
     try {
-      saveSpDraft({ ...draft, currentStep: currentStep as ServiceProviderOnboardingStepId });
+      syncStoreWithDraft({ ...draft, currentStep: currentStep as ServiceProviderOnboardingStepId });
       const updated = getSpOnboardingDraft();
       setDraft(updated);
+      persistDraft(updated);
     } catch (e) {
       setError("Failed to save draft");
     } finally {
@@ -115,19 +194,27 @@ export default function ServiceProviderOnboardingStepPage() {
       return;
     }
     setError(null);
-    saveSpDraft({ ...draft, currentStep: Math.min(currentStep + 1, SERVICE_PROVIDER_ONBOARDING_STEPS) as ServiceProviderOnboardingStepId });
+    const nextStep = Math.min(currentStep + 1, SERVICE_PROVIDER_ONBOARDING_STEPS) as ServiceProviderOnboardingStepId;
+    const nextDraft = { ...draft, currentStep: nextStep };
+    syncStoreWithDraft(nextDraft);
+    persistDraft(nextDraft);
+    markStepCompleted(currentStep);
     if (currentStep < SERVICE_PROVIDER_ONBOARDING_STEPS) {
-      router.push(`/onboarding/service-provider/${currentStep + 1}`);
+      router.push(`/onboarding/service-provider/${nextStep}`);
     }
-  }, [currentStep, draft, router]);
+  }, [currentStep, draft, router, completedSteps]);
 
   const handleBack = useCallback(() => {
     if (!draft) return;
-    saveSpDraft({ ...draft, currentStep: Math.max(currentStep - 1, 1) as ServiceProviderOnboardingStepId });
+    const prevStep = Math.max(currentStep - 1, 1) as ServiceProviderOnboardingStepId;
+    const backDraft = { ...draft, currentStep: prevStep };
+    syncStoreWithDraft(backDraft);
+    persistDraft(backDraft);
+    markStepCompleted(currentStep);
     if (currentStep > 1) {
-      router.push(`/onboarding/service-provider/${currentStep - 1}`);
+      router.push(`/onboarding/service-provider/${prevStep}`);
     }
-  }, [currentStep, draft, router]);
+  }, [currentStep, draft, router, completedSteps]);
 
   const handleSubmit = useCallback(async () => {
     if (!draft) return;
@@ -136,6 +223,10 @@ export default function ServiceProviderOnboardingStepPage() {
     try {
       const res = submitSpApplication();
       if (res.success) {
+        const allSteps: ServiceProviderOnboardingStepId[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        setCompletedSteps(allSteps);
+        persistProgress(allSteps);
+        persistDraft(draft);
         router.push("/account/profiles/service-provider");
       } else {
         setError(res.message);
@@ -200,7 +291,15 @@ export default function ServiceProviderOnboardingStepPage() {
       return (
         <StepVerification
           draft={draft}
-          onUpdate={(data) => setDraft((prev) => prev ? { ...prev, ...data } : null)}
+          onUpdate={(data) =>
+            setDraft((prev) => {
+              if (!prev) return null;
+              const next = { ...prev, ...data };
+              persistDraft(next);
+              syncStoreWithDraft(next);
+              return next;
+            })
+          }
           onSubmitVerification={(type) => {
             // Handle verification submission
           }}
@@ -210,7 +309,15 @@ export default function ServiceProviderOnboardingStepPage() {
     return (
       <Component
         draft={draft}
-        onUpdate={(data: Partial<ServiceProviderOnboardingDraft>) => setDraft((prev) => prev ? { ...prev, ...data } : null)}
+        onUpdate={(data: Partial<ServiceProviderOnboardingDraft>) =>
+          setDraft((prev) => {
+            if (!prev) return null;
+            const next = { ...prev, ...data };
+            persistDraft(next);
+            syncStoreWithDraft(next);
+            return next;
+          })
+        }
       />
     );
   };
@@ -218,6 +325,7 @@ export default function ServiceProviderOnboardingStepPage() {
   return (
     <OnboardingLayout
       draft={draft}
+      completedSteps={completedSteps}
       onSaveDraft={handleSaveDraft}
       onNext={handleNext}
       onBack={handleBack}
