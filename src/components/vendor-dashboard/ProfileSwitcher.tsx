@@ -17,6 +17,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { getVendorAccess, getVendorProfileSummary } from "@/services/vendor-dashboard";
+import { getServiceProviderAccess } from "@/services/service-provider-dashboard";
+import { getSpProfileByUserId } from "@/data/service-provider";
 import { VendorStatusBadge } from "./VendorStatusBadge";
 
 interface ProfileEntry {
@@ -28,17 +30,14 @@ interface ProfileEntry {
   onboardLabel?: string;
 }
 
-/**
- * Multi-profile switcher. Only shows active profiles as selectable; inactive
- * profiles surface an onboarding action. Displaying a profile NEVER grants
- * permissions — the backend remains authoritative.
- */
 export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const access = getVendorAccess();
   const vendor = getVendorProfileSummary();
+  const spAccess = getServiceProviderAccess();
+  const spProfile = getSpProfileByUserId(user?.id ?? "");
 
   const profiles: ProfileEntry[] = [
     { id: "customer", label: "Customer", icon: User, active: true, href: "/home" },
@@ -51,12 +50,23 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
       onboardLabel: "Become a Vendor",
     },
     { id: "freelancer", label: "Freelancer", icon: Briefcase, active: false, onboardLabel: "Become a Freelancer" },
-    { id: "service", label: "Service Provider", icon: Wrench, active: false, onboardLabel: "Offer Services" },
+    {
+      id: "service",
+      label: "Service Provider",
+      icon: Wrench,
+      active: spAccess.kind === "approved",
+      href: "/service-provider",
+      onboardLabel: "Offer Services",
+    },
     { id: "employer", label: "Employer", icon: Building2, active: false, onboardLabel: "Become an Employer" },
     { id: "ambassador", label: "Ambassador", icon: UserCheck, active: false, onboardLabel: "Become an Ambassador" },
   ];
 
-  const current = profiles.find((p) => p.id === "vendor" && p.active) ? profiles[1] : profiles[0];
+  const current = profiles.find((p) => p.id === "vendor" && p.active)
+    ? profiles[1]
+    : profiles.find((p) => p.id === "service" && p.active)
+    ? profiles.find((p) => p.id === "service")!
+    : profiles[0];
 
   return (
     <div className="relative">
@@ -83,9 +93,9 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
               Current Profile
             </p>
             <ProfileRow
-              label={vendor ? "Vendor" : current.label}
+              label={vendor ? "Vendor" : spAccess.kind === "approved" ? "Service Provider" : current.label}
               icon={current.icon}
-              sub={vendor?.storeName ?? user?.name}
+              sub={vendor?.storeName ?? spProfile?.displayName ?? user?.name}
               onNavigate={() => {
                 setOpen(false);
                 onClosed?.();
@@ -117,6 +127,17 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
                     </button>
                   );
                 }
+                if (p.id === "service" && spAccess.kind === "approved" && spProfile) {
+                  return (
+                    <div key={p.id} className="flex items-center gap-2.5 rounded-lg px-3 py-2">
+                      <Icon className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+                      <span className="flex-1 text-sm text-neutral-700">Service Provider</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-success-100 text-success-700">
+                        Active
+                      </span>
+                    </div>
+                  );
+                }
                 if (p.id === "vendor" && vendor) {
                   return (
                     <div key={p.id} className="flex items-center gap-2.5 rounded-lg px-3 py-2">
@@ -127,19 +148,37 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
                   );
                 }
                 return (
-                  <Link
-                    key={p.id}
-                    href="/account/profiles/vendor/onboarding"
-                    onClick={() => {
-                      setOpen(false);
-                      onClosed?.();
-                    }}
-                    role="menuitem"
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-500 hover:bg-neutral-50"
-                  >
-                    <Icon className="h-4 w-4 shrink-0 text-neutral-300" aria-hidden />
-                    <span className="flex-1 text-left">{p.onboardLabel ?? p.label}</span>
-                  </Link>
+                  p.id === "service"
+                    ? (
+                      <Link
+                        key={p.id}
+                        href="/onboarding/service-provider/1"
+                        onClick={() => {
+                          setOpen(false);
+                          onClosed?.();
+                        }}
+                        role="menuitem"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-500 hover:bg-neutral-50"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-neutral-300" aria-hidden />
+                        <span className="flex-1 text-left">{p.onboardLabel ?? p.label}</span>
+                      </Link>
+                    )
+                    : (
+                      <Link
+                        key={p.id}
+                        href="/account/profiles/vendor/onboarding"
+                        onClick={() => {
+                          setOpen(false);
+                          onClosed?.();
+                        }}
+                        role="menuitem"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-neutral-500 hover:bg-neutral-50"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 text-neutral-300" aria-hidden />
+                        <span className="flex-1 text-left">{p.onboardLabel ?? p.label}</span>
+                      </Link>
+                    )
                 );
               })}
             </div>
