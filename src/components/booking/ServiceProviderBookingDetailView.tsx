@@ -21,7 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import {
-  completeBooking,
   formatBookingDate,
   formatBookingDay,
   formatBookingTime,
@@ -29,9 +28,12 @@ import {
   startBooking,
 } from "@/services/booking";
 import { BookingStatusBadge } from "./BookingStatusBadge";
+import { FulfillmentStatusBadge } from "./FulfillmentStatusBadge";
 import { BookingTimeline } from "./BookingTimeline";
 import { AcceptBookingModal } from "./AcceptBookingModal";
 import { DeclineBookingModal } from "./DeclineBookingModal";
+import { CompleteBookingModal } from "./CompleteBookingModal";
+import { SettlementPanel } from "./SettlementPanel";
 import { BookingEmptyState } from "./BookingEmptyState";
 import type { BookingError, ServiceBooking } from "@/types/booking";
 
@@ -44,7 +46,8 @@ export function ServiceProviderBookingDetailView({ bookingId }: { bookingId: str
   );
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [declineOpen, setDeclineOpen] = useState(false);
-  const [busyAction, setBusyAction] = useState<"start" | "complete" | null>(null);
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [busyAction, setBusyAction] = useState<"start" | null>(null);
   const [error, setError] = useState<BookingError | null>(null);
 
   if (!booking) {
@@ -71,11 +74,11 @@ export function ServiceProviderBookingDetailView({ bookingId }: { bookingId: str
   const canComplete = booking.status === "in_progress";
   const pending = booking.status === "pending";
 
-  function runSimple(action: "start" | "complete") {
+  function runSimple(action: "start") {
     if (busyAction) return;
     setBusyAction(action);
     setError(null);
-    const result = action === "start" ? startBooking(activeBookingId) : completeBooking(activeBookingId);
+    const result = startBooking(activeBookingId);
     setBusyAction(null);
     if (result.ok) {
       setBooking(result.booking);
@@ -98,6 +101,13 @@ export function ServiceProviderBookingDetailView({ bookingId }: { bookingId: str
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-kampmax-text">{booking.serviceName}</h1>
             <BookingStatusBadge status={booking.status} />
+            {booking.status === "completed" && (
+              <FulfillmentStatusBadge
+                status={booking.fulfillment.confirmationStatus}
+                perspective="provider"
+                showAlways
+              />
+            )}
           </div>
           <p className="mt-1 text-xs text-kampmax-text-muted">
             Ref <span className="font-mono font-semibold">{booking.bookingReference}</span>
@@ -146,18 +156,10 @@ export function ServiceProviderBookingDetailView({ bookingId }: { bookingId: str
 
           {canComplete && (
             <button
-              onClick={() => runSimple("complete")}
-              disabled={busyAction !== null}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg bg-success-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-success-700",
-                busyAction === "complete" && "cursor-wait"
-              )}
+              onClick={() => setCompleteOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-success-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-success-700"
             >
-              {busyAction === "complete" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <ClipboardCheck className="h-3.5 w-3.5" aria-hidden />
-              )}
+              <ClipboardCheck className="h-3.5 w-3.5" aria-hidden />
               Mark completed
             </button>
           )}
@@ -245,10 +247,9 @@ export function ServiceProviderBookingDetailView({ bookingId }: { bookingId: str
                   : "From ₦" + booking.price.amount.toLocaleString("en-NG")}
             </p>
             <p className="mt-1 text-xs text-kampmax-text-muted">{booking.price.note}</p>
-            <p className="mt-3 text-[11px] text-kampmax-text-muted">
-              Payments and escrow arrive in the next module. The price shown here is the agreed
-              amount for this appointment.
-            </p>
+            <div className="mt-3">
+              <SettlementPanel booking={booking} />
+            </div>
           </section>
         </div>
 
@@ -293,6 +294,16 @@ export function ServiceProviderBookingDetailView({ bookingId }: { bookingId: str
           onComplete={(updated) => {
             setBooking(updated);
             setDeclineOpen(false);
+          }}
+        />
+      )}
+      {completeOpen && (
+        <CompleteBookingModal
+          booking={booking}
+          onClose={() => setCompleteOpen(false)}
+          onComplete={(updated) => {
+            setBooking(updated);
+            setCompleteOpen(false);
           }}
         />
       )}

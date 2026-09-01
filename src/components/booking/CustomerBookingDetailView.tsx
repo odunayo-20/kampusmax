@@ -27,9 +27,15 @@ import {
   getCustomerBooking,
 } from "@/services/booking";
 import { BookingStatusBadge } from "./BookingStatusBadge";
+import { FulfillmentStatusBadge } from "./FulfillmentStatusBadge";
 import { BookingTimeline } from "./BookingTimeline";
 import { CancelBookingModal } from "./CancelBookingModal";
 import { RescheduleModal } from "./RescheduleModal";
+import { ConfirmCompletionModal } from "./ConfirmCompletionModal";
+import { ReportProblemModal } from "./ReportProblemModal";
+import { LeaveReviewModal } from "./LeaveReviewModal";
+import { SettlementPanel } from "./SettlementPanel";
+import { CompletionCard } from "./CompletionCard";
 import { BookingEmptyState } from "./BookingEmptyState";
 import type { ServiceBooking } from "@/types/booking";
 
@@ -40,6 +46,9 @@ export function CustomerBookingDetailView({ bookingId }: { bookingId: string }) 
   );
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reschedOpen, setReschedOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   if (!booking) {
     return (
@@ -72,6 +81,13 @@ export function CustomerBookingDetailView({ bookingId }: { bookingId: string }) 
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-bold text-neutral-900">{booking.serviceName}</h1>
               <BookingStatusBadge status={booking.status} />
+              {booking.status === "completed" && (
+                <FulfillmentStatusBadge
+                  status={booking.fulfillment.confirmationStatus}
+                  perspective="customer"
+                  showAlways
+                />
+              )}
             </div>
             <p className="mt-1 text-xs text-neutral-500">
               Ref <span className="font-mono font-semibold">{booking.bookingReference}</span>
@@ -185,18 +201,38 @@ export function CustomerBookingDetailView({ bookingId }: { bookingId: string }) 
           </div>
 
           <aside className="space-y-3 lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-xl border border-info-200 bg-info-50 p-3.5">
-              <p className="flex items-start gap-2 text-xs text-info-800">
-                <Wallet className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                <span>{ready.paymentLabel}</span>
+            <SettlementPanel booking={booking} />
+
+            {ready.requiresProviderApproval && (
+              <p className="flex items-start gap-2 rounded-xl border border-warning-200 bg-warning-50 p-3.5 text-xs text-warning-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>Your request is awaiting the provider&apos;s confirmation.</span>
               </p>
-              {ready.requiresProviderApproval && (
-                <p className="mt-2 flex items-start gap-2 text-xs text-warning-800">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  <span>Your request is awaiting the provider&apos;s confirmation.</span>
+            )}
+
+            {ready.canConfirmCompletion && (
+              <div className="rounded-xl border border-info-200 bg-info-50 p-3.5">
+                <p className="text-xs font-bold text-info-800">
+                  This service needs your sign-off
                 </p>
-              )}
-            </div>
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-success-600 px-3 py-2 text-xs font-bold text-white hover:bg-success-700"
+                >
+                  It&apos;s done — confirm
+                </button>
+              </div>
+            )}
+
+            {booking.status === "completed" && (
+              <CompletionCard
+                booking={booking}
+                canReview={ready.canReview}
+                onConfirm={() => setConfirmOpen(true)}
+                onReport={() => setReportOpen(true)}
+                onReview={() => setReviewOpen(true)}
+              />
+            )}
 
             <div className="rounded-xl border border-neutral-200 bg-white p-3.5 text-[11px] text-neutral-500">
               <p className="flex items-start gap-1.5">
@@ -221,13 +257,6 @@ export function CustomerBookingDetailView({ bookingId }: { bookingId: string }) 
                 Book {booking.serviceName} again
               </Link>
             )}
-
-            {booking.status === "completed" && (
-              <div className="rounded-xl border border-neutral-200 bg-white p-3.5 text-center text-xs text-neutral-400">
-                Reviews open in the next module — you&apos;ll be able to rate{" "}
-                {booking.serviceName}.
-              </div>
-            )}
           </aside>
         </div>
       </div>
@@ -249,6 +278,36 @@ export function CustomerBookingDetailView({ bookingId }: { bookingId: string }) 
           onComplete={(updated) => {
             setBooking(updated);
             setReschedOpen(false);
+          }}
+        />
+      )}
+      {confirmOpen && (
+        <ConfirmCompletionModal
+          booking={booking}
+          onClose={() => setConfirmOpen(false)}
+          onComplete={(updated) => {
+            setBooking(updated);
+            setConfirmOpen(false);
+          }}
+        />
+      )}
+      {reportOpen && (
+        <ReportProblemModal
+          booking={booking}
+          onClose={() => setReportOpen(false)}
+          onComplete={(updated) => {
+            setBooking(updated);
+            setReportOpen(false);
+          }}
+        />
+      )}
+      {reviewOpen && (
+        <LeaveReviewModal
+          booking={booking}
+          onClose={() => setReviewOpen(false)}
+          onComplete={(updated) => {
+            setBooking(updated);
+            setReviewOpen(false);
           }}
         />
       )}

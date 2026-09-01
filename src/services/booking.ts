@@ -1,5 +1,5 @@
 // ============================================================
-// SERVICE BOOKING SERVICE LAYER  (Module 18)
+// SERVICE BOOKING SERVICE LAYER  (Modules 18–19)
 // ============================================================
 //
 // Maps 1:1 to the future booking API. The UI talks ONLY to these functions —
@@ -9,9 +9,12 @@
 //   POST  /bookings                              → create booking (idempotent)
 //   POST  /bookings/:id/cancel
 //   POST  /bookings/:id/reschedule
-//   GET   /me/bookings?filter=...                → customer list
+//   GET   /me/bookings?query=...                 → customer list (paged)
 //   GET   /me/bookings/:id                       → customer detail
-//   GET   /service-provider/bookings?filter=...
+//   POST  /me/bookings/:id/confirm-completion
+//   POST  /me/bookings/:id/report-problem
+//   POST  /me/bookings/:id/review
+//   GET   /service-provider/bookings?query=...
 //   GET   /service-provider/bookings/:id
 //   POST  /service-provider/bookings/:id/accept|decline|start|complete
 //
@@ -25,11 +28,18 @@
 
 import type {
   BookingAvailabilityResponse,
+  BookingEvidence,
   BookingListFilter,
+  BookingListQuery,
+  BookingPageResult,
   BookingPaymentStage,
   BookingReadyState,
   BookingResult,
+  BookingReviewInput,
+  FulfillmentConfirmationStatus,
+  ProviderBookingStatusFilter,
   ServiceBooking,
+  ServiceProblemCategory,
 } from "@/types/booking";
 import {
   BOOKING_STATUS_SHORT_LABELS,
@@ -40,6 +50,7 @@ import {
   cancelBookingOnBackend,
   completeBookingOnBackend,
   computeAvailabilityResponse,
+  confirmCompletionOnBackend,
   createBookingOnBackend,
   declineBookingOnBackend,
   getBookingForCustomer,
@@ -47,9 +58,11 @@ import {
   getBookingsForCustomer,
   getBookingsForProvider,
   getProviderBookingStats,
+  reportProblemOnBackend,
   rescheduleBookingOnBackend,
   resolveBookingLocation,
   startBookingOnBackend,
+  submitBookingReviewOnBackend,
 } from "@/data/booking";
 import { getMarketplaceProvider, getServiceDetail } from "@/services/service-marketplace";
 import { getCurrentUser } from "@/services/users";
@@ -295,45 +308,152 @@ export function startBooking(id: string): BookingResult {
   if (!owner) {
     return { ok: false, error: { code: "403", message: "You don't have a service provider dashboard for this booking." } };
   }
-  return startBookingOnBackend(id, owner, Date.now());
-}
-
-export function completeBooking(id: string): BookingResult {
-  const owner = providerOwner();
-  if (!owner) {
-    return { ok: false, error: { code: "403", message: "You don't have a service provider dashboard for this booking." } };
-  }
-  const result = completeBookingOnBackend(id, owner, Date.now());
+  const result = startBookingOnBackend(id, owner, Date.now());
   if (result.ok && !result.alreadyExisted) {
     const b = result.booking;
     pushUserNotification({
       userId: b.customerId,
       type: "booking_update",
       category: "bookings",
-      title: "Booking completed",
-      message: `Your ${b.serviceName} appointment has been completed.`,
+      title: "Appointment started",
+      message: `Your ${b.serviceName} appointment has started.`,
       actionUrl: `/customer/bookings/${b.id}`,
     });
   }
   return result;
 }
 
+export function completeBooking(id: string, evidence?: BookingEvidence[]): BookingResult {
+  const owner = providerOwner();
+  if (!owner) {
+    return { ok: false, error: { code: "403", message: "You don't have a service provider dashboard for this booking." } };
+  }
+  const result = completeBookingOnBackend(id, owner, { evidence }, Date.now());
+  if (result.ok && !result.alreadyExisted) {
+    const b = result.booking;
+    const awaiting = b.fulfillment.confirmationStatus === "awaiting";
+    pushUserNotification({
+      userId: b.customerId,
+      type: "booking_update",
+      category: "bookings",
+      title: awaiting ? "Service completed — please confirm" : "Service completed",
+      message: awaiting
+        ? `Your ${b.serviceName} appointment is complete. Confirm the service to close your order.`
+        : `Your ${b.serviceName} appointment has been completed.`,
+      actionUrl: `/customer/bookings/${b.id}`,
+    });
+  }
+  return result;
+}
+
+// ── Customer fulfilment actions (completion gate / review) ────
+
+export function confirmBookingCompletion(bookingId: string): BookingResult {
+  const result = confirmCompletionOnBackend(getCurrentUser().id, bookingId, Date.now());
+  if (result.ok && !result.alreadyExisted) {
+    const b = result.booking;
+    pushSpBookingNotification(
+      "Completion confirmed",
+      `${b.customer.name} confirmed ${b.serviceName} was completed (${bookingStartLabel(b)}).`,
+      `/service-provider/bookings/${b.id}`
+    );
+    recordSpBookingActivity(
+      "Booking fulfilled",
+      `${b.customer.name} confirmed ${b.serviceName} was completed. Settlement preview is now available.`,
+      `/service-provider/bookings/${b.id}`
+    );
+  }
+  return result;
+}
+
+export interface ReportBookingProblemInput {
+  category: ServiceProblemCategory;
+  description: string;
+  evidence?: BookingEvidence[];
+}
+
+export function reportBookingProblem(bookingId: string, input: ReportBookingProblemInput): BookingResult {
+  const result = reportProblemOnBackend(getCurrentUser().id, bookingId, input, Date.now());
+  if (result.ok) {
+    const b = result.booking;
+    pushSpBookingNotification(
+      "Issue reported",
+      `${b.customer.name} reported an issue on ${b.serviceName}. It's being reviewed by Kampmax support.`,
+      `/service-provider/bookings/${b.id}`
+    );
+    recordSpBookingActivity(
+      "Issue reported",
+      `${b.customer.name} reported an issue on ${b.serviceName} — handed to Kampmax support.`,
+      `/service-provider/bookings/${b.id}`
+    );
+  }
+  return result;
+}
+
+export function submitBookingReview(bookingId: string, input: BookingReviewInput): BookingResult {
+  const result = submitBookingReviewOnBackend(getCurrentUser().id, bookingId, input, Date.now());
+  if (result.ok) {
+    const b = result.booking;
+    pushSpBookingNotification(
+      "New review received",
+      `${b.customer.name} left a ${input.rating}-star review on ${b.serviceName}.`,
+      `/service-provider/bookings/${b.id}`
+    );
+    recordSpBookingActivity(
+      "New review received",
+      `${b.customer.name} left a ${input.rating}-star review on ${b.serviceName}.`,
+      `/service-provider/bookings/${b.id}`
+    );
+  }
+  return result;
+}
+
 // ── Queries ───────────────────────────────────────────────────
 
-export function getCustomerBookings(filter: BookingListFilter): ServiceBooking[] {
-  return getBookingsForCustomer(getCurrentUser().id, filter);
+const BOOKING_LIST_PAGE_SIZE = 12;
+
+export function getCustomerBookings(query: BookingListQuery = {}): BookingPageResult {
+  const result = getBookingsForCustomer(getCurrentUser().id, {
+    page: 1,
+    limit: BOOKING_LIST_PAGE_SIZE,
+    ...query,
+  });
+  return result as BookingPageResult;
+}
+
+export function getCustomerBookingCounts(): Record<BookingListFilter, number> {
+  const userId = getCurrentUser().id;
+  const count = (status: BookingListFilter) =>
+    (getBookingsForCustomer(userId, { status, page: 1, limit: 1 }) as BookingPageResult).total;
+  return {
+    upcoming: count("upcoming"),
+    in_progress: count("in_progress"),
+    completed: count("completed"),
+    past: count("past"),
+    cancelled: count("cancelled"),
+    all: count("all"),
+  };
 }
 
 export function getCustomerBooking(bookingId: string): ServiceBooking | null {
   return getBookingForCustomer(getCurrentUser().id, bookingId);
 }
 
-export type ProviderBookingFilter = "pending" | "upcoming" | "completed" | "cancelled" | "all";
+export type ProviderBookingFilter = ProviderBookingStatusFilter;
 
-export function getProviderBookings(filter: ProviderBookingFilter): ServiceBooking[] {
+export function getProviderBookings(query: BookingListQuery = {}): BookingPageResult {
   const owner = providerOwner();
-  if (!owner) return [];
-  return getBookingsForProvider(owner.providerId, filter);
+  if (!owner) return emptyResult();
+  const result = getBookingsForProvider(owner.providerId, {
+    page: 1,
+    limit: BOOKING_LIST_PAGE_SIZE,
+    ...query,
+  });
+  return result as BookingPageResult;
+}
+
+function emptyResult(): BookingPageResult {
+  return { items: [], page: 1, limit: BOOKING_LIST_PAGE_SIZE, total: 0, totalPages: 1 };
 }
 
 export function getProviderBooking(bookingId: string): ServiceBooking | null {
@@ -346,7 +466,9 @@ export function getProviderBookingSummary(): {
   pending: number;
   upcomingToday: number;
   upcoming: number;
+  inProgress: number;
   completed: number;
+  cancelled: number;
 } | null {
   const owner = providerOwner();
   if (!owner) return null;
@@ -359,13 +481,29 @@ export function getBookingReadyState(booking: ServiceBooking): BookingReadyState
   const nowMs = Date.now();
   const startMs = new Date(booking.startAt).getTime();
   const active = booking.status === "pending" || booking.status === "confirmed" || booking.status === "in_progress";
+  const f = booking.fulfillment;
+  const done = booking.status === "completed";
+  const reviewClosed =
+    done && !!f.reviewEligibleUntil && new Date(f.reviewEligibleUntil).getTime() < nowMs;
+
+  let paymentStage: BookingPaymentStage = "not_started";
+  if (f.payment.state === "not_required") paymentStage = "not_required";
+  else if (f.payment.state === "paid") paymentStage = "settled";
+  else if (!!f.payment.state && f.payment.state !== "unpaid") paymentStage = "pending";
+  else if (done) paymentStage = "pending";
+
   return {
-    paymentStage: "not_started" as BookingPaymentStage,
-    paymentLabel: "Payment & escrow open in a later module — no charge yet.",
+    paymentStage,
+    paymentLabel: f?.payment?.label ?? "Payment & escrow open in a later module — no charge yet.",
     requiresProviderApproval: booking.bookingPreference === "request_approval" && booking.status === "pending",
     canCancel: active && startMs > nowMs,
     canReschedule: (booking.status === "pending" || booking.status === "confirmed") && startMs > nowMs,
-    canReview: false,
+    canReview: done && f.confirmationStatus === "confirmed" && !f.review && !reviewClosed,
+    canConfirmCompletion:
+      done && f.requiresCompletionConfirmation && f.confirmationStatus === "awaiting",
+    canReportProblem:
+      done && f.confirmationStatus !== "confirmed" && f.confirmationStatus !== "problem_reported",
+    confirmationStatus: f?.confirmationStatus ?? ("not_required" as FulfillmentConfirmationStatus),
   };
 }
 

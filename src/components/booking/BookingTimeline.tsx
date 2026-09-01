@@ -11,6 +11,9 @@ const KIND_STYLES: Record<BookingTimelineEvent["kind"], string> = {
   rescheduled: "bg-warning-500",
   cancelled: "bg-error-500",
   completed: "bg-success-500",
+  completion_confirmed: "bg-success-500",
+  problem_reported: "bg-error-500",
+  reviewed: "bg-warning-500",
 };
 
 /** Vertical booking timeline (backend events, rendered oldest → newest). */

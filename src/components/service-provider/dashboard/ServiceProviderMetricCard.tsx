@@ -1,6 +1,6 @@
 "use client";
 
-import { Wrench, Calendar, Clock, Star, Eye, Layers } from "lucide-react";
+import { Wrench, Calendar, Clock, Star, Eye, Layers, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ServiceProviderDashboardMetric } from "@/types/service-provider-dashboard";
 
@@ -8,6 +8,7 @@ const ICON: Record<ServiceProviderDashboardMetric["key"], typeof Layers> = {
   active_services: Wrench,
   total_bookings: Calendar,
   upcoming_bookings: Clock,
+  in_progress_bookings: CalendarClock,
   average_rating: Star,
   profile_views: Eye,
   response_time: Clock,

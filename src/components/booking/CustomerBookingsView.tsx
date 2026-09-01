@@ -6,35 +6,60 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { getCustomerBookings } from "@/services/booking";
+import {
+  getCustomerBookingCounts,
+  getCustomerBookings,
+} from "@/services/booking";
 import { BookingListCard } from "./BookingListCard";
 import { BookingEmptyState } from "./BookingEmptyState";
-import type { BookingListFilter } from "@/types/booking";
+import { BookingFilters } from "./BookingFilters";
+import { BookingPagination } from "./BookingPagination";
+import type { BookingListFilter, BookingListQuery } from "@/types/booking";
 
 const TABS: { key: BookingListFilter; label: string }[] = [
   { key: "upcoming", label: "Upcoming" },
-  { key: "past", label: "Past" },
+  { key: "in_progress", label: "In progress" },
+  { key: "completed", label: "Completed" },
   { key: "cancelled", label: "Cancelled" },
   { key: "all", label: "All" },
 ];
+
+const EMPTY_FILTERS: Pick<
+  BookingListQuery,
+  "search" | "serviceId" | "providerId" | "dateFrom" | "dateTo" | "sort"
+> = {};
+
+const isActiveTab = (t: BookingListFilter): t is Exclude<BookingListFilter, "past"> =>
+  t !== "past";
 
 /** Customer booking dashboard (auth-gated by the (main) layout). */
 export function CustomerBookingsView() {
   const { user } = useAuth();
   const [tab, setTab] = useState<BookingListFilter>("upcoming");
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
 
   const userId = user?.id ?? "u1";
-  const bookings = useMemo(() => getCustomerBookings(tab), [tab, userId]);
-  const counts = useMemo(
-    () =>
-      ({
-        upcoming: getCustomerBookings("upcoming").length,
-        past: getCustomerBookings("past").length,
-        cancelled: getCustomerBookings("cancelled").length,
-        all: getCustomerBookings("all").length,
-      }) as Record<BookingListFilter, number>,
-    [userId]
+
+  const query: BookingListQuery = useMemo(
+    () => ({ status: tab, page, ...filters }),
+    [tab, page, filters]
   );
+
+  const result = useMemo(() => getCustomerBookings(query), [query, userId]);
+  const counts = useMemo(() => getCustomerBookingCounts(), [userId]);
+
+  function switchTab(next: BookingListFilter) {
+    if (!isActiveTab(next)) return;
+    setTab(next);
+    setPage(1);
+    setFilters(EMPTY_FILTERS);
+  }
+
+  function patchFilters(patch: Partial<BookingListQuery>) {
+    setFilters((prev) => ({ ...prev, ...patch }));
+    setPage(1);
+  }
 
   return (
     <PageContainer>
@@ -60,7 +85,7 @@ export function CustomerBookingsView() {
               key={t.key}
               role="tab"
               aria-selected={tab === t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => switchTab(t.key)}
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium transition-all",
                 tab === t.key
@@ -83,7 +108,9 @@ export function CustomerBookingsView() {
           ))}
         </div>
 
-        {bookings.length === 0 ? (
+        <BookingFilters role="customer" query={query} onChange={patchFilters} />
+
+        {result.total === 0 ? (
           tab === "upcoming" ? (
             <BookingEmptyState
               title="No upcoming bookings"
@@ -98,11 +125,19 @@ export function CustomerBookingsView() {
             />
           )
         ) : (
-          <div className="space-y-3">
-            {bookings.map((booking) => (
-              <BookingListCard key={booking.id} booking={booking} role="customer" />
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {result.items.map((booking) => (
+                <BookingListCard key={booking.id} booking={booking} role="customer" />
+              ))}
+            </div>
+            <BookingPagination
+              page={result.page}
+              totalPages={result.totalPages}
+              total={result.total}
+              onChange={setPage}
+            />
+          </>
         )}
       </div>
     </PageContainer>

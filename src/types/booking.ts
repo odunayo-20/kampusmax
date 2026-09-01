@@ -1,5 +1,5 @@
 // ============================================================
-// SERVICE BOOKING & SCHEDULING DOMAIN TYPES  (Module 18)
+// SERVICE BOOKING & SCHEDULING DOMAIN TYPES  (Modules 18–19)
 // ============================================================
 //
 // Backend-authoritative projections for the booking & scheduling module.
@@ -75,7 +75,10 @@ export type BookingTimelineEventKind =
   | "started"
   | "rescheduled"
   | "cancelled"
-  | "completed";
+  | "completed"
+  | "completion_confirmed"
+  | "problem_reported"
+  | "reviewed";
 
 export interface BookingTimelineEvent {
   id: string;
@@ -146,6 +149,127 @@ export interface ServiceBooking {
   createdAt: string;
   updatedAt: string;
   timeline: BookingTimelineEvent[];
+  /** Order-fulfilment model (Module 19): completion confirmation, problems,
+   * reviews, evidence, and payment/escrow readiness. Backend-owned. */
+  fulfillment: BookingFulfillment;
+}
+
+// ── Fulfilment model (Module 19) ──────────────────────────────
+
+/** Evidence file attached by a party. Uploaded client-side, but the actual
+ * file lives / uploads with the real backend — never executed locally. */
+export type BookingEvidenceKind = "image" | "document" | "other";
+
+export interface BookingEvidence {
+  id: string;
+  kind: BookingEvidenceKind;
+  name: string;
+  mime: string;
+  sizeBytes: number;
+  /** In-memory preview (client-held until a secure backend upload exists). */
+  dataUrl?: string;
+}
+
+export type FulfillmentConfirmationStatus =
+  | "not_required" // category rule: no customer gate after completion
+  | "awaiting" // provider completed; customer must confirm
+  | "confirmed" // customer confirmed completion
+  | "problem_reported"; // customer reported an issue; handed to support
+
+export type ServiceProblemCategory =
+  | "service_not_completed"
+  | "service_incomplete"
+  | "quality_issue"
+  | "provider_no_show"
+  | "wrong_service"
+  | "other";
+
+export interface BookingProblem {
+  category: ServiceProblemCategory;
+  description: string;
+  evidence?: BookingEvidence[];
+  reportedAt: string;
+  /** Dispute handoff — the resolution flow opens in a later module. */
+  assignedTo: "kampmax_support";
+}
+
+export interface BookingReviewInput {
+  rating: 1 | 2 | 3 | 4 | 5;
+  title?: string;
+  body?: string;
+}
+
+export interface BookingReview extends BookingReviewInput {
+  id: string;
+  submittedAt: string;
+}
+
+export type BookingPaymentState =
+  | "not_required"
+  | "unpaid"
+  | "paid"
+  | "escrow_held"
+  | "release_pending"
+  | "released"
+  | "refund_pending"
+  | "refunded";
+
+export type BookingEscrowState =
+  | "not_available"
+  | "held"
+  | "release_pending"
+  | "released"
+  | "refund_pending"
+  | "refunded"
+  | "disputed";
+
+/** Illustrative settlement computed by the backend AFTER a completed booking
+ * is confirmed. Read-only readiness display — no money is moved. */
+export interface BookingSettlementBreakdown {
+  currency: "NGN";
+  serviceAmount: number;
+  platformFee: number;
+  platformFeeRate: number;
+  providerEarnings: number;
+  tax: number;
+  feeLabel: string;
+  computedAt: string;
+  disclaimer: string;
+}
+
+export interface BookingRescheduleHistoryEntry {
+  originalStartAt: string;
+  originalEndAt: string;
+  rescheduledAt: string;
+}
+
+export interface BookingFulfillment {
+  /** Backend category rule: subjective services require the customer to confirm. */
+  requiresCompletionConfirmation: boolean;
+  /** Backend category rule: provider may attach proof when completing. */
+  allowCompletionEvidence: boolean;
+  completionEvidence?: BookingEvidence[];
+  confirmationStatus: FulfillmentConfirmationStatus;
+  customerConfirmedAt?: string;
+  problem?: BookingProblem;
+  review?: BookingReview;
+  /** Reviews open within this window (booking-timezone days; backend-set). */
+  reviewEligibleUntil?: string;
+  /** Readiness projections — this module never moves money. */
+  payment: { state: BookingPaymentState; label: string };
+  escrow: { state: BookingEscrowState; label: string };
+  settlement?: BookingSettlementBreakdown;
+  startedAt?: string;
+  completedAt?: string;
+  /** Latest completed reschedule; the timeline keeps the full history. */
+  reschedule?: BookingRescheduleHistoryEntry;
+  /** Outcome flags are backend/admin-assigned only (late / no-show). */
+  outcomeFlags?: {
+    providerLate?: boolean;
+    customerLate?: boolean;
+    providerNoShow?: boolean;
+    customerNoShow?: boolean;
+  };
 }
 
 // ── Availability (backend-authoritative slots) ────────────────
@@ -267,9 +391,42 @@ export type BookingResult =
 
 // ── List filters ──────────────────────────────────────────────
 
-export type BookingListFilter = "upcoming" | "past" | "cancelled" | "all";
+/** Customer-side list tabs (superset covers the provider dashboard too). */
+export type BookingListFilter =
+  | "upcoming"
+  | "in_progress"
+  | "completed"
+  | "past"
+  | "cancelled"
+  | "all";
 
-// ── Ready states (payment/escrow/review not yet implemented) ──
+export type ProviderBookingStatusFilter = "pending" | BookingListFilter;
+
+export type BookingSort = "newest" | "oldest" | "upcoming" | "recently_completed";
+
+export interface BookingListQuery {
+  status?: BookingListFilter | ProviderBookingStatusFilter;
+  /** Free text across service name, reference, and party names. */
+  search?: string;
+  serviceId?: string;
+  providerId?: string;
+  /** Inclusive date window in the booking timezone ("YYYY-MM-DD"). */
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: BookingSort;
+  page?: number;
+  limit?: number;
+}
+
+export interface BookingPageResult {
+  items: ServiceBooking[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+// ── Ready states (payment/escrow/review spelled out below) ──
 
 export type BookingPaymentStage =
   | "not_required"
@@ -284,5 +441,9 @@ export interface BookingReadyState {
   canCancel: boolean;
   canReschedule: boolean;
   canReview: boolean;
+  /** Customer may drive the post-completion gate. */
+  canConfirmCompletion: boolean;
+  canReportProblem: boolean;
+  confirmationStatus: FulfillmentConfirmationStatus;
   cancelBlockedReason?: string;
 }

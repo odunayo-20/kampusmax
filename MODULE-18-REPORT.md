@@ -154,7 +154,9 @@ on all controls.
 Payments & escrow and service orders/payouts (the UI/timeline surface the ready-stage boundary —
 `getBookingReadyState` returns `not_started`), quote negotiation, provider-initiated cancellation
 of confirmed bookings (backend supports status rules; no provider cancel UI yet), reviews on
-completed bookings, in-app messaging/chat for appointment day logistics, a real timezone/AST
+completed bookings (now delivered in **Module 19** — completion confirmation gate, problem
+reporting, and a review window on confirmed-complete orders; the dispute/resolution engine remains
+deferred), in-app messaging/chat for appointment day logistics, a real timezone/AST
 library (fixed UTC+1 is correct for Nigeria and documented), and real rate-limiting (`429` declared).
 
 ## 10. Verification
@@ -177,6 +179,7 @@ library (fixed UTC+1 is correct for Nigeria and documented), and real rate-limit
 
 ## 12. Suggested next module
 
-**Module 19 — Payments, escrow & service orders**: ready-state payment stage becomes real
-(hold/escrow → release on `completed`), order + payout records, and review gating on completed
-bookings.
+**Module 19 — Payments, escrow & service orders** (implemented — see `MODULE-19-REPORT.md`):
+ready-state payment stage becomes real (hold/escrow → release on `completed`), order + payout
+records, and review gating on completed bookings (customer completion confirmation, problem
+reporting, review window). [Implemented]

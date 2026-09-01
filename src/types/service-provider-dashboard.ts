@@ -59,6 +59,7 @@ export interface ServiceProviderDashboardMetric {
     | "active_services"
     | "total_bookings"
     | "upcoming_bookings"
+    | "in_progress_bookings"
     | "average_rating"
     | "profile_views"
     | "response_time";

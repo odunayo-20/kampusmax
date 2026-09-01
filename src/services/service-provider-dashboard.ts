@@ -269,6 +269,13 @@ export function getSpDashboard(): {
         : `${bookingStats.upcomingToday} today`,
     },
     {
+      key: "in_progress_bookings",
+      label: "In Progress",
+      valueLabel: String(bookingStats.inProgress),
+      tone: "info",
+      sublabel: `${bookingStats.completed} completed · ${bookingStats.cancelled} cancelled`,
+    },
+    {
       key: "average_rating",
       label: "Average Rating",
       valueLabel: ctx.metrics.averageRating.toFixed(1),

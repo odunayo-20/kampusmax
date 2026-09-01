@@ -35,18 +35,38 @@ import type {
   BookingAvailabilityResponse,
   BookingDayUnavailableReason,
   BookingError,
+  BookingEvidence,
+  BookingFulfillment,
+  BookingListFilter,
+  BookingListQuery,
   BookingLocation,
+  BookingPageResult,
   BookingResult,
+  BookingReviewInput,
   BookingSlot,
+  BookingSort,
+  BookingSettlementBreakdown,
   CancelBookingInput,
   DayAvailability,
   ProviderBookingDecision,
+  ProviderBookingStatusFilter,
   RescheduleBookingInput,
   ServiceBooking,
+  ServiceProblemCategory,
 } from "@/types/booking";
 import {
   ACTIVE_BOOKING_STATUSES,
 } from "@/types/booking";
+import {
+  COMPLETION_CONFIRMATION_REQUIRED_CATEGORY_IDS,
+  COMPLETION_EVIDENCE_ALLOWED_CATEGORY_IDS,
+  ESCROW_STATE_LABELS,
+  PAYMENT_STATE_LABELS,
+  PLATFORM_FEE_RATE,
+  PROBLEM_ASSIGNED_TO,
+  REVIEW_WINDOW_DAYS,
+  SETTLEMENT_DISCLAIMER,
+} from "@/config/service-order";
 import type {
   MarketplaceProvider,
   MarketplaceService,
@@ -256,6 +276,76 @@ function baseCustomer(name: string, phone: string, email: string, customerId: st
   return { customerId, name, phone, email, campusId: "rugipo" };
 }
 
+// ── Fulfilment model (backend-owned post-completion lifecycle) ──
+
+function newEvidenceId(): string {
+  return `ev${Math.floor(Math.random() * 1_000_000)}`;
+}
+
+function mkFulfillment(service: MarketplaceService): BookingFulfillment {
+  return {
+    requiresCompletionConfirmation: (
+      COMPLETION_CONFIRMATION_REQUIRED_CATEGORY_IDS as readonly string[]
+    ).includes(service.categoryId),
+    allowCompletionEvidence: (
+      COMPLETION_EVIDENCE_ALLOWED_CATEGORY_IDS as readonly string[]
+    ).includes(service.categoryId),
+    confirmationStatus: "not_required",
+    payment: { state: "unpaid", label: PAYMENT_STATE_LABELS.unpaid },
+    escrow: { state: "not_available", label: ESCROW_STATE_LABELS.not_available },
+  };
+}
+
+function settlementPreviewFor(b: ServiceBooking, nowMs: number): BookingSettlementBreakdown {
+  const serviceAmount = b.price.amount;
+  const platformFee = Math.round(serviceAmount * PLATFORM_FEE_RATE * 100) / 100;
+  const tax = 0;
+  return {
+    currency: "NGN",
+    serviceAmount,
+    platformFee,
+    platformFeeRate: PLATFORM_FEE_RATE,
+    providerEarnings: serviceAmount - platformFee - tax,
+    tax,
+    feeLabel: b.price.finalFeeLabel ?? "Standard platform fee",
+    computedAt: new Date(nowMs).toISOString(),
+    disclaimer: SETTLEMENT_DISCLAIMER,
+  };
+}
+
+function reviewEligibleUntilAfter(completedAtIso: string): string {
+  const ms = new Date(completedAtIso).getTime();
+  return new Date(ms + REVIEW_WINDOW_DAYS * 24 * 3_600_000).toISOString();
+}
+
+/** Reconciles payment/escrow readiness + settlement from the current
+ * status/confirmation state. Called by every fulfilment mutation. */
+function syncFulfillmentState(b: ServiceBooking, nowMs: number): void {
+  const f = b.fulfillment;
+  let paymentLabel = "No charge until the service is completed.";
+  if (b.status === "cancelled" || b.status === "declined") {
+    paymentLabel = "No charge was made for this booking.";
+  } else if (b.status === "completed") {
+    if (f.confirmationStatus === "awaiting") {
+      paymentLabel = "Payment is requested once you confirm the service was completed.";
+    } else if (f.confirmationStatus === "confirmed") {
+      f.settlement = settlementPreviewFor(b, nowMs);
+      f.reviewEligibleUntil = f.reviewEligibleUntil ?? reviewEligibleUntilAfter(f.completedAt ?? b.updatedAt);
+      paymentLabel = `Payment received and held in escrow — readiness preview, no charge was made.`;
+      f.payment = { state: "paid", label: paymentLabel };
+      f.escrow = { state: "held", label: `Held in escrow — readiness preview (NGN ${b.price.amount.toLocaleString()}).` };
+      return;
+    } else if (f.confirmationStatus === "problem_reported") {
+      paymentLabel = "On hold until the reported issue is reviewed.";
+      f.escrow = { state: "disputed", label: `Disputed — awaiting review by ${PROBLEM_ASSIGNED_TO}.` };
+      f.payment = { state: "unpaid", label: paymentLabel };
+      return;
+    }
+  }
+  f.payment = { state: "unpaid", label: paymentLabel };
+  f.escrow = { state: "not_available", label: ESCROW_STATE_LABELS.not_available };
+}
+
 function buildSeedBookings(nowMs: number): ServiceBooking[] {
   const cat = (serviceId: string) => serviceById(serviceId);
   const providerOf = (serviceId: string) => {
@@ -270,7 +360,10 @@ function buildSeedBookings(nowMs: number): ServiceBooking[] {
     dayOffset: number,
     hhmm: string,
     locationType: ServiceProviderLocationType,
-    opts: Partial<ServiceBooking> & { cancelledBy?: ServiceBooking["cancelledBy"] }
+    opts: Omit<Partial<ServiceBooking>, "fulfillment"> & {
+      cancelledBy?: ServiceBooking["cancelledBy"];
+      fulfillment?: Partial<BookingFulfillment>;
+    }
   ): ServiceBooking => {
     const service = cat(serviceId);
     const provider = providerOf(serviceId);
@@ -300,8 +393,38 @@ function buildSeedBookings(nowMs: number): ServiceBooking[] {
         createdAt: new Date(nowMs - 30_000).toISOString(),
       });
     }
+    if (statusBase === "in_progress" || statusBase === "completed") {
+      timeline.push({
+        id: `${serviceId}-tl-started`,
+        kind: "started",
+        title: "Appointment started",
+        message: "The provider started this appointment.",
+        createdAt: new Date(nowMs - 25 * 60_000).toISOString(),
+      });
+    }
+    if (statusBase === "completed") {
+      timeline.push({
+        id: `${serviceId}-tl-completed`,
+        kind: "completed",
+        title: "Booking completed",
+        message: "The provider completed this appointment.",
+        createdAt: new Date(nowMs - 20 * 60_000).toISOString(),
+      });
+    }
 
-    return {
+    const fulfillment: BookingFulfillment = {
+      ...mkFulfillment(bookableService),
+      ...opts.fulfillment,
+    };
+    if (statusBase === "in_progress" || statusBase === "completed") {
+      fulfillment.startedAt = new Date(Math.min(new Date(slot.start).getTime(), nowMs - 5 * 60_000)).toISOString();
+    }
+    if (statusBase === "completed") {
+      const startMs = new Date(slot.start).getTime();
+      fulfillment.completedAt = new Date(Math.min(nowMs - 15 * 60_000, startMs + bookableService.durationMinutes * 60_000)).toISOString();
+    }
+
+    const booking: ServiceBooking = {
       id: `bkmSeed_${serviceId}_${opts.cancelledBy ?? statusBase}`,
       bookingReference: newReference(),
       customerId: customer.customerId,
@@ -328,22 +451,30 @@ function buildSeedBookings(nowMs: number): ServiceBooking[] {
       createdAt: new Date(nowMs - 60_000).toISOString(),
       updatedAt: new Date(nowMs - 30_000).toISOString(),
       timeline,
+      fulfillment,
     };
+    syncFulfillmentState(booking, nowMs);
+    return booking;
   };
+
+  const nowMinusMinutes = (minutes: number) => toHHmmLocal(nowMs - minutes * 60_000);
 
   // Provider (sp1) calendar, incoming from other students.
   const providerBookings = [
     seed("msvc1", baseCustomer("Chioma Nwosu", "+234 813 456 7890", "chioma@rugipo.edu.ng", "u2"), "pending", 1, "10:00", "provider_location", {}),
     seed("msvc2", baseCustomer("Ibrahim Musa", "+234 814 567 8901", "ibrahim@rugipo.edu.ng", "u3"), "confirmed", 2, "11:00", "provider_location", {}),
     seed("msvc3", baseCustomer("Folashade Adeyemi", "+234 815 678 9012", "folashade@rugipo.edu.ng", "u4"), "confirmed", 3, "09:30", "online", {}),
-    seed("msvc1", baseCustomer("Emeka Obi", "+234 816 789 0123", "emeka@rugipo.edu.ng", "u5"), "completed", -6, "14:00", "provider_location", {}),
+    seed("msvc1", baseCustomer("Emeka Obi", "+234 816 789 0123", "emeka@rugipo.edu.ng", "u5"), "completed", -6, "14:00", "provider_location", { fulfillment: { confirmationStatus: "confirmed", customerConfirmedAt: new Date(nowMs - 5 * 24 * 3_600_000).toISOString() } }),
     seed("msvc2", baseCustomer("Chioma Nwosu", "+234 813 456 7890", "chioma@rugipo.edu.ng", "u2"), "cancelled", 1, "14:00", "provider_location", { cancelledBy: "customer" }),
+    seed("msvc2", baseCustomer("Ibrahim Musa", "+234 814 567 8901", "ibrahim@rugipo.edu.ng", "u3"), "in_progress", 0, nowMinusMinutes(40), "provider_location", {}),
   ];
 
   // Customer (u1) history, on other providers.
   const customerBookings = [
     seed("msvc6", baseCustomer("Adebayo Oluwaseun", "+234 812 345 6789", "adebayo@rugipo.edu.ng", "u1"), "pending", 2, "13:00", "customer_location", {}),
-    seed("msvc16", baseCustomer("Adebayo Oluwaseun", "+234 812 345 6789", "adebayo@rugipo.edu.ng", "u1"), "completed", -5, "07:00", "provider_location", {}),
+    seed("msvc6", baseCustomer("Adebayo Oluwaseun", "+234 812 345 6789", "adebayo@rugipo.edu.ng", "u1"), "in_progress", 0, nowMinusMinutes(30), "customer_location", {}),
+    seed("msvc6", baseCustomer("Adebayo Oluwaseun", "+234 812 345 6789", "adebayo@rugipo.edu.ng", "u1"), "completed", -1, "12:00", "customer_location", { fulfillment: { confirmationStatus: "awaiting" } }),
+    seed("msvc16", baseCustomer("Adebayo Oluwaseun", "+234 812 345 6789", "adebayo@rugipo.edu.ng", "u1"), "completed", -5, "07:00", "provider_location", { fulfillment: { confirmationStatus: "confirmed", customerConfirmedAt: new Date(nowMs - 5 * 24 * 3_600_000).toISOString() } }),
     seed("msvc12", baseCustomer("Adebayo Oluwaseun", "+234 812 345 6789", "adebayo@rugipo.edu.ng", "u1"), "cancelled", -3, "12:00", "provider_location", { cancelledBy: "customer" }),
   ];
 
@@ -681,6 +812,7 @@ export function createBookingOnBackend(
         createdAt,
       },
     ],
+    fulfillment: mkFulfillment(service),
   };
   if (instant) {
     booking.timeline.push({
@@ -748,6 +880,7 @@ export function cancelBookingOnBackend(
     message: input.reason || (input.cancelledBy === "customer" ? "Cancelled by you." : "Cancelled by the provider."),
     createdAt: booking.updatedAt,
   });
+  syncFulfillmentState(booking, nowMs);
 
   return { ok: true, booking: cloneBooking(booking) };
 }
@@ -794,6 +927,11 @@ export function rescheduleBookingOnBackend(
   }
 
   const was = toHHmmLocal(new Date(booking.startAt).getTime());
+  booking.fulfillment.reschedule = {
+    originalStartAt: booking.startAt,
+    originalEndAt: booking.endAt,
+    rescheduledAt: new Date(nowMs).toISOString(),
+  };
   booking.startAt = new Date(startMs).toISOString();
   booking.endAt = new Date(endMs).toISOString();
   booking.updatedAt = new Date(nowMs).toISOString();
@@ -886,6 +1024,7 @@ export function startBookingOnBackend(
       return { status: "err", err: error("422", `Only confirmed bookings can be started.`) };
     }
     b.status = "in_progress";
+    b.fulfillment.startedAt = new Date(nowMs).toISOString();
     b.timeline.push({
       id: `${b.id}-tl-start-${nowMs}`,
       kind: "started",
@@ -897,58 +1036,313 @@ export function startBookingOnBackend(
   }, nowMs);
 }
 
+export interface CompleteBookingOptions {
+  /** Provider-attached proof (allowed only for evidenced service categories). */
+  evidence?: BookingEvidence[];
+}
+
 export function completeBookingOnBackend(
   id: string,
   owner: { providerId: string },
+  opts: CompleteBookingOptions = {},
   nowMs = Date.now()
 ): BookingResult {
   return providerBookingMutation(id, owner, (b) => {
     if (b.status === "completed") return { status: "ok" };
+    if (b.fulfillment.confirmationStatus === "problem_reported") {
+      return { status: "err", err: error("422", `A booking with a reported issue can't be re-completed.`) };
+    }
     if (b.status !== "confirmed" && b.status !== "in_progress") {
       return { status: "err", err: error("422", `A ${b.status} booking can't be completed.`) };
     }
+    if (opts.evidence && opts.evidence.length > 0) {
+      if (!b.fulfillment.allowCompletionEvidence) {
+        return { status: "err", err: error("422", "This service doesn't accept completion evidence.") };
+      }
+      b.fulfillment.completionEvidence = opts.evidence;
+    }
     b.status = "completed";
-    b.timeline.push({
-      id: `${b.id}-tl-complete-${nowMs}`,
-      kind: "completed",
-      title: "Booking completed",
-      message: "The provider completed this appointment.",
-      createdAt: new Date(nowMs).toISOString(),
-    });
+    const completedAt = new Date(nowMs).toISOString();
+    b.fulfillment.completedAt = completedAt;
+    b.fulfillment.confirmationStatus = b.fulfillment.requiresCompletionConfirmation ? "awaiting" : "confirmed";
+    b.fulfillment.customerConfirmedAt = b.fulfillment.requiresCompletionConfirmation ? undefined : completedAt;
+    syncFulfillmentState(b, nowMs);
+    if (!b.fulfillment.requiresCompletionConfirmation) {
+      b.timeline.push({
+        id: `${b.id}-tl-complete-${nowMs}`,
+        kind: "completed",
+        title: "Booking completed",
+        message: "The provider completed this appointment.",
+        createdAt: completedAt,
+      });
+      b.timeline.push({
+        id: `${b.id}-tl-confirm-${nowMs}`,
+        kind: "completion_confirmed",
+        title: "Completion confirmed",
+        message: "Automatically confirmed — your review window is now open.",
+        createdAt: completedAt,
+      });
+    } else {
+      b.timeline.push({
+        id: `${b.id}-tl-awaiting-${nowMs}`,
+        kind: "completed",
+        title: "Booking completed",
+        message: "The provider completed this appointment. Confirm the service to close the order.",
+        createdAt: completedAt,
+      });
+    }
     return { status: "ok" };
   }, nowMs);
 }
 
+// ── Customer fulfilment actions (completion gate) ─────────────
+
+export function confirmCompletionOnBackend(
+  customerId: string,
+  bookingId: string,
+  nowMs = Date.now()
+): BookingResult {
+  const found = findBookingForOwner(bookingId, "customerId", customerId);
+  if (!found.booking || found.err) return { ok: false, error: found.err! };
+
+  const b = found.booking;
+  if (b.status !== "completed") {
+    return { ok: false, error: error("422", "This booking isn't completed yet.") };
+  }
+  if (!b.fulfillment.requiresCompletionConfirmation) {
+    return { ok: false, error: error("422", "This booking is confirmed automatically — nothing to do.") };
+  }
+  if (b.fulfillment.confirmationStatus === "confirmed") return { ok: true, booking: cloneBooking(b) };
+  if (b.fulfillment.confirmationStatus === "problem_reported") {
+    return { ok: false, error: error("422", "An issue was already reported for this booking.") };
+  }
+
+  b.fulfillment.confirmationStatus = "confirmed";
+  b.fulfillment.customerConfirmedAt = new Date(nowMs).toISOString();
+  b.fulfillment.reviewEligibleUntil = reviewEligibleUntilAfter(b.fulfillment.completedAt ?? b.updatedAt);
+  syncFulfillmentState(b, nowMs);
+  b.updatedAt = new Date(nowMs).toISOString();
+  b.timeline.push({
+    id: `${b.id}-tl-confirm-${nowMs}`,
+    kind: "completion_confirmed",
+    title: "Completion confirmed",
+    message: "You confirmed that the service was completed.",
+    createdAt: b.updatedAt,
+  });
+
+  return { ok: true, booking: cloneBooking(b) };
+}
+
+export interface ReportProblemInput {
+  category: ServiceProblemCategory;
+  description: string;
+  evidence?: BookingEvidence[];
+}
+
+export function reportProblemOnBackend(
+  customerId: string,
+  bookingId: string,
+  input: ReportProblemInput,
+  nowMs = Date.now()
+): BookingResult {
+  const found = findBookingForOwner(bookingId, "customerId", customerId);
+  if (!found.booking || found.err) return { ok: false, error: found.err! };
+
+  const b = found.booking;
+  if (b.status !== "completed") {
+    return { ok: false, error: error("422", "You can report an issue after the provider completes the service.") };
+  }
+  if (b.fulfillment.confirmationStatus === "confirmed") {
+    return { ok: false, error: error("422", "You already confirmed this booking. Share feedback in your review or contact Kampmax support.") };
+  }
+  if (b.fulfillment.confirmationStatus === "problem_reported") {
+    return { ok: false, error: error("422", "An issue was already reported for this booking.") };
+  }
+  if (!input.description.trim()) {
+    return { ok: false, error: error("422", "Tell us a little more about the issue.", { field: "description" }) };
+  }
+
+  b.fulfillment.confirmationStatus = "problem_reported";
+  b.fulfillment.problem = {
+    category: input.category,
+    description: input.description.trim(),
+    evidence: input.evidence && input.evidence.length > 0 ? input.evidence : undefined,
+    reportedAt: new Date(nowMs).toISOString(),
+    assignedTo: PROBLEM_ASSIGNED_TO,
+  };
+  syncFulfillmentState(b, nowMs);
+  b.updatedAt = new Date(nowMs).toISOString();
+  b.timeline.push({
+    id: `${b.id}-tl-problem-${nowMs}`,
+    kind: "problem_reported",
+    title: "Issue reported",
+    message: "Your issue was reported to Kampmax support for review.",
+    createdAt: b.updatedAt,
+  });
+
+  return { ok: true, booking: cloneBooking(b) };
+}
+
+export function submitBookingReviewOnBackend(
+  customerId: string,
+  bookingId: string,
+  input: BookingReviewInput,
+  nowMs = Date.now()
+): BookingResult {
+  const found = findBookingForOwner(bookingId, "customerId", customerId);
+  if (!found.booking || found.err) return { ok: false, error: found.err! };
+
+  const b = found.booking;
+  const f = b.fulfillment;
+  if (b.status !== "completed") {
+    return { ok: false, error: error("422", "Reviews open after the booking is completed.") };
+  }
+  if (f.review) return { ok: true, booking: cloneBooking(b) };
+  if (f.confirmationStatus !== "confirmed") {
+    return { ok: false, error: error("422", "Confirm the service was completed — or report an issue — before leaving a review.") };
+  }
+  if (f.reviewEligibleUntil && new Date(f.reviewEligibleUntil).getTime() < nowMs) {
+    return { ok: false, error: error("422", "The review window for this booking has closed.") };
+  }
+
+  f.review = { id: newEvidenceId(), submittedAt: new Date(nowMs).toISOString(), ...input };
+  b.updatedAt = new Date(nowMs).toISOString();
+  b.timeline.push({
+    id: `${b.id}-tl-review-${nowMs}`,
+    kind: "reviewed",
+    title: "Review submitted",
+    message: `You rated this booking ${input.rating}/5${input.title ? ` — “${input.title}”` : ""}.`,
+    createdAt: b.updatedAt,
+  });
+
+  return { ok: true, booking: cloneBooking(b) };
+}
+
 // ── Queries (read-layer projections) ──────────────────────────
 
-export function getBookingsForCustomer(
-  customerId: string,
-  filter: "upcoming" | "past" | "cancelled" | "all",
-  nowMs = Date.now()
-): ServiceBooking[] {
-  let list = store.bookings.filter((b) => b.customerId === customerId);
-  const now = nowMs;
-  switch (filter) {
+type ListQueryArg = BookingListFilter | ProviderBookingStatusFilter | BookingListQuery;
+
+interface NormalizedQuery extends BookingListQuery {
+  status: BookingListFilter | ProviderBookingStatusFilter;
+  sort: BookingSort;
+}
+
+function normalizeQuery(arg: ListQueryArg, nowMs: number): NormalizedQuery {
+  const q: BookingListQuery = typeof arg === "string" ? { status: arg } : arg;
+  const status = q.status ?? "all";
+  const sort = q.sort ?? (status === "upcoming" ? ("upcoming" as const) : ("newest" as const));
+  return { ...q, status, sort };
+}
+
+function applyStatusFilter(list: ServiceBooking[], status: NormalizedQuery["status"], nowMs: number) {
+  switch (status) {
     case "upcoming":
-      list = list.filter(
-        (b) => ACTIVE_BOOKING_STATUSES.includes(b.status) && new Date(b.startAt).getTime() >= now
+      return list.filter(
+        (b) => ACTIVE_BOOKING_STATUSES.includes(b.status) && new Date(b.startAt).getTime() >= nowMs
       );
-      list.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-      break;
     case "past":
-      list = list.filter(
-        (b) => b.status === "completed" || new Date(b.startAt).getTime() < now
+      return list.filter(
+        (b) => b.status === "completed" || new Date(b.startAt).getTime() < nowMs
       );
-      list.sort((a, b) => new Date(b.startAt).getTime() - new Date(b.startAt).getTime());
-      break;
     case "cancelled":
-      list = list.filter((b) => b.status === "cancelled" || b.status === "declined");
-      list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+      return list.filter((b) => b.status === "cancelled" || b.status === "declined");
+    case "pending":
+      return list.filter((b) => b.status === "pending");
+    case "in_progress":
+      return list.filter((b) => b.status === "in_progress");
+    case "completed":
+      return list.filter((b) => b.status === "completed");
+    default:
+      return list;
+  }
+}
+
+function applySearchFilter(list: ServiceBooking[], search: string | undefined) {
+  if (!search?.trim()) return list;
+  const needle = search.trim().toLowerCase();
+  return list.filter((b) => {
+    const providerName = providerById(b.providerId)?.displayName?.toLowerCase() ?? "";
+    const customerName = b.customer?.name?.toLowerCase() ?? "";
+    return (
+      b.serviceName.toLowerCase().includes(needle) ||
+      b.bookingReference.toLowerCase().includes(needle) ||
+      customerName.includes(needle) ||
+      providerName.includes(needle)
+    );
+  });
+}
+
+function sortBookings(list: ServiceBooking[], sort: BookingSort): void {
+  const startKey = (b: ServiceBooking) => new Date(b.startAt).getTime();
+  switch (sort) {
+    case "oldest":
+      list.sort((a, b) => startKey(a) - startKey(b));
+      break;
+    case "upcoming":
+      list.sort((a, b) => startKey(a) - startKey(b));
+      break;
+    case "recently_completed":
+      list.sort((a, b) => {
+        const key = (x: ServiceBooking) =>
+          x.status === "completed"
+            ? new Date(x.fulfillment.completedAt ?? x.updatedAt).getTime()
+            : Number.NEGATIVE_INFINITY;
+        return key(b) - key(a);
+      });
       break;
     default:
-      list.sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+      list.sort((a, b) => startKey(b) - startKey(a));
+  }
+}
+
+function runListQuery(
+  base: ServiceBooking[],
+  arg: ListQueryArg,
+  nowMs: number
+): ServiceBooking[] | BookingPageResult {
+  const q = normalizeQuery(arg, nowMs);
+  let list = applyStatusFilter(base, q.status, nowMs);
+  list = applySearchFilter(list, q.search);
+
+  if (q.serviceId) list = list.filter((b) => b.serviceId === q.serviceId);
+  if (q.providerId) list = list.filter((b) => b.providerId === q.providerId);
+  if (q.dateFrom || q.dateTo) {
+    list = list.filter((b) => {
+      const key = dayKeyOf(new Date(b.startAt).getTime());
+      if (q.dateFrom && key < q.dateFrom) return false;
+      if (q.dateTo && key > q.dateTo) return false;
+      return true;
+    });
+  }
+
+  sortBookings(list, q.sort);
+
+  if (typeof q.page === "number" || typeof q.limit === "number") {
+    const limit = Math.max(1, q.limit ?? 20);
+    const total = list.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const page = Math.min(Math.max(1, q.page ?? 1), totalPages);
+    const start = (page - 1) * limit;
+    return {
+      items: list.slice(start, start + limit).map((b) => cloneBooking(b)),
+      page,
+      limit,
+      total,
+      totalPages,
+    };
   }
   return list.map((b) => cloneBooking(b));
+}
+
+export function getBookingsForCustomer(customerId: string, filter: BookingListFilter): ServiceBooking[];
+export function getBookingsForCustomer(customerId: string, query: BookingListQuery): BookingPageResult;
+export function getBookingsForCustomer(
+  customerId: string,
+  arg: BookingListFilter | BookingListQuery,
+  nowMs = Date.now()
+): ServiceBooking[] | BookingPageResult {
+  const base = store.bookings.filter((b) => b.customerId === customerId);
+  return runListQuery(base, arg, nowMs);
 }
 
 export function getBookingForCustomer(
@@ -961,32 +1355,16 @@ export function getBookingForCustomer(
 
 export function getBookingsForProvider(
   providerId: string,
-  filter: "pending" | "upcoming" | "completed" | "cancelled" | "all"
-): ServiceBooking[] {
-  let list = store.bookings.filter((b) => b.providerId === providerId);
-  switch (filter) {
-    case "pending":
-      list = list.filter((b) => b.status === "pending");
-      list.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-      break;
-    case "upcoming":
-      list = list.filter(
-        (b) => b.status === "confirmed" || (b.status === "in_progress" && new Date(b.startAt).getTime() >= Date.now())
-      );
-      list.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-      break;
-    case "completed":
-      list = list.filter((b) => b.status === "completed");
-      list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(b.updatedAt).getTime());
-      break;
-    case "cancelled":
-      list = list.filter((b) => b.status === "cancelled" || b.status === "declined");
-      list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(b.updatedAt).getTime());
-      break;
-    default:
-      list.sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
-  }
-  return list.map((b) => cloneBooking(b));
+  filter: ProviderBookingStatusFilter
+): ServiceBooking[];
+export function getBookingsForProvider(providerId: string, query: BookingListQuery): BookingPageResult;
+export function getBookingsForProvider(
+  providerId: string,
+  arg: ProviderBookingStatusFilter | BookingListQuery,
+  nowMs = Date.now()
+): ServiceBooking[] | BookingPageResult {
+  const base = store.bookings.filter((b) => b.providerId === providerId);
+  return runListQuery(base, arg, nowMs);
 }
 
 export function getBookingForProvider(
@@ -1001,16 +1379,20 @@ export function getProviderBookingStats(providerId: string): {
   pending: number;
   upcomingToday: number;
   upcoming: number;
+  inProgress: number;
   completed: number;
+  cancelled: number;
 } {
   const now = Date.now();
+  const base = store.bookings.filter((b) => b.providerId === providerId);
+  const upcoming = runListQuery(base, "upcoming", now) as ServiceBooking[];
   return {
-    pending: getBookingsForProvider(providerId, "pending").length,
-    upcomingToday: getBookingsForProvider(providerId, "upcoming").filter(
-      (b) => dayKeyOf(new Date(b.startAt).getTime()) === dayKeyOf(now)
-    ).length,
-    upcoming: getBookingsForProvider(providerId, "upcoming").length,
-    completed: getBookingsForProvider(providerId, "completed").length,
+    pending: (runListQuery(base, "pending", now) as ServiceBooking[]).length,
+    upcomingToday: upcoming.filter((b) => dayKeyOf(new Date(b.startAt).getTime()) === dayKeyOf(now)).length,
+    upcoming: upcoming.length,
+    inProgress: (runListQuery(base, "in_progress", now) as ServiceBooking[]).length,
+    completed: (runListQuery(base, "completed", now) as ServiceBooking[]).length,
+    cancelled: (runListQuery(base, "cancelled", now) as ServiceBooking[]).length,
   };
 }
 

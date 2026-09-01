@@ -4,8 +4,10 @@ import Link from "next/link";
 import { ArrowRight, MapPin, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BookingStatusBadge } from "./BookingStatusBadge";
+import { FulfillmentStatusBadge } from "./FulfillmentStatusBadge";
 import { BookingDateTime } from "./BookingDateTime";
 import { formatNaira } from "@/lib/utils";
+import { getProviderDisplayName } from "@/services/service-marketplace";
 import type { ServiceBooking } from "@/types/booking";
 
 /**
@@ -66,6 +68,12 @@ export function BookingListCard({
               {booking.serviceName}
             </p>
             <BookingStatusBadge status={booking.status} />
+            {booking.status === "completed" && (
+              <FulfillmentStatusBadge
+                status={booking.fulfillment.confirmationStatus}
+                perspective={role}
+              />
+            )}
           </div>
           <div className="mt-1">
             <BookingDateTime booking={booking} />
@@ -75,12 +83,17 @@ export function BookingListCard({
               <MapPin className="h-3 w-3 shrink-0 text-neutral-400" aria-hidden />
               <span className="truncate">{booking.location.label}</span>
             </span>
-            {role === "provider" ? (
+            {role === "customer" ? (
+              <span className="inline-flex items-center gap-1">
+                <User className="h-3 w-3 text-neutral-400" aria-hidden />
+                {getProviderDisplayName(booking.providerId)}
+              </span>
+            ) : (
               <span className="inline-flex items-center gap-1">
                 <User className="h-3 w-3 text-neutral-400" aria-hidden />
                 {booking.customer.name}
               </span>
-            ) : null}
+            )}
           </div>
         </div>
 
