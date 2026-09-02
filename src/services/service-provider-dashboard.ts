@@ -233,6 +233,16 @@ export function recordSpBookingActivity(title: string, message: string, href?: s
   recordActivity({ kind: "booking_request", title, message, href });
 }
 
+/** Financials module integration: notify the provider's dashboard feed (payouts/account). */
+export function pushSpFinancialNotification(title: string, body: string, href?: string): void {
+  pushNotification({ kind: "financial_update", title, body, href });
+}
+
+/** Financials module integration: record a payout/earnings event on the activity feed. */
+export function recordSpFinancialActivity(title: string, message: string, href?: string): void {
+  recordActivity({ kind: "payout_update", title, message, href });
+}
+
 // ── Dashboard overview ───────────────────────────────────────
 
 export function getSpDashboard(): {

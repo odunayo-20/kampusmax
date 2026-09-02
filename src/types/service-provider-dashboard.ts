@@ -120,6 +120,7 @@ export type ServiceProviderActivityKind =
   | "portfolio_item_updated"
   | "availability_updated"
   | "booking_request"
+  | "payout_update"
   | "system_announcement";
 
 export interface ServiceProviderActivityEvent {
@@ -159,6 +160,7 @@ export type ServiceProviderNotificationKind =
   | "new_review"
   | "service_moderation"
   | "booking_request"
+  | "financial_update"
   | "system_announcement";
 
 export interface ServiceProviderNotification {

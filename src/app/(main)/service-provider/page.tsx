@@ -25,6 +25,7 @@ const ACTIVITY_ICON: Record<ServiceProviderActivityKind, string> = {
   portfolio_item_updated: "🖼️",
   availability_updated: "🗓️",
   booking_request: "📅",
+  payout_update: "💰",
   system_announcement: "📢",
 };
 

@@ -23,6 +23,7 @@ const SERVICE_PROVIDER_DASHBOARD_SECTIONS = [
   "/service-provider/portfolio",
   "/service-provider/reviews",
   "/service-provider/bookings",
+  "/service-provider/financials",
   "/service-provider/settings",
 ];
 

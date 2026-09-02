@@ -17,6 +17,7 @@ const KIND_DOT: Record<ServiceProviderNotification["kind"], string> = {
   new_review: "bg-primary-600",
   service_moderation: "bg-success-600",
   booking_request: "bg-warning-600",
+  financial_update: "bg-info-600",
   system_announcement: "bg-neutral-400",
 };
 

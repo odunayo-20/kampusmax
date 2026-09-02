@@ -296,7 +296,7 @@ function mkFulfillment(service: MarketplaceService): BookingFulfillment {
   };
 }
 
-function settlementPreviewFor(b: ServiceBooking, nowMs: number): BookingSettlementBreakdown {
+export function settlementPreviewFor(b: ServiceBooking, nowMs: number): BookingSettlementBreakdown {
   const serviceAmount = b.price.amount;
   const platformFee = Math.round(serviceAmount * PLATFORM_FEE_RATE * 100) / 100;
   const tax = 0;
@@ -363,6 +363,8 @@ function buildSeedBookings(nowMs: number): ServiceBooking[] {
     opts: Omit<Partial<ServiceBooking>, "fulfillment"> & {
       cancelledBy?: ServiceBooking["cancelledBy"];
       fulfillment?: Partial<BookingFulfillment>;
+      /** Seeds only: when the customer confirmed completion, relative to `completedAt`. */
+      confirmAfterMinutes?: number;
     }
   ): ServiceBooking => {
     const service = cat(serviceId);
@@ -425,7 +427,7 @@ function buildSeedBookings(nowMs: number): ServiceBooking[] {
     }
 
     const booking: ServiceBooking = {
-      id: `bkmSeed_${serviceId}_${opts.cancelledBy ?? statusBase}`,
+      id: `bkmSeed_${serviceId}_${opts.cancelledBy ?? statusBase}_${customer.customerId}`,
       bookingReference: newReference(),
       customerId: customer.customerId,
       providerId: bookableProvider.id,
@@ -453,6 +455,16 @@ function buildSeedBookings(nowMs: number): ServiceBooking[] {
       timeline,
       fulfillment,
     };
+    if (
+      statusBase === "completed" &&
+      fulfillment.confirmationStatus === "confirmed" &&
+      typeof opts.confirmAfterMinutes === "number" &&
+      fulfillment.completedAt
+    ) {
+      fulfillment.customerConfirmedAt = new Date(
+        new Date(fulfillment.completedAt).getTime() + opts.confirmAfterMinutes * 60_000
+      ).toISOString();
+    }
     syncFulfillmentState(booking, nowMs);
     return booking;
   };
@@ -467,6 +479,15 @@ function buildSeedBookings(nowMs: number): ServiceBooking[] {
     seed("msvc1", baseCustomer("Emeka Obi", "+234 816 789 0123", "emeka@rugipo.edu.ng", "u5"), "completed", -6, "14:00", "provider_location", { fulfillment: { confirmationStatus: "confirmed", customerConfirmedAt: new Date(nowMs - 5 * 24 * 3_600_000).toISOString() } }),
     seed("msvc2", baseCustomer("Chioma Nwosu", "+234 813 456 7890", "chioma@rugipo.edu.ng", "u2"), "cancelled", 1, "14:00", "provider_location", { cancelledBy: "customer" }),
     seed("msvc2", baseCustomer("Ibrahim Musa", "+234 814 567 8901", "ibrahim@rugipo.edu.ng", "u3"), "in_progress", 0, nowMinusMinutes(40), "provider_location", {}),
+    // Historical completed bookings (Module 20 financials demo). Settled = the
+    // customer confirmed completion; the M20 backend recognizes these earnings.
+    seed("msvc1", baseCustomer("Chinedu Okonkwo", "+234 901 234 5678", "chinedu@rugipo.edu.ng", "u91"), "completed", -2, "10:00", "provider_location", { fulfillment: { confirmationStatus: "confirmed" }, confirmAfterMinutes: 90 }),
+    seed("msvc1", baseCustomer("Zainab Bello", "+234 902 345 6789", "zainab@rugipo.edu.ng", "u94"), "completed", -4, "15:00", "provider_location", { fulfillment: { confirmationStatus: "confirmed" }, confirmAfterMinutes: 60 }),
+    seed("msvc2", baseCustomer("Tunde Bakare", "+234 903 456 7890", "tunde@rugipo.edu.ng", "u93"), "completed", -8, "09:00", "provider_location", { fulfillment: { confirmationStatus: "confirmed" }, confirmAfterMinutes: 45 }),
+    seed("msvc2", baseCustomer("Halima Yusuf", "+234 904 567 8901", "halima@rugipo.edu.ng", "u92"), "completed", -10, "13:00", "provider_location", { fulfillment: { confirmationStatus: "confirmed" }, confirmAfterMinutes: 120 }),
+    seed("msvc3", baseCustomer("Oluwatobi Akins", "+234 905 678 9012", "tobi@rugipo.edu.ng", "u95"), "completed", -12, "11:00", "online", { fulfillment: { confirmationStatus: "confirmed" }, confirmAfterMinutes: 30 }),
+    seed("msvc1", baseCustomer("Ngozi Umeh", "+234 906 789 0123", "ngozi@rugipo.edu.ng", "u96"), "completed", -1, "09:30", "provider_location", { fulfillment: { confirmationStatus: "awaiting" } }),
+    seed("msvc2", baseCustomer("Samuel Eze", "+234 907 890 1234", "samuel@rugipo.edu.ng", "u97"), "completed", -3, "12:00", "provider_location", { fulfillment: { confirmationStatus: "problem_reported" } }),
   ];
 
   // Customer (u1) history, on other providers.
