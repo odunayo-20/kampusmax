@@ -49,7 +49,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
       href: "/vendor",
       onboardLabel: "Become a Vendor",
     },
-    { id: "freelancer", label: "Freelancer", icon: Briefcase, active: false, onboardLabel: "Become a Freelancer" },
+    { id: "freelancer", label: "Freelancer", icon: Briefcase, active: false, href: "/onboarding/freelancer", onboardLabel: "Become a Freelancer" },
     {
       id: "service",
       label: "Service Provider",
