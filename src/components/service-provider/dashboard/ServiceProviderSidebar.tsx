@@ -59,7 +59,7 @@ export function ServiceProviderSidebar({
       items: [
         { href: "/service-provider/reviews", label: "Reviews", icon: Star },
         { href: "/service-provider/bookings", label: "Bookings", icon: HeartHandshake },
-        { href: "/service-provider/analytics", label: "Analytics", icon: BarChart3, placeholder: true },
+        { href: "/service-provider/analytics", label: "Analytics", icon: BarChart3 },
         { href: "/service-provider/financials", label: "Financials", icon: Wallet },
       ],
     },
