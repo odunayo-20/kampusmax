@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getVendorAccess, getVendorProfileSummary } from "@/services/vendor-dashboard";
 import { getServiceProviderAccess } from "@/services/service-provider-dashboard";
 import { getSpProfileByUserId } from "@/data/service-provider";
+import { getFreelancerDashboardAccess } from "@/services/freelancer-dashboard";
 import { VendorStatusBadge } from "./VendorStatusBadge";
 
 interface ProfileEntry {
@@ -38,6 +39,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
   const vendor = getVendorProfileSummary();
   const spAccess = getServiceProviderAccess();
   const spProfile = getSpProfileByUserId(user?.id ?? "");
+  const flAccess = getFreelancerDashboardAccess();
 
   const profiles: ProfileEntry[] = [
     { id: "customer", label: "Customer", icon: User, active: true, href: "/home" },
@@ -49,7 +51,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
       href: "/vendor",
       onboardLabel: "Become a Vendor",
     },
-    { id: "freelancer", label: "Freelancer", icon: Briefcase, active: false, href: "/onboarding/freelancer", onboardLabel: "Become a Freelancer" },
+    { id: "freelancer", label: "Freelancer", icon: Briefcase, active: flAccess.kind === "approved", href: flAccess.kind === "approved" ? "/freelancer/dashboard" : "/onboarding/freelancer", onboardLabel: "Become a Freelancer" },
     {
       id: "service",
       label: "Service Provider",
@@ -66,6 +68,8 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
     ? profiles[1]
     : profiles.find((p) => p.id === "service" && p.active)
     ? profiles.find((p) => p.id === "service")!
+    : profiles.find((p) => p.id === "freelancer" && p.active)
+    ? profiles.find((p) => p.id === "freelancer")!
     : profiles[0];
 
   return (
@@ -93,7 +97,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
               Current Profile
             </p>
             <ProfileRow
-              label={vendor ? "Vendor" : spAccess.kind === "approved" ? "Service Provider" : current.label}
+              label={vendor ? "Vendor" : spAccess.kind === "approved" ? "Service Provider" : flAccess.kind === "approved" ? "Freelancer" : current.label}
               icon={current.icon}
               sub={vendor?.storeName ?? spProfile?.displayName ?? user?.name}
               onNavigate={() => {
