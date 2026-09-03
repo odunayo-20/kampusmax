@@ -26,6 +26,8 @@ import {
 } from "@/data/freelancer";
 import { getNotifications, getUnreadNotificationCount } from "@/services/notifications";
 import { computeFlCompletion } from "@/services/freelancer";
+import { getFreelancerContracts } from "@/services/contract";
+import { CONTRACT_STATUS } from "@/types/contract";
 import type { FreelancerOnboardingStatus } from "@/types/freelancer";
 import { FREELANCER_ONBOARDING_STATUS } from "@/types/freelancer";
 import type {
@@ -205,14 +207,36 @@ export function getFreelancerDashboard(): FreelancerDashboard | null {
 
   const profileStatus = computeFreelancerProfileStatus();
 
-  // M23–M25 not yet implemented: all business counts are true zeros / `—`,
-  // surfaced as empty states rather than fabricated activity.
+  // Module 24 — real (backend-scoped to the authenticated user) contract data.
+  const contracts = getFreelancerContracts();
+  const active = contracts.filter(
+    (c) => c.status !== CONTRACT_STATUS.COMPLETED && c.status !== CONTRACT_STATUS.CANCELLED
+  ).length;
+  const completed = contracts.filter((c) => c.status === CONTRACT_STATUS.COMPLETED).length;
+  const awaitingAction = contracts.filter(
+    (c) =>
+      c.status === CONTRACT_STATUS.PENDING_ACCEPTANCE ||
+      c.status === CONTRACT_STATUS.REVISION_REQUESTED
+  ).length;
+
   const metrics: FreelancerDashboardMetric[] = [
     { key: "active_proposals", label: "Active Proposals", valueLabel: "—", tone: "neutral", sublabel: "Module 23" },
-    { key: "active_contracts", label: "Active Contracts", valueLabel: "—", tone: "neutral", sublabel: "Module 24" },
-    { key: "completed_projects", label: "Completed Projects", valueLabel: "—", tone: "neutral" },
+    { key: "active_contracts", label: "Active Contracts", valueLabel: String(active), tone: "info" },
+    { key: "completed_projects", label: "Completed Projects", valueLabel: String(completed), tone: "success" },
     { key: "total_earnings", label: "Total Earnings", valueLabel: "—", tone: "neutral", sublabel: "Module 25" },
   ];
+
+  // Contract deadlines fed into the dashboard "Next Contract Action" surface.
+  const deadlines = contracts
+    .filter((c) => c.status !== CONTRACT_STATUS.COMPLETED && c.status !== CONTRACT_STATUS.CANCELLED)
+    .slice(0, 5)
+    .map((c) => ({ id: c.id, title: c.projectTitle, dueDate: c.deadline }));
+
+  const awaitingActionContract = contracts.find(
+    (c) =>
+      c.status === CONTRACT_STATUS.PENDING_ACCEPTANCE ||
+      c.status === CONTRACT_STATUS.REVISION_REQUESTED
+  ) ?? null;
 
   return {
     profile: {
@@ -228,18 +252,19 @@ export function getFreelancerDashboard(): FreelancerDashboard | null {
     availability: availabilityLabel(draft.availability.status),
     opportunities: { total: 0, sample: [] },
     proposals: { submitted: 0, underReview: 0, accepted: 0, rejected: 0 },
-    contracts: { active: 0, completed: 0 },
-    deadlines: [],
+    contracts: { active, completed },
+    deadlines,
     earnings: { thisMonth: 0, pending: 0, available: 0 },
-    activity: buildActivity(user.id),
+    activity: buildActivity(user.id, awaitingActionContract),
   };
 }
 
-// ── Activity feed (seeded onboarding milestones only) ───────
+// ── Activity feed (profile lifecycle + contract action pending) ──
 
-function buildActivity(userId: string): FreelancerDashboard["activity"] {
-  // No real freelance activity exists until M23+. Surface only the current
-  // profile lifecycle milestone the backend actually knows about.
+function buildActivity(
+  userId: string,
+  awaitingActionContract?: { id: string; projectTitle: string } | null
+): FreelancerDashboard["activity"] {
   const status = getFreelancerOnboardingStatus(userId);
   const events: FreelancerDashboard["activity"] = [];
 
@@ -259,6 +284,17 @@ function buildActivity(userId: string): FreelancerDashboard["activity"] {
       title: "Profile submitted for review",
       message: "Our team is reviewing your freelancer profile.",
       createdAt: new Date(Date.now() - 86_400_000).toISOString(),
+    });
+  }
+
+  if (awaitingActionContract) {
+    events.push({
+      id: "fl_act_contract_action",
+      kind: "contract_started",
+      title: `Action needed: ${awaitingActionContract.projectTitle}`,
+      message: "A contract is waiting for your attention.",
+      href: `/freelancer/contracts/${awaitingActionContract.id}`,
+      createdAt: new Date().toISOString(),
     });
   }
 

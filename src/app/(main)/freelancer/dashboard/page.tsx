@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, X, ArrowRight, Bell } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, X, ArrowRight, Bell, Handshake } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
 import { getFreelancerDashboard, getFreelancerDashboardAccess, getFreelancerNotificationSummary } from "@/services/freelancer-dashboard";
 import { FreelancerMetricCard } from "@/components/freelancer/dashboard/FreelancerMetricCard";
@@ -11,6 +12,7 @@ import { FreelancerProfilePreview } from "@/components/freelancer/dashboard/Free
 import { FreelancerAvailability } from "@/components/freelancer/dashboard/FreelancerAvailability";
 import { FreelancerActivityFeed } from "@/components/freelancer/dashboard/FreelancerActivityFeed";
 import { FreelancerEmptySection } from "@/components/freelancer/dashboard/FreelancerEmptySection";
+import { FreelancerNextContractAction } from "@/components/freelancer/dashboard/FreelancerNextContractAction";
 
 export default function FreelancerDashboardPage() {
   const [dashboard] = useState(() => getFreelancerDashboard());
@@ -103,12 +105,27 @@ export default function FreelancerDashboardPage() {
       <section aria-label="Your work at a glance">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-bold text-kampmax-text">Find work & grow</h2>
-          <span className="text-xs text-kampmax-text-muted">Coming soon</span>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <FreelancerEmptySection id="opportunities" href="/freelancer/dashboard" />
           <FreelancerEmptySection id="proposals" href="/freelancer/dashboard" />
-          <FreelancerEmptySection id="contracts" href="/freelancer/dashboard" />
+          <Link
+            href="/freelancer/contracts"
+            className="group relative flex flex-col items-start gap-3 rounded-xl border border-kampmax-border bg-white p-5 transition-shadow hover:shadow-md"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success-50 text-success-600">
+              <Handshake className="h-5 w-5" aria-hidden />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-kampmax-text">Your contracts</p>
+              <p className="mt-1 text-xs text-kampmax-text-secondary">
+                {dashboard.contracts.active} active · {dashboard.contracts.completed} completed
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary-600 group-hover:underline">
+              Manage contracts <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </span>
+          </Link>
           <FreelancerEmptySection id="earnings" href="/freelancer/dashboard" />
         </div>
       </section>
@@ -117,28 +134,31 @@ export default function FreelancerDashboardPage() {
         <div className="lg:col-span-2">
           <FreelancerActivityFeed events={activity} />
         </div>
-        <div className="rounded-xl border border-kampmax-border bg-white p-5">
-          <h2 className="text-sm font-bold text-kampmax-text">Next steps</h2>
-          <ul className="mt-3 space-y-2">
-            {profileStatus.missing.length > 0 ? (
-              profileStatus.missing.slice(0, 4).map((m) => (
-                <li key={m.key}>
-                  <a
-                    href={m.href}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-kampmax-text hover:bg-neutral-50"
-                  >
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-600" aria-hidden />
-                    <span className="flex-1">{m.label}</span>
-                    <ArrowRight className="h-3.5 w-3.5 text-neutral-400" aria-hidden />
-                  </a>
+        <div className="space-y-4">
+          <FreelancerNextContractAction />
+          <div className="rounded-xl border border-kampmax-border bg-white p-5">
+            <h2 className="text-sm font-bold text-kampmax-text">Next steps</h2>
+            <ul className="mt-3 space-y-2">
+              {profileStatus.missing.length > 0 ? (
+                profileStatus.missing.slice(0, 4).map((m) => (
+                  <li key={m.key}>
+                    <a
+                      href={m.href}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-kampmax-text hover:bg-neutral-50"
+                    >
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-600" aria-hidden />
+                      <span className="flex-1">{m.label}</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-neutral-400" aria-hidden />
+                    </a>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-kampmax-text-secondary">
+                  Your profile is complete. {timeAgo(new Date().toISOString())}
                 </li>
-              ))
-            ) : (
-              <li className="text-sm text-kampmax-text-secondary">
-                Your profile is complete. {timeAgo(new Date().toISOString())}
-              </li>
-            )}
-          </ul>
+              )}
+            </ul>
+          </div>
         </div>
       </div>
     </div>

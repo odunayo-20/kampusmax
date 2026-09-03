@@ -47,9 +47,9 @@ export function FreelancerSidebar({
     {
       title: "Work",
       items: [
+        { label: "My Contracts", href: "/freelancer/contracts", icon: Handshake },
         { label: "Find Work", icon: Search, placeholder: true },
         { label: "My Proposals", icon: FileText, placeholder: true },
-        { label: "My Contracts", icon: Handshake, placeholder: true },
       ],
     },
     {
