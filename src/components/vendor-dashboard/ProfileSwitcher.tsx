@@ -20,6 +20,7 @@ import { getVendorAccess, getVendorProfileSummary } from "@/services/vendor-dash
 import { getServiceProviderAccess } from "@/services/service-provider-dashboard";
 import { getSpProfileByUserId } from "@/data/service-provider";
 import { getFreelancerDashboardAccess } from "@/services/freelancer-dashboard";
+import { getEmployerDashboardAccess } from "@/services/employer";
 import { VendorStatusBadge } from "./VendorStatusBadge";
 
 interface ProfileEntry {
@@ -40,6 +41,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
   const spAccess = getServiceProviderAccess();
   const spProfile = getSpProfileByUserId(user?.id ?? "");
   const flAccess = getFreelancerDashboardAccess();
+  const empAccess = getEmployerDashboardAccess();
 
   const profiles: ProfileEntry[] = [
     { id: "customer", label: "Customer", icon: User, active: true, href: "/home" },
@@ -60,7 +62,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
       href: "/service-provider",
       onboardLabel: "Offer Services",
     },
-    { id: "employer", label: "Employer", icon: Building2, active: false, onboardLabel: "Become an Employer" },
+    { id: "employer", label: "Employer", icon: Building2, active: empAccess.kind === "approved", href: empAccess.kind === "approved" ? "/onboarding/employer" : "/onboarding/employer", onboardLabel: "Become an Employer" },
     { id: "ambassador", label: "Ambassador", icon: UserCheck, active: false, onboardLabel: "Become an Ambassador" },
   ];
 
@@ -171,7 +173,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
                     : (
                       <Link
                         key={p.id}
-                        href="/account/profiles/vendor/onboarding"
+                        href={p.href ?? "/account/profiles/vendor/onboarding"}
                         onClick={() => {
                           setOpen(false);
                           onClosed?.();
