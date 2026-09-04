@@ -13,6 +13,7 @@ import { FreelancerAvailability } from "@/components/freelancer/dashboard/Freela
 import { FreelancerActivityFeed } from "@/components/freelancer/dashboard/FreelancerActivityFeed";
 import { FreelancerEmptySection } from "@/components/freelancer/dashboard/FreelancerEmptySection";
 import { FreelancerNextContractAction } from "@/components/freelancer/dashboard/FreelancerNextContractAction";
+import { FreelancerFinancialSummary } from "@/components/freelancer/dashboard/FreelancerFinancialSummary";
 
 export default function FreelancerDashboardPage() {
   const [dashboard] = useState(() => getFreelancerDashboard());
@@ -126,7 +127,7 @@ export default function FreelancerDashboardPage() {
               Manage contracts <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </span>
           </Link>
-          <FreelancerEmptySection id="earnings" href="/freelancer/dashboard" />
+          <FreelancerFinancialSummary />
         </div>
       </section>
 
