@@ -136,6 +136,8 @@ export interface FreelancerPortfolioItem {
   externalUrl?: string;
   completionDate?: string;
   visible: boolean;
+  /** Optional category this project belongs to (Module 23B portfolio manager). */
+  categoryId?: string;
 }
 
 // ── Onboarding draft (form data model) ──────────────────────
