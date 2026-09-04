@@ -79,7 +79,7 @@ export function ProfileSwitcher({ onClosed }: { onClosed?: () => void }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-white hover:bg-white/10"
+        className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
       >
         <User className="h-4 w-4" aria-hidden />
         <span className="hidden sm:inline">{current.label}</span>

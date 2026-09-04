@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Footer } from "@/components/layout/footer/Footer";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { isServiceProviderDashboardPath } from "@/lib/utils";
+import { isFreelancerDashboardPath } from "@/services/freelancer-dashboard";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -18,7 +19,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Dashboard sections render their own full-screen shell (sidebar/header)
   const isVendorSection = pathname.startsWith("/vendor");
   const isServiceProviderSection = isServiceProviderDashboardPath(pathname);
-  const isDashboardSection = isVendorSection || isServiceProviderSection;
+  const isFreelancerSection = isFreelancerDashboardPath(pathname);
+  const isDashboardSection = isVendorSection || isServiceProviderSection || isFreelancerSection;
 
   useEffect(() => {
     if (status === "unauthenticated") {
