@@ -55,8 +55,8 @@ export function FreelancerSidebar({
     {
       title: "Profile",
       items: [
-        { label: "My Services", icon: Briefcase, placeholder: true },
-        { label: "Portfolio", icon: Sparkles, placeholder: true },
+        { label: "My Services", href: "/freelancer/services", icon: Briefcase },
+        { label: "Portfolio", href: "/freelancer/portfolio", icon: Sparkles },
       ],
     },
     {
