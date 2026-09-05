@@ -1,8 +1,11 @@
 import { Notification, NotificationCategory } from "@/types";
 import {
-  notifications as mockNotifications,
   getNotificationsByUser as _getNotificationsByUser,
   getUnreadCount as _getUnreadCount,
+  pushNotificationRecord,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotificationRecord,
 } from "@/data/notifications";
 
 const categoryLabels: Record<NotificationCategory, string> = {
@@ -18,10 +21,29 @@ const categoryLabels: Record<NotificationCategory, string> = {
 
 export { categoryLabels };
 
+export interface NotificationCategorySummary {
+  id: NotificationCategory | "all";
+  label: string;
+  count: number;
+  unread: number;
+}
+
+const CATEGORY_ORDER: NotificationCategory[] = [
+  "orders",
+  "messages",
+  "marketplace",
+  "bookings",
+  "campus",
+  "payments",
+  "account",
+  "promotions",
+];
+
 /**
- * Push a notification for a user (unshift + unread). Used by the booking
- * service to emit booking_update notifications. Mirrors a backend push so the
- * notification feed, badges, and category tabs all react immediately.
+ * Push a notification for a user (unshift + unread). Used by booking,
+ * employer, freelancer and opportunity services to emit notifications.
+ * Mirrors a backend push so the notification feed, badge and category
+ * tabs all react immediately through the TanStack change bridge.
  */
 export function pushUserNotification(input: {
   userId: string;
@@ -31,21 +53,9 @@ export function pushUserNotification(input: {
   message: string;
   actionUrl?: string;
   groupId?: string;
+  imageUrl?: string;
 }): Notification {
-  const notification: Notification = {
-    id: `n_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-    userId: input.userId,
-    type: input.type,
-    category: input.category,
-    title: input.title,
-    message: input.message,
-    read: false,
-    createdAt: new Date().toISOString(),
-    actionUrl: input.actionUrl,
-    groupId: input.groupId,
-  };
-  mockNotifications.unshift(notification);
-  return notification;
+  return pushNotificationRecord(input);
 }
 
 export function getNotifications(userId: string): Notification[] {
@@ -69,56 +79,68 @@ export function getUnreadCountByCategory(
   userId: string,
   category: NotificationCategory
 ): number {
-  return mockNotifications.filter(
-    (n) => n.userId === userId && n.category === category && !n.read
+  return _getNotificationsByUser(userId).filter(
+    (n) => n.category === category && !n.read
   ).length;
 }
 
 export function getGroupedNotifications(
   userId: string
 ): { category: NotificationCategory; label: string; notifications: Notification[] }[] {
-  const groups: Record<string, Notification[]> = {};
   const userNotifs = _getNotificationsByUser(userId);
 
+  const groups: Record<string, Notification[]> = {};
   for (const notif of userNotifs) {
     if (!groups[notif.category]) groups[notif.category] = [];
     groups[notif.category].push(notif);
   }
 
-  const order: NotificationCategory[] = [
-    "orders",
-    "messages",
-    "marketplace",
-    "bookings",
-    "campus",
-    "payments",
-    "account",
-    "promotions",
-  ];
+  return CATEGORY_ORDER.filter((cat) => groups[cat]?.length).map((cat) => ({
+    category: cat,
+    label: categoryLabels[cat],
+    notifications: groups[cat],
+  }));
+}
 
-  return order
-    .filter((cat) => groups[cat]?.length)
-    .map((cat) => ({
-      category: cat,
-      label: categoryLabels[cat],
-      notifications: groups[cat],
-    }));
+/**
+ * Aggregate summary for the notification center's category tabs.
+ * Driven by a single store pass so the "All" totals always equal the
+ * per-category counts.
+ */
+export function getNotificationCategorySummaries(
+  userId: string
+): NotificationCategorySummary[] {
+  const all = _getNotificationsByUser(userId);
+
+  const counted = CATEGORY_ORDER.map((category) => {
+    const items = all.filter((n) => n.category === category);
+    return {
+      id: category,
+      label: categoryLabels[category],
+      count: items.length,
+      unread: items.filter((n) => !n.read).length,
+    };
+  }).filter((sum) => sum.count > 0);
+
+  return [
+    {
+      id: "all" as const,
+      label: "All",
+      count: all.length,
+      unread: all.filter((n) => !n.read).length,
+    },
+    ...counted,
+  ];
 }
 
 export function markAsRead(notificationId: string): void {
-  const n = mockNotifications.find((n) => n.id === notificationId);
-  if (n) n.read = true;
+  markNotificationRead(notificationId);
 }
 
 export function markAllAsRead(userId: string): void {
-  mockNotifications
-    .filter((n) => n.userId === userId)
-    .forEach((n) => (n.read = true));
+  markAllNotificationsRead(userId);
 }
 
 export function deleteNotification(notificationId: string): boolean {
-  const idx = mockNotifications.findIndex((n) => n.id === notificationId);
-  if (idx === -1) return false;
-  mockNotifications.splice(idx, 1);
-  return true;
+  return deleteNotificationRecord(notificationId);
 }

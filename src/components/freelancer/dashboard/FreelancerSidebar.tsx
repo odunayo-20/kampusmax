@@ -68,7 +68,7 @@ export function FreelancerSidebar({
         { href: "/freelancer/settings", label: "Settings", icon: Settings },
         { href: "/freelancer/earnings", label: "Earnings", icon: Wallet },
         { label: "Messages", icon: MessageSquare, placeholder: true },
-        { label: "Notifications", icon: Bell, placeholder: true },
+        { label: "Notifications", href: "/notifications", icon: Bell },
       ],
     },
   ];

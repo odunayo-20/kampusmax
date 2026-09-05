@@ -2,19 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { Notification } from "@/types";
-import {
-  Package,
-  MessageCircle,
-  ShoppingCart,
-  GraduationCap,
-  CreditCard,
-  User,
-  Tag,
-  Bell,
-  Trash2,
-  ChevronRight,
-  CalendarCheck,
-} from "lucide-react";
+import { Trash2, ChevronRight } from "lucide-react";
+import { getNotificationCategoryMeta } from "@/components/notifications/notification-meta";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -23,52 +12,6 @@ interface NotificationItemProps {
   onNavigate?: (url: string) => void;
   compact?: boolean;
 }
-
-const categoryConfig: Record<
-  string,
-  { icon: typeof Package; bg: string; color: string }
-> = {
-  orders: {
-    icon: Package,
-    bg: "bg-kampmax-blue/10",
-    color: "text-kampmax-blue",
-  },
-  messages: {
-    icon: MessageCircle,
-    bg: "bg-kampmax-success/10",
-    color: "text-kampmax-success",
-  },
-  marketplace: {
-    icon: ShoppingCart,
-    bg: "bg-kampmax-gold/10",
-    color: "text-kampmax-gold-dark",
-  },
-  campus: {
-    icon: GraduationCap,
-    bg: "bg-kampmax-gold/10",
-    color: "text-kampmax-gold",
-  },
-  payments: {
-    icon: CreditCard,
-    bg: "bg-kampmax-success/10",
-    color: "text-kampmax-success",
-  },
-  account: {
-    icon: User,
-    bg: "bg-kampmax-muted",
-    color: "text-kampmax-text-secondary",
-  },
-  promotions: {
-    icon: Tag,
-    bg: "bg-kampmax-error/10",
-    color: "text-kampmax-error",
-  },
-  bookings: {
-    icon: CalendarCheck,
-    bg: "bg-primary-100",
-    color: "text-primary-700",
-  },
-};
 
 function formatNotifTime(dateStr: string): string {
   const d = new Date(dateStr);
@@ -92,7 +35,7 @@ export function NotificationItem({
   onNavigate,
   compact,
 }: NotificationItemProps) {
-  const config = categoryConfig[notification.category] || categoryConfig.orders;
+  const config = getNotificationCategoryMeta(notification.category);
   const Icon = config.icon;
 
   function handleClick() {

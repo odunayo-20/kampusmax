@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Bell, ShoppingCart, Search } from "lucide-react";
+import { MapPin, ShoppingCart, Search } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
-import { getUnreadNotificationCount } from "@/services/notifications";
 import { Avatar } from "@/components/ui";
+import { NotificationBell } from "@/components/notifications";
 import { cn } from "@/lib/utils";
 
 export function MobileHeader() {
   const { itemCount } = useCart();
   const { selectedCampus } = useApp();
   const { user } = useAuth();
-  const unreadCount = user ? getUnreadNotificationCount(user.id) : 0;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-neutral-200 lg:hidden">
@@ -45,22 +44,10 @@ export function MobileHeader() {
             <span className="font-semibold text-neutral-900">{selectedCampus.abbreviation}</span>
           </div>
 
-          <Link
-            href="/notifications"
-            aria-label="Notifications"
-            className={cn(
-              "relative h-9 w-9 flex items-center justify-center rounded-md text-neutral-500",
-              "hover:bg-neutral-100 transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
-            )}
-          >
-            <Bell className="h-[19px] w-[19px]" />
-            {unreadCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-error-600 text-white text-[9px] font-bold rounded-full px-1 ring-1 ring-white">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </Link>
+          <NotificationBell
+            variant="link"
+            className="text-neutral-500"
+          />
 
           <Link
             href="/cart"

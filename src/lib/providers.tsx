@@ -1,16 +1,24 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { AppProvider } from "@/lib/app-context";
 import { CartProvider } from "@/lib/cart-context";
 import { AuthProvider } from "@/lib/auth-context";
+import { createQueryClient } from "@/lib/query-client";
+import { NotificationSyncBridge } from "@/components/notifications/NotificationSyncBridge";
 
 export function Providers({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(() => createQueryClient());
+
   return (
     <AuthProvider>
-      <AppProvider>
-        <CartProvider>{children}</CartProvider>
-      </AppProvider>
+      <QueryClientProvider client={queryClient}>
+        <NotificationSyncBridge />
+        <AppProvider>
+          <CartProvider>{children}</CartProvider>
+        </AppProvider>
+      </QueryClientProvider>
     </AuthProvider>
   );
 }

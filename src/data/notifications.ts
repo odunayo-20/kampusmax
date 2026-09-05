@@ -298,3 +298,86 @@ export function getNotificationsByUser(userId: string): Notification[] {
 export function getUnreadCount(userId: string): number {
   return notifications.filter((n) => n.userId === userId && !n.read).length;
 }
+
+// ────────────────────────────────────────────────────────────────
+// Mutation records + change notifications
+//
+// Every record mutation goes through the functions below so consumers
+// (TanStack Query's NotificationSyncBridge) can refresh caches in sync
+// with the authoritative in-memory store — no polling needed.
+// ────────────────────────────────────────────────────────────────
+
+type NotificationChangeListener = () => void;
+
+const changeListeners = new Set<NotificationChangeListener>();
+
+export function subscribeToNotificationChanges(
+  listener: NotificationChangeListener
+): () => void {
+  changeListeners.add(listener);
+  return () => {
+    changeListeners.delete(listener);
+  };
+}
+
+function emitNotificationsChanged(): void {
+  changeListeners.forEach((listener) => listener());
+}
+
+export interface PushNotificationRecordInput {
+  userId: string;
+  type: Notification["type"];
+  category: Notification["category"];
+  title: string;
+  message: string;
+  actionUrl?: string;
+  groupId?: string;
+  imageUrl?: string;
+}
+
+export function pushNotificationRecord(
+  input: PushNotificationRecordInput
+): Notification {
+  const notification: Notification = {
+    id: `n_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+    userId: input.userId,
+    type: input.type,
+    category: input.category,
+    title: input.title,
+    message: input.message,
+    read: false,
+    createdAt: new Date().toISOString(),
+    actionUrl: input.actionUrl,
+    imageUrl: input.imageUrl,
+    groupId: input.groupId,
+  };
+  notifications.unshift(notification);
+  emitNotificationsChanged();
+  return notification;
+}
+
+export function markNotificationRead(notificationId: string): boolean {
+  const n = notifications.find((n) => n.id === notificationId);
+  if (!n || n.read) return false;
+  n.read = true;
+  emitNotificationsChanged();
+  return true;
+}
+
+export function markAllNotificationsRead(userId: string): number {
+  const targets = notifications.filter(
+    (n) => n.userId === userId && !n.read
+  );
+  if (targets.length === 0) return 0;
+  targets.forEach((n) => (n.read = true));
+  emitNotificationsChanged();
+  return targets.length;
+}
+
+export function deleteNotificationRecord(notificationId: string): boolean {
+  const idx = notifications.findIndex((n) => n.id === notificationId);
+  if (idx === -1) return false;
+  notifications.splice(idx, 1);
+  emitNotificationsChanged();
+  return true;
+}

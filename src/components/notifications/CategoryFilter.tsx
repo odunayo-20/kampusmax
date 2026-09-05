@@ -2,17 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { NotificationCategory } from "@/types";
-import {
-  Package,
-  MessageCircle,
-  ShoppingCart,
-  GraduationCap,
-  CreditCard,
-  User,
-  Tag,
-  Layers,
-  CalendarCheck,
-} from "lucide-react";
+import { Layers } from "lucide-react";
+import { getNotificationCategoryMeta } from "@/components/notifications/notification-meta";
 
 interface CategoryFilterProps {
   categories: {
@@ -25,18 +16,6 @@ interface CategoryFilterProps {
   onSelect: (cat: NotificationCategory | "all") => void;
 }
 
-const catIcons: Record<string, typeof Package> = {
-  all: Layers,
-  orders: Package,
-  messages: MessageCircle,
-  marketplace: ShoppingCart,
-  campus: GraduationCap,
-  payments: CreditCard,
-  account: User,
-  promotions: Tag,
-  bookings: CalendarCheck,
-};
-
 export function CategoryFilter({
   categories,
   selected,
@@ -45,7 +24,8 @@ export function CategoryFilter({
   return (
     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4">
       {categories.map((cat) => {
-        const Icon = catIcons[cat.id] || Layers;
+        const Icon =
+          cat.id === "all" ? Layers : getNotificationCategoryMeta(cat.id).icon;
         const isActive = selected === cat.id;
         return (
           <button

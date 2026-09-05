@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home, Store, GraduationCap, MessageCircle,
-  MapPin, Bell, ShoppingCart, ChevronDown, Search
+  MapPin, Search, ShoppingCart, ChevronDown
 } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
-import { getUnreadNotificationCount } from "@/services/notifications";
 import { Avatar } from "@/components/ui";
+import { NotificationBell } from "@/components/notifications";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -25,7 +25,6 @@ export function DesktopNavigation() {
   const { itemCount } = useCart();
   const { selectedCampus } = useApp();
   const { user } = useAuth();
-  const unreadCount = user ? getUnreadNotificationCount(user.id) : 0;
 
   function isActive(href: string): boolean {
     if (href === "/home") return pathname === "/home";
@@ -85,21 +84,10 @@ export function DesktopNavigation() {
             <ChevronDown className="h-3 w-3 text-neutral-500" />
           </div>
 
-          <Link
-            href="/notifications"
-            className={cn(
-              "relative h-9 w-9 flex items-center justify-center rounded-md transition-colors",
-              "hover:bg-neutral-100 text-neutral-600",
-              isActive("/notifications") && "bg-primary-50 text-primary-600"
-            )}
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            {unreadCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-error-600 text-white text-[9px] font-bold rounded-full px-1">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </Link>
+          <NotificationBell
+            variant="dropdown"
+            active={isActive("/notifications")}
+          />
 
           <Link
             href="/cart"
