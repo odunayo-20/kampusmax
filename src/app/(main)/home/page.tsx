@@ -25,13 +25,14 @@ import { getCategories } from "@/services/categories";
 import { getTopVendorsByCampus } from "@/services/users";
 import { getUpcomingEvents } from "@/services/events";
 import { getCampusPosts } from "@/services/posts";
-import { getTotalUnreadCount } from "@/services/messages";
+import { useUnreadMessageCount } from "@/hooks/use-messages";
 import { useCart } from "@/lib/cart-context";
 
 export default function HomePage() {
   const { selectedCampus } = useApp();
   const { user } = useAuth();
   const campusId = selectedCampus.id;
+  const unreadMessagesQuery = useUnreadMessageCount();
 
   const featured = getFeaturedProductsByCampus(campusId).slice(0, 6);
   const popular = getPopularProductsByCampus(campusId).slice(0, 8);
@@ -41,7 +42,7 @@ export default function HomePage() {
   const vendors = getTopVendorsByCampus(campusId);
   const events = getUpcomingEvents(campusId).slice(0, 4);
   const posts = getCampusPosts(campusId).slice(0, 6);
-  const unreadMessages = user ? getTotalUnreadCount(user.id) : 0;
+  const unreadMessages = unreadMessagesQuery.data ?? 0;
 
   const greeting = getGreeting();
   const firstName = user?.name?.split(" ")[0] || "Student";

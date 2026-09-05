@@ -7,6 +7,7 @@ import { CartProvider } from "@/lib/cart-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { createQueryClient } from "@/lib/query-client";
 import { NotificationSyncBridge } from "@/components/notifications/NotificationSyncBridge";
+import { MessageSyncBridge } from "@/components/messages/MessageSyncBridge";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
@@ -15,6 +16,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <NotificationSyncBridge />
+        <MessageSyncBridge />
         <AppProvider>
           <CartProvider>{children}</CartProvider>
         </AppProvider>

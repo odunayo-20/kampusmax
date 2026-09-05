@@ -11,6 +11,8 @@ import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
 import { Avatar } from "@/components/ui";
 import { NotificationBell } from "@/components/notifications";
+import { UnreadMessageBadge } from "@/components/messages/UnreadMessageBadge";
+import { useUnreadMessageCount } from "@/hooks/use-messages";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -25,6 +27,8 @@ export function DesktopNavigation() {
   const { itemCount } = useCart();
   const { selectedCampus } = useApp();
   const { user } = useAuth();
+  const unreadMessagesQuery = useUnreadMessageCount();
+  const unreadMessages = unreadMessagesQuery.data ?? 0;
 
   function isActive(href: string): boolean {
     if (href === "/home") return pathname === "/home";
@@ -50,13 +54,21 @@ export function DesktopNavigation() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                    "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                     active
                       ? "text-primary-600 bg-primary-50 font-semibold"
                       : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
                   )}
                 >
-                  <link.icon className={cn("h-4 w-4", active && "stroke-[2.5px]")} />
+                  <span className="relative">
+                    <link.icon className={cn("h-4 w-4", active && "stroke-[2.5px]")} />
+                    {link.href === "/chat" && (
+                      <UnreadMessageBadge
+                        count={unreadMessages}
+                        className="absolute -top-2 -right-2 min-w-[15px] h-[15px] text-[9px]"
+                      />
+                    )}
+                  </span>
                   {link.label}
                 </Link>
               );

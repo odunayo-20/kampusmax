@@ -16,10 +16,12 @@ import {
   Settings,
   Home,
   Lock,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { VendorPermissions } from "@/types/vendor-dashboard";
 import { VendorStatusBadge } from "./VendorStatusBadge";
+import { useUnreadMessageCount } from "@/hooks/use-messages";
 
 interface NavItem {
   href: string;
@@ -42,6 +44,8 @@ interface VendorSidebarProps {
 
 export function VendorSidebar({ storeName, permissions, status }: VendorSidebarProps) {
   const pathname = usePathname();
+  const unreadMessagesQuery = useUnreadMessageCount();
+  const unreadMessages = unreadMessagesQuery.data ?? 0;
 
   const sections: NavSection[] = [
     {
@@ -73,6 +77,12 @@ export function VendorSidebar({ storeName, permissions, status }: VendorSidebarP
       items: [
         { href: "/vendor/staff", label: "Staff", icon: UsersRound, permission: "canManageStaff", placeholder: true },
         { href: "/vendor/financials", label: "Financials", icon: Wallet, permission: "canViewFinancials" },
+        {
+          href: "/chat",
+          label: "Messages",
+          icon: MessageSquare,
+          badge: unreadMessages > 0 ? (unreadMessages > 9 ? "9+" : String(unreadMessages)) : undefined,
+        },
         { href: "/vendor/store/settings", label: "Settings", icon: Settings },
       ],
     },

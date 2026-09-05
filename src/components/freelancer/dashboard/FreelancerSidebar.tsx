@@ -21,11 +21,14 @@ import {
 import { cn } from "@/lib/utils";
 import type { FreelancerOnboardingStatus } from "@/types/freelancer";
 import { FreelancerStatusBadge } from "./FreelancerStatusBadge";
+import { useUnreadMessageCount } from "@/hooks/use-messages";
 
 interface NavItem {
   href?: string;
   label: string;
   icon: typeof User;
+  /** Live unread counter rendered as a badge (messages). */
+  badgeCount?: number;
   /** Future module — not yet implemented; shown as a locked placeholder. */
   placeholder?: boolean;
 }
@@ -40,6 +43,8 @@ export function FreelancerSidebar({
   status: FreelancerOnboardingStatus;
 }) {
   const pathname = usePathname();
+  const unreadMessagesQuery = useUnreadMessageCount();
+  const unreadMessages = unreadMessagesQuery.data ?? 0;
 
   const sections: NavSection[] = [
     {
@@ -67,7 +72,7 @@ export function FreelancerSidebar({
         { href: "/freelancer/profile", label: "Profile", icon: User },
         { href: "/freelancer/settings", label: "Settings", icon: Settings },
         { href: "/freelancer/earnings", label: "Earnings", icon: Wallet },
-        { label: "Messages", icon: MessageSquare, placeholder: true },
+        { href: "/chat", label: "Messages", icon: MessageSquare, badgeCount: unreadMessages },
         { label: "Notifications", href: "/notifications", icon: Bell },
       ],
     },
@@ -137,6 +142,11 @@ export function FreelancerSidebar({
                     >
                       <Icon className="h-4 w-4 shrink-0" aria-hidden />
                       <span className="flex-1 truncate">{item.label}</span>
+                      {typeof item.badgeCount === "number" && item.badgeCount > 0 && (
+                        <span className="rounded-full bg-kampmax-gold px-1.5 py-0.5 text-[10px] font-bold text-kampmax-navy">
+                          {item.badgeCount > 9 ? "9+" : item.badgeCount}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );

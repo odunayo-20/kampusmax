@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Store, GraduationCap, MessageCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUnreadMessageCount } from "@/hooks/use-messages";
+import { UnreadMessageBadge } from "@/components/messages/UnreadMessageBadge";
 
 const tabs = [
   { href: "/home", icon: Home, label: "Home" },
@@ -15,6 +17,8 @@ const tabs = [
 
 export function BottomNavigation() {
   const pathname = usePathname();
+  const unreadMessagesQuery = useUnreadMessageCount();
+  const unreadMessages = unreadMessagesQuery.data ?? 0;
 
   function isActive(href: string): boolean {
     if (href === "/home") return pathname === "/home";
@@ -43,6 +47,12 @@ export function BottomNavigation() {
                     active && "stroke-[2.5px]"
                   )}
                 />
+                {tab.href === "/chat" && (
+                  <UnreadMessageBadge
+                    count={unreadMessages}
+                    className="absolute -top-2 -right-2.5 min-w-[15px] h-[15px] text-[9px]"
+                  />
+                )}
                 {active && (
                   <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-4 bg-primary-600 rounded-full" />
                 )}

@@ -1,5 +1,9 @@
 import { Conversation, Message } from "@/types";
 
+// ============================================================
+// SEED DATA
+// ============================================================
+
 export const messages: Message[] = [
   { id: "m1", conversationId: "conv1", senderId: "u1", text: "Hello! Is the HP Laptop still available?", createdAt: "2025-01-14T10:00:00Z", read: true },
   { id: "m2", conversationId: "conv1", senderId: "u3", text: "Yes it is! Would you like to see more photos?", createdAt: "2025-01-14T10:05:00Z", read: true },
@@ -46,4 +50,98 @@ export function getConversationById(id: string): Conversation | undefined {
 
 export function getMessagesByConversation(conversationId: string): Message[] {
   return messages.filter((m) => m.conversationId === conversationId);
+}
+
+// ============================================================
+// CHANGE EVENTS
+// ============================================================
+
+type ConversationStoreChangeHandler = () => void;
+
+const changeListeners = new Set<ConversationStoreChangeHandler>();
+
+/**
+ * Subscribe to messaging store mutations (send, mark-as-read). Used by the
+ * MessageSyncBridge to invalidate the TanStack messaging key tree instead of
+ * polling; a future WebSocket push channel replaces this same signal.
+ */
+export function subscribeToConversationChanges(
+  handler: ConversationStoreChangeHandler
+): () => void {
+  changeListeners.add(handler);
+  return () => {
+    changeListeners.delete(handler);
+  };
+}
+
+function emitConversationsChanged(): void {
+  changeListeners.forEach((handler) => handler());
+}
+
+// ============================================================
+// RECORD MUTATORS
+//
+// These are the only places the seeded store is written. They mirror the
+// server-side rules the real API will enforce (sender assigned by identity,
+// membership required to mark read / receive conversations), so the rest of
+// the frontend can never mis-write messaging state.
+// ============================================================
+
+export function sendMessageRecord(
+  conversationId: string,
+  senderId: string,
+  text: string,
+  extra?: Partial<Message>
+): Message {
+  const newMessage: Message = {
+    id: `m${Date.now()}${Math.random().toString(36).slice(2, 7)}`,
+    conversationId,
+    senderId,
+    text,
+    createdAt: new Date().toISOString(),
+    read: false,
+    ...extra,
+  };
+  messages.push(newMessage);
+
+  const conv = conversations.find((c) => c.id === conversationId);
+  if (conv) {
+    conv.lastMessage = newMessage;
+    conv.updatedAt = newMessage.createdAt;
+  }
+
+  emitConversationsChanged();
+  return newMessage;
+}
+
+export function markConversationReadRecord(
+  conversationId: string,
+  userId: string
+): void {
+  const conv = conversations.find((c) => c.id === conversationId);
+  if (!conv || !conv.participants.includes(userId)) return;
+
+  messages
+    .filter((m) => m.conversationId === conversationId && m.senderId !== userId && !m.read)
+    .forEach((m) => {
+      m.read = true;
+    });
+  conv.unreadCount = 0;
+
+  emitConversationsChanged();
+}
+
+export function markAllMessagesReadRecord(userId: string): void {
+  conversations
+    .filter((c) => c.participants.includes(userId))
+    .forEach((c) => {
+      c.unreadCount = 0;
+    });
+  messages
+    .filter((m) => m.senderId !== userId && !m.read)
+    .forEach((m) => {
+      m.read = true;
+    });
+
+  emitConversationsChanged();
 }

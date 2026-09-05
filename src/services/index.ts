@@ -45,10 +45,12 @@ export {
 } from "./notifications";
 export {
   getConversations,
+  getConversationForUser,
   getConversationById,
   getMessages,
   sendMessage,
   getTotalUnreadCount,
+  searchConversations,
 } from "./messages";
 export {
   getReviewsByVendor,
