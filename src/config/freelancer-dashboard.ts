@@ -63,4 +63,7 @@ export const FREELANCER_DASHBOARD_SECTIONS = [
   "/freelancer/payout-methods",
   "/freelancer/services",
   "/freelancer/portfolio",
+  "/freelancer/find-work",
+  "/freelancer/proposals",
+  "/freelancer/saved-jobs",
 ] as const;

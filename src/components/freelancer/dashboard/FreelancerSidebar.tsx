@@ -16,6 +16,7 @@ import {
   Home,
   Lock,
   Search,
+  Bookmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FreelancerOnboardingStatus } from "@/types/freelancer";
@@ -48,8 +49,9 @@ export function FreelancerSidebar({
       title: "Work",
       items: [
         { label: "My Contracts", href: "/freelancer/contracts", icon: Handshake },
-        { label: "Find Work", icon: Search, placeholder: true },
-        { label: "My Proposals", icon: FileText, placeholder: true },
+        { label: "Find Work", href: "/freelancer/find-work", icon: Search },
+        { label: "My Proposals", href: "/freelancer/proposals", icon: FileText },
+        { label: "Saved Jobs", href: "/freelancer/saved-jobs", icon: Bookmark },
       ],
     },
     {
