@@ -1,4 +1,5 @@
 import { NotificationCategory } from "@/types";
+import type { EmployerApplicationStatus } from "@/types/opportunity";
 
 /**
  * Structured TanStack Query key factory for Kampmax.
@@ -6,7 +7,8 @@ import { NotificationCategory } from "@/types";
  * Keys are scoped per user so caches never leak data between sessions.
  * The `notifications` preview is deliberately flat and shareable — the
  * NotificationSyncBridge invalidates the top-level `all` key whenever the
- * notification store changes so every dependent query refreshes together.
+ * notification store changes, so every dependent query refreshes together.
+ * Keys are scoped per user so caches never leak between sessions.
  */
 export interface NotificationListFilters {
   category: NotificationCategory | "all";
@@ -43,4 +45,68 @@ export const messageKeys = {
     ["messages", "conversation", conversationId, userId] as const,
   thread: (conversationId: string, userId: string) =>
     ["messages", "thread", conversationId, userId] as const,
+};
+
+/**
+ * Jobs key factory (Module 27).
+ *
+ * The public marketplace list/detail are NOT user-scoped (only OPEN,
+ * discoverable jobs). Employer lists, counts and details are scoped per
+ * user so owner-only records can never leak between sessions. Saved-job ids
+ * are per user.
+ */
+export interface JobListQuery {
+  search?: string;
+  categoryId?: string;
+  experience?: string;
+  arrangement?: string;
+  sort?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface EmployerJobListQuery {
+  status?: string;
+  sort?: string;
+  page?: number;
+  size?: number;
+}
+
+export const jobKeys = {
+  all: ["jobs"] as const,
+  list: (filters: JobListQuery) => ["jobs", "list", filters] as const,
+  detail: (id: string) => ["jobs", "detail", id] as const,
+  employerList: (userId: string, filters: EmployerJobListQuery) =>
+    ["jobs", "employer", userId, "list", filters] as const,
+  employerDetail: (userId: string, id: string) =>
+    ["jobs", "employer", userId, "detail", id] as const,
+  employerCounts: (userId: string) =>
+    ["jobs", "employer", userId, "counts"] as const,
+  saved: (userId: string) => ["jobs", "saved", userId] as const,
+};
+
+/**
+ * Applications & hiring key factory (Module 28). Employer-scoped per user so
+ * owner-only proposal records and public candidate profiles can never leak
+ * between sessions. The employer-facing mutations invalidate the flat `all`
+ * key AND the jobs keys (accepting an application closes the job), so list,
+ * counts and job detail all refresh together.
+ */
+export interface EmployerApplicationListQuery {
+  jobId?: string;
+  status?: EmployerApplicationStatus | "all";
+  sort?: string;
+  search?: string;
+  page?: number;
+  size?: number;
+}
+
+export const applicationKeys = {
+  all: ["applications"] as const,
+  list: (userId: string, filters: EmployerApplicationListQuery) =>
+    ["applications", "list", userId, filters] as const,
+  detail: (userId: string, id: string) =>
+    ["applications", "detail", userId, id] as const,
+  summary: (userId: string) =>
+    ["applications", "summary", userId] as const,
 };

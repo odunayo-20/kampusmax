@@ -121,10 +121,43 @@ export interface Opportunity {
   deadline: string;
   status: OpportunityStatus;
   employer: OpportunityEmployer;
+  /** Backend-derived owner projection (Module 27). Never client-supplied. */
+  employerUserId?: string;
   screeningQuestions: OpportunityScreeningQuestion[];
   attachments: OpportunityAttachment[];
   viewCount: number;
   proposalCount: number;
+}
+
+// ── Create/update job input (mass-assignment-safe) ─────────
+// Ownership (employerUserId), status, scores, employer summary, postedAt,
+// viewCount, proposalCount and screening-question ids are DERIVED by the
+// backend/store — they can never be supplied in this shape (no mass assignment).
+
+export interface OpportunityInput {
+  title: string;
+  categoryId: string;
+  summary: string;
+  description: string;
+  requirements: string;
+  skills: string[];
+  workArrangement: OpportunityWorkArrangement;
+  location: {
+    city?: string;
+    state?: string;
+    campusId?: string;
+    remote?: boolean;
+  };
+  budget: {
+    type: OpportunityBudgetType;
+    min?: number;
+    max?: number;
+    currency: "NGN";
+  };
+  duration: OpportunityDuration;
+  experienceLevel: string;
+  deadline: string;
+  screeningQuestions: OpportunityScreeningQuestion[];
 }
 
 // ── Query / pagination ──────────────────────────────────────
@@ -227,12 +260,57 @@ export interface Proposal {
   createdAt: string;
   updatedAt: string;
   submittedAt?: string;
+  /** Optional employer-facing note set when the proposal is rejected (Module 28). */
+  rejectionReason?: string;
   timeline: {
     id: string;
     status: ProposalStatus;
     label: string;
     at: string;
   }[];
+}
+
+// ── Employer application views (Module 28) ────────────────
+// Read-model aggregates the employer Applications & Hiring surface consumes.
+// The proposal itself is the application — no duplicate model. The employer
+// may only ever see proposals on jobs they own (enforced in the service layer).
+
+export type EmployerApplicationStatus = Exclude<ProposalStatus, "draft">;
+
+/** Evergreen presentation mapping for the statuses an employer can act on. */
+export const EMPLOYER_APPLICATION_STATUSES: EmployerApplicationStatus[] = [
+  "submitted",
+  "under_review",
+  "shortlisted",
+  "accepted",
+  "rejected",
+  "withdrawn",
+] as const;
+
+/** A proposal + the job it belongs to + a public candidate preview. */
+export interface EmployerApplicationSummary {
+  proposal: Proposal;
+  job: {
+    id: string;
+    title: string;
+    status: OpportunityStatus;
+  };
+  candidate: {
+    id: string;
+    name: string;
+    headline: string;
+    avatar?: string;
+  };
+}
+
+export interface EmployerApplicationsPage {
+  items: EmployerApplicationSummary[];
+  total: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  /** Per-status counts across the employer's jobs (excludes drafts). */
+  counts: Record<EmployerApplicationStatus | "all", number>;
 }
 
 // ── Editable proposal input (mass-assignment-safe) ──────────
@@ -274,4 +352,6 @@ export interface OpportunityResult {
   proposal?: Proposal;
   opportunity?: Opportunity;
   status?: ProposalStatus;
+  /** Id of the contract created by an accepted proposal (hire). */
+  contractId?: string;
 }

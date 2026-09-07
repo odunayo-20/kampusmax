@@ -4,6 +4,7 @@ import {
   getConversationsByUser as _getConversationsByUser,
   getConversationById as _getConversationById,
   getMessagesByConversation as _getMessagesByConversation,
+  getOrCreateDirectConversationRecord,
   sendMessageRecord,
   markConversationReadRecord,
   markAllMessagesReadRecord,
@@ -40,6 +41,20 @@ export function getConversationForUser(
 
 export function getConversationById(id: string): Conversation | undefined {
   return _getConversationById(id);
+}
+
+/**
+ * Finds or creates a direct conversation between two users (Module 28
+ * "Message candidate"). Service layer guards: both users must exist and be
+ * distinct — a self-chat is invalid. The backend store owns id generation.
+ */
+export function getOrCreateDirectConversation(
+  userAId: string,
+  userBId: string
+): { created: boolean; conversation: Conversation } | null {
+  if (!userAId || !userBId || userAId === userBId) return null;
+  if (!getUserById(userAId) || !getUserById(userBId)) return null;
+  return getOrCreateDirectConversationRecord(userAId, userBId);
 }
 
 export function getMessages(conversationId: string): Message[] {

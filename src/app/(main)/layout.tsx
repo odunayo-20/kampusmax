@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/footer/Footer";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { isServiceProviderDashboardPath } from "@/lib/utils";
 import { isFreelancerDashboardPath } from "@/services/freelancer-dashboard";
+import { isEmployerDashboardPath } from "@/services/employer";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,7 +21,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isVendorSection = pathname.startsWith("/vendor");
   const isServiceProviderSection = isServiceProviderDashboardPath(pathname);
   const isFreelancerSection = isFreelancerDashboardPath(pathname);
-  const isDashboardSection = isVendorSection || isServiceProviderSection || isFreelancerSection;
+  const isEmployerSection = isEmployerDashboardPath(pathname);
+  const isDashboardSection =
+    isVendorSection || isServiceProviderSection || isFreelancerSection || isEmployerSection;
 
   useEffect(() => {
     if (status === "unauthenticated") {

@@ -39,6 +39,7 @@ import {
   EMPLOYER_ONBOARDING_STEPS,
   isEmployerBlockingStatus,
 } from "@/types/employer";
+import { EMPLOYER_DASHBOARD_SECTIONS } from "@/config/employer-dashboard";
 
 // ── Owner context ───────────────────────────────────────────
 
@@ -313,6 +314,13 @@ export function getEmployerPublicPreview(
  */
 export function getEmployerCampusOptions() {
   return getCampuses();
+}
+
+/** True when the pathname belongs to the full-screen Employer dashboard shell. */
+export function isEmployerDashboardPath(pathname: string): boolean {
+  return EMPLOYER_DASHBOARD_SECTIONS.some(
+    (section) => pathname === section || pathname.startsWith(`${section}/`)
+  );
 }
 
 export { EMPLOYER_ONBOARDING_STEPS, isEmployerBlockingStatus };

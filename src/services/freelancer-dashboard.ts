@@ -19,16 +19,17 @@
 // sections therefore render true empty states + `—` placeholders so the library
 // is API-ready but never fakes activity.
 
-import { getCurrentUser } from "@/services/users";
+import { getCurrentUser, getUserById } from "@/services/users";
 import {
   getFreelancerOnboardingDraft,
   getFreelancerOnboardingStatus,
 } from "@/data/freelancer";
+import { FREELANCER_CATEGORIES } from "@/config/freelancer";
 import { getNotifications, getUnreadNotificationCount } from "@/services/notifications";
 import { computeFlCompletion } from "@/services/freelancer";
 import { getFreelancerContracts } from "@/services/contract";
 import { CONTRACT_STATUS } from "@/types/contract";
-import type { FreelancerOnboardingStatus } from "@/types/freelancer";
+import type { FreelancerOnboardingDraft, FreelancerOnboardingStatus } from "@/types/freelancer";
 import { FREELANCER_ONBOARDING_STATUS } from "@/types/freelancer";
 import type {
   FreelancerDashboard,
@@ -197,6 +198,72 @@ export function computeFreelancerProfileStatus(): FreelancerProfileStatus {
   return { status, completionPercentage, missing, isPublic, verification };
 }
 
+// ── Public freelancer profile (Module 28) ───────────────────
+// Read-model an EMPLOYER reviewing an application sees. Only fields the
+// backend treats as public — identity+approval, profile, skills, experience,
+// education, certifications, visible portfolio and rates. Contact details,
+// email, phone, verification artifacts and internal notes are never included.
+// Returns null for profiles that aren't approved (no partial private data
+// leaks from drafts or in-review records).
+
+export interface PublicFreelancerProfile {
+  id: string;
+  name: string;
+  avatar?: string;
+  approved: boolean;
+  slug?: string;
+  headline?: string;
+  bio?: string;
+  city?: string;
+  remoteAvailable: boolean;
+  categories: { id: string; name: string }[];
+  skills: string[];
+  experience: FreelancerOnboardingDraft["experience"];
+  education: FreelancerOnboardingDraft["education"];
+  certifications: FreelancerOnboardingDraft["certifications"];
+  portfolio: FreelancerOnboardingDraft["portfolio"];
+  rates: {
+    hourlyRate?: number;
+    projectRate?: number;
+    negotiable: boolean;
+  };
+  availability: { status: FreelancerDashAvailability | null; label: string };
+}
+
+export function getPublicFreelancerProfile(
+  userId: string
+): PublicFreelancerProfile | null {
+  const draft = getFreelancerOnboardingDraft(userId);
+  if (!draft || draft.status !== FREELANCER_ONBOARDING_STATUS.APPROVED) {
+    return null;
+  }
+  const user = getUserById(userId);
+  const categoryLookup = new Map(
+    FREELANCER_CATEGORIES.map((c) => [c.id, c.name])
+  );
+  return {
+    id: userId,
+    name: user?.name ?? userId,
+    avatar: user?.avatar || undefined,
+    approved: true,
+    slug: draft.approvedSlug,
+    headline: draft.profile.headline,
+    bio: draft.profile.bio,
+    city: draft.profile.city,
+    remoteAvailable: draft.profile.remoteAvailable === true,
+    categories: draft.categories
+      .map((id) => ({ id, name: categoryLookup.get(id) ?? id }))
+      .filter((c) => categoryLookup.has(c.id)),
+    skills: draft.skills,
+    experience: draft.experience,
+    education: draft.education,
+    certifications: draft.certifications,
+    portfolio: draft.portfolio.filter((p) => p.visible),
+    rates: { ...draft.rates },
+    availability: availabilityLabel(draft.availability.status),
+  };
+}
+
 // ── Dashboard overview ──────────────────────────────────────
 
 export function getFreelancerDashboard(): FreelancerDashboard | null {
@@ -244,7 +311,7 @@ export function getFreelancerDashboard(): FreelancerDashboard | null {
       bio: draft.profile.bio,
       photoUrl: draft.profile.photoUrl,
       city: draft.profile.city,
-      remoteAvailable: draft.profile.remoteAvailable,
+remoteAvailable: draft.profile.remoteAvailable === true,
       skills: draft.skills,
     },
     profileStatus,

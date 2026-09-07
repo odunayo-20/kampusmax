@@ -145,3 +145,38 @@ export function markAllMessagesReadRecord(userId: string): void {
 
   emitConversationsChanged();
 }
+
+/**
+ * Finds an existing direct (`type: "direct"`) conversation between two users
+ * or creates one. Used by the employer "Message candidate" action so the
+ * employer flow can jump straight into the same chat surface without a
+ * duplicate thread. Creation is the only path that writes a new conversation
+ * id — the UI never fabricates one.
+ */
+export function getOrCreateDirectConversationRecord(
+  userAId: string,
+  userBId: string
+): { created: boolean; conversation: Conversation } {
+  const existing = conversations.find(
+    (c) =>
+      c.type === "direct" &&
+      c.participants.includes(userAId) &&
+      c.participants.includes(userBId)
+  );
+  if (existing) {
+    return { created: false, conversation: existing };
+  }
+
+  const createdAt = new Date().toISOString();
+  const conversation: Conversation = {
+    id: `conv${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    type: "direct",
+    participants: [userAId, userBId],
+    unreadCount: 0,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  conversations.push(conversation);
+  emitConversationsChanged();
+  return { created: true, conversation };
+}

@@ -22,9 +22,11 @@ import { OpportunityStatusBadge } from "./StatusBadges";
 export function OpportunityCard({
   opportunity: o,
   saved,
+  href,
 }: {
   opportunity: Opportunity;
   saved?: boolean;
+  href?: string;
 }) {
   const category = JOB_CATEGORIES.find((c) => c.id === o.categoryId)?.name ?? "Other";
   const budgetLabel = budgetText(o);
@@ -32,7 +34,7 @@ export function OpportunityCard({
 
   return (
     <Link
-      href={`/freelancer/find-work/${o.id}`}
+      href={href ?? `/freelancer/find-work/${o.id}`}
       className="group block rounded-xl border border-neutral-200 bg-white p-5 transition-shadow hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">

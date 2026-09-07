@@ -13,6 +13,8 @@ import { CONTRACT_STATUS } from "@/types/contract";
 
 interface ContractStoreRecord {
   contract: Contract;
+  /** Owner-scoped: which freelancer this contract belongs to (Module 28). */
+  freelancerId: string;
 }
 
 const store = new Map<string, ContractStoreRecord>();
@@ -649,24 +651,108 @@ function disputedContract(): Contract {
 
 // ── Seed store at module load ───────────────────────────────
 
-store.set(freshId("ct"), { contract: pendingContract() });
-store.set(freshId("ct"), { contract: activeContract() });
-store.set(freshId("ct"), { contract: completedContract() });
-store.set(freshId("ct"), { contract: disputedContract() });
+store.set(freshId("ct"), { contract: pendingContract(), freelancerId: DEMO_FREELANCER_ID });
+store.set(freshId("ct"), { contract: activeContract(), freelancerId: DEMO_FREELANCER_ID });
+store.set(freshId("ct"), { contract: completedContract(), freelancerId: DEMO_FREELANCER_ID });
+store.set(freshId("ct"), { contract: disputedContract(), freelancerId: DEMO_FREELANCER_ID });
 
 // ── Store API ───────────────────────────────────────────────
 
+/**
+ * Backend-authoritative contract creation (Module 28 "hire"). The employer
+ * flow never constructs a contract itself — accepting a proposal signals this
+ * store to create the PENDING_ACCEPTANCE record owned by the hired freelancer.
+ */
+export function createContractRecord(input: {
+  freelancerId: string;
+  proposalId: string;
+  projectTitle: string;
+  client: Contract["client"];
+  agreedAmount?: number;
+  scope: string;
+  deliverables: string[];
+  deadlineDays: number;
+}): Contract {
+  const now = nowIso();
+  const deadline = daysFromNow(Math.max(Math.floor(input.deadlineDays), 1));
+  const contract: Contract = {
+    id: freshId("ct"),
+    proposalId: input.proposalId,
+    projectTitle: input.projectTitle,
+    status: CONTRACT_STATUS.PENDING_ACCEPTANCE,
+    client: { ...input.client },
+    agreedAmount: input.agreedAmount,
+    currency: "NGN",
+    startDate: now,
+    deadline,
+    progress: 0,
+    currentMilestone: undefined,
+    nextAction: "Review and accept this contract to begin work.",
+    lastActivity: now,
+    totalMilestones: 1,
+    completedMilestones: 0,
+    outstandingDeliverables: 0,
+    agreement: {
+      scope: input.scope,
+      terms: "Milestone-based. The client reviews each submission within 5 business days and provides up to two rounds of revisions per milestone.",
+      expectations:
+        "The freelancer agrees to communicate progress and deliver the final files agreed in the accepted proposal.",
+      deliverables: [...input.deliverables],
+      conditions: [
+        "Deliverables must be original and free of third-party licensing conflicts.",
+        "The client owns the final deliverables after completion.",
+      ],
+    },
+    projectScope: {
+      included: [...input.deliverables],
+      excluded: [],
+      requirements: [],
+    },
+    milestones: [
+      {
+        id: freshId("ms"),
+        contractId: "",
+        title: "Project delivery",
+        description: input.scope,
+        dueDate: deadline,
+        status: "PENDING",
+        progress: 0,
+        deliverables: [],
+      },
+    ],
+    files: [],
+    timeline: [
+      {
+        id: freshId("tl"),
+        type: "CONTRACT_CREATED",
+        timestamp: now,
+        actor: { displayName: input.client.displayName },
+        description: "Contract created from an accepted proposal.",
+      },
+    ],
+    deliverables: [],
+    canAccept: true,
+    canCancel: false,
+    canComplete: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+  store.set(contract.id, { contract, freelancerId: input.freelancerId });
+  return cloneContract(contract);
+}
+
 /** Returns all contracts owned by the given freelancer (backend-scoped). */
 export function getContractsForFreelancer(userId: string): Contract[] {
-  // Demo store: same set regardless of id for the seeded user.
-  if (userId !== DEMO_FREELANCER_ID) return [];
-  return Array.from(store.values()).map((r) => cloneContract(r.contract));
+  return Array.from(store.values())
+    .filter((r) => r.freelancerId === userId)
+    .map((r) => cloneContract(r.contract));
 }
 
 /** Returns a single contract by id if it belongs to the freelancer. */
 export function getContractForFreelancer(userId: string, contractId: string): Contract | null {
-  if (userId !== DEMO_FREELANCER_ID) return null;
-  const rec = Array.from(store.values()).find((r) => r.contract.id === contractId);
+  const rec = Array.from(store.values()).find(
+    (r) => r.freelancerId === userId && r.contract.id === contractId
+  );
   return rec ? cloneContract(rec.contract) : null;
 }
 

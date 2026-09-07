@@ -14,7 +14,10 @@
 // end-to-end without a freelancer applying to their own job.
 
 import type {
+  EmployerApplicationStatus,
   Opportunity,
+  OpportunityEmployer,
+  OpportunityInput,
   Proposal,
   ProposalInput,
   ProposalStatus,
@@ -54,7 +57,8 @@ function clone<T>(value: T): T {
 const opportunities = new Map<string, Opportunity>();
 
 function seedOpp(id: string, opp: Opportunity) {
-  opportunities.set(id, opp);
+  // Owner is derived from the employer summary, never supplied by a client.
+  opportunities.set(id, { ...opp, employerUserId: opp.employer.id });
 }
 
 const CLIENT_A = {
@@ -244,15 +248,147 @@ seedOpp("opp_expired", {
   proposalCount: 6,
 });
 
+// ── Demo employer (u1) job listings ─────────────────────────
+// Module 27: the demo employer (u1, Oluwaseun Labs) owns a set of jobs
+// across every backend status so the employer management surface can be
+// demonstrated. The OPEN listing's skills intentionally fall outside the
+// demo freelancer's profile so the marketplace never invites the demo user
+// to apply to their own employer's job.
+
+const EMPLOYER_U1 = {
+  id: "u1",
+  name: "Oluwaseun Labs",
+  descriptor: "Technology • Rufus Giwa Polytechnic",
+  location: "Owo, Ondo State",
+  verified: true,
+};
+
+seedOpp("opp_my_open", {
+  id: "opp_my_open",
+  title: "Video editor for product launch promos",
+  categoryId: "ec7",
+  summary:
+    "Cut 4 launch promos for our student-entrepreneur tools. Raw footage and brand kit provided.",
+  description:
+    "We're launching a new tool for student entrepreneurs and need short, punchy promos for social and our site. You'll work from a provided shot list and brand kit.\n\nScope: four 30–60s promos, one vertical cut each, plus captions. Rough cuts within a week of kick-off.",
+  requirements:
+    "Comfortable with Premiere Pro or DaVinci Resolve. Motion graphics for titles is a plus. A short portfolio or sample reel is required.",
+  skills: ["Video Editing", "Adobe Premiere", "DaVinci Resolve", "Motion Graphics"],
+  workArrangement: "hybrid",
+  location: { city: "Owo", state: "Ondo", campusId: "rugipo", remote: true },
+  budget: { type: "project", min: 120000, max: 250000, currency: "NGN" },
+  duration: "short_term",
+  experienceLevel: "intermediate",
+  postedAt: daysAgo(1),
+  deadline: daysFromNow(12),
+  status: OPPORTUNITY_STATUS.OPEN,
+  employer: EMPLOYER_U1,
+  employerUserId: "u1",
+  screeningQuestions: [
+    { id: "sq1", question: "Link a promo or reel you've edited.", optional: false },
+  ],
+  attachments: [],
+  viewCount: 41,
+  proposalCount: 4,
+});
+
+seedOpp("opp_my_draft", {
+  id: "opp_my_draft",
+  title: "Design newsletter templates for student founders",
+  categoryId: "ec3",
+  summary: "A set of clean, mobile-friendly newsletter templates in Figma.",
+  description:
+    "We send a weekly newsletter to student founders and need a reusable template system: header, story cards, CTA blocks and a sponsor slot.\n\nDeliverables are Figma files plus a short style note we can hand to a developer.",
+  requirements:
+    "Strong Figma skills and an eye for mobile-first layout. Experience with email design is a plus.",
+  skills: ["Figma", "Graphic Design", "Email Design"],
+  workArrangement: "remote",
+  location: { city: "Owo", state: "Ondo", campusId: "rugipo", remote: true },
+  budget: { type: "project", min: 60000, max: 140000, currency: "NGN" },
+  duration: "few_weeks",
+  experienceLevel: "entry_level",
+  postedAt: daysAgo(3),
+  deadline: daysFromNow(20),
+  status: OPPORTUNITY_STATUS.DRAFT,
+  employer: EMPLOYER_U1,
+  employerUserId: "u1",
+  screeningQuestions: [],
+  attachments: [],
+  viewCount: 0,
+  proposalCount: 0,
+});
+
+seedOpp("opp_my_pending", {
+  id: "opp_my_pending",
+  title: "Website copy for our studio site",
+  categoryId: "ec5",
+  summary: "Homepage, about and services copy for the Oluwaseun Labs website.",
+  description:
+    "We're refreshing our studio website. We need clear, friendly copy for five pages and a set of SEO meta descriptions.\n\nWe'll provide the outline and tone notes; you write, we edit together.",
+  requirements: "Excellent written English. Portfolio or writing samples required.",
+  skills: ["Copywriting", "Content Writing", "SEO"],
+  workArrangement: "remote",
+  location: { city: "Owo", state: "Ondo", campusId: "rugipo", remote: true },
+  budget: { type: "project", min: 50000, max: 120000, currency: "NGN" },
+  duration: "few_weeks",
+  experienceLevel: "intermediate",
+  postedAt: daysAgo(2),
+  deadline: daysFromNow(16),
+  status: OPPORTUNITY_STATUS.PENDING_REVIEW,
+  employer: EMPLOYER_U1,
+  employerUserId: "u1",
+  screeningQuestions: [],
+  attachments: [],
+  viewCount: 0,
+  proposalCount: 0,
+});
+
+seedOpp("opp_my_closed", {
+  id: "opp_my_closed",
+  title: "Mobile app UI exploration (closed)",
+  categoryId: "ec4",
+  summary: "This listing is closed — no longer accepting proposals.",
+  description:
+    "We explored visual routes for a student tools app. The listing is now closed.",
+  requirements: "UI/UX design, Figma, low-fi to hi-fi exploration.",
+  skills: ["UI/UX Design", "Figma", "Prototyping"],
+  workArrangement: "remote",
+  location: { city: "Owo", state: "Ondo", campusId: "rugipo", remote: true },
+  budget: { type: "project", min: 80000, max: 200000, currency: "NGN" },
+  duration: "few_weeks",
+  experienceLevel: "intermediate",
+  postedAt: daysAgo(14),
+  deadline: daysAgo(2),
+  status: OPPORTUNITY_STATUS.CLOSED,
+  employer: EMPLOYER_U1,
+  employerUserId: "u1",
+  screeningQuestions: [],
+  attachments: [],
+  viewCount: 86,
+  proposalCount: 2,
+});
+
 // ── Opportunity store API ───────────────────────────────────
 
+/**
+ * Replaces the static seed `proposalCount` with the live count derived from
+ * the proposal store (Module 28). The number an employer sees is always the
+ * current volume of (non-draft, non-withdrawn) proposals — never a stale
+ * literal recorded at publish time.
+ */
+export function hydrateOpportunityCounts(opp: Opportunity): Opportunity {
+  const hydrated = { ...clone(opp) };
+  hydrated.proposalCount = getProposalCountForOpportunity(opp.id);
+  return hydrated;
+}
+
 export function getAllOpportunities(): Opportunity[] {
-  return clone(Array.from(opportunities.values()));
+  return Array.from(opportunities.values()).map(hydrateOpportunityCounts);
 }
 
 export function getOpportunityRecord(id: string): Opportunity | null {
   const opp = opportunities.get(id);
-  return opp ? clone(opp) : null;
+  return opp ? hydrateOpportunityCounts(opp) : null;
 }
 
 export function incrementOpportunityViews(id: string): void {
@@ -297,10 +433,10 @@ export function queryOpportunityRecords(
 
   list = sortOpportunities(list, query.sort ?? "newest");
 
-  return { items: list, total: list.length };
+  return { items: list.map(hydrateOpportunityCounts), total: list.length };
 }
 
-function sortOpportunities(list: Opportunity[], sort: OpportunitySortKey): Opportunity[] {
+export function sortOpportunities(list: Opportunity[], sort: OpportunitySortKey): Opportunity[] {
   const budgetOf = (o: Opportunity) => o.budget.max ?? o.budget.min ?? 0;
   switch (sort) {
     case "oldest":
@@ -315,6 +451,122 @@ function sortOpportunities(list: Opportunity[], sort: OpportunitySortKey): Oppor
     default:
       return [...list].sort((a, b) => +new Date(b.postedAt) - +new Date(a.postedAt));
   }
+}
+
+// ── Employer-owned job management (Module 27) ───────────────
+// Owner-scoped record operations. Status is only ever written by these
+// transition functions (simulating the backend) — never by the client.
+
+export function listEmployerOpportunityRecords(ownerId: string): Opportunity[] {
+  return Array.from(opportunities.values())
+    .filter((o) => o.employerUserId === ownerId)
+    .sort((a, b) => +new Date(b.postedAt) - +new Date(a.postedAt))
+    .map(hydrateOpportunityCounts);
+}
+
+export function countOpportunitiesByStatus(
+  ownerId: string
+): Record<OpportunityStatus, number> & { all: number } {
+  const counts: Record<OpportunityStatus, number> & { all: number } = {
+    draft: 0,
+    pending_review: 0,
+    open: 0,
+    closed: 0,
+    expired: 0,
+    cancelled: 0,
+    all: 0,
+  };
+  for (const o of opportunities.values()) {
+    if (o.employerUserId !== ownerId) continue;
+    counts.all += 1;
+    counts[o.status] += 1;
+  }
+  return counts;
+}
+
+export function createOpportunityRecord(
+  ownerId: string,
+  input: OpportunityInput,
+  employerSummary: OpportunityEmployer
+): Opportunity {
+  const now = nowIso();
+  const opportunity: Opportunity = {
+    id: freshId("opp"),
+    title: input.title,
+    categoryId: input.categoryId,
+    summary: input.summary,
+    description: input.description,
+    requirements: input.requirements,
+    skills: [...input.skills],
+    workArrangement: input.workArrangement,
+    location: { ...input.location },
+    budget: { ...input.budget },
+    duration: input.duration,
+    experienceLevel: input.experienceLevel,
+    deadline: input.deadline,
+    screeningQuestions: input.screeningQuestions.map((q) => ({
+      ...q,
+      id: q.id || freshId("sq"),
+    })),
+    attachments: [],
+    postedAt: now,
+    status: OPPORTUNITY_STATUS.DRAFT,
+    employer: { ...employerSummary },
+    employerUserId: ownerId,
+    viewCount: 0,
+    proposalCount: 0,
+  };
+  opportunities.set(opportunity.id, opportunity);
+  return hydrateOpportunityCounts(clone(opportunity));
+}
+
+export function updateDraftOpportunityRecord(
+  ownerId: string,
+  id: string,
+  input: OpportunityInput
+): Opportunity | null {
+  const opp = opportunities.get(id);
+  if (!opp || opp.employerUserId !== ownerId || opp.status !== OPPORTUNITY_STATUS.DRAFT) {
+    return null;
+  }
+  opp.title = input.title;
+  opp.categoryId = input.categoryId;
+  opp.summary = input.summary;
+  opp.description = input.description;
+  opp.requirements = input.requirements;
+  opp.skills = [...input.skills];
+  opp.workArrangement = input.workArrangement;
+  opp.location = { ...input.location };
+  opp.budget = { ...input.budget };
+  opp.duration = input.duration;
+  opp.experienceLevel = input.experienceLevel;
+  opp.deadline = input.deadline;
+  opp.screeningQuestions = input.screeningQuestions.map((q) => ({
+    ...q,
+    id: q.id || freshId("sq"),
+  }));
+  opp.attachments = [];
+  return hydrateOpportunityCounts(clone(opp));
+}
+
+/** DRAFT → PENDING_REVIEW (backend-authorized moderation queue). */
+export function publishOpportunityRecord(ownerId: string, id: string): Opportunity | null {
+  const opp = opportunities.get(id);
+  if (!opp || opp.employerUserId !== ownerId || opp.status !== OPPORTUNITY_STATUS.DRAFT) {
+    return null;
+  }
+  opp.status = OPPORTUNITY_STATUS.PENDING_REVIEW;
+  return hydrateOpportunityCounts(clone(opp));
+}
+
+/** OPEN → CLOSED (employer retracts a live posting). */
+export function closeOpportunityRecord(ownerId: string, id: string): Opportunity | null {
+  const opp = opportunities.get(id);
+  if (!opp || opp.employerUserId !== ownerId || opp.status !== OPPORTUNITY_STATUS.OPEN) {
+    return null;
+  }
+  opp.status = OPPORTUNITY_STATUS.CLOSED;
+  return hydrateOpportunityCounts(clone(opp));
 }
 
 // ── Saved jobs (per user, localStorage-synced for resilience) ──
@@ -494,5 +746,346 @@ export function withdrawProposalRecord(id: string): Proposal | null {
     label: "Proposal withdrawn",
     at: nowIso(),
   });
+  return clone(p);
+}
+
+// ── Seeded proposals for the demo employer (u1) jobs ────────
+// Module 28: the employer Applications surface needs realistic volume across
+// every status it can act on. These proposals are submitted by REAL seed users
+// (u2–u5) whose approved freelancer profiles back the candidate previews.
+// Only the demo owner's jobs carry proposals so the surface never leaks other
+// employers' candidates.
+
+function seededProposal(seed: {
+  id: string;
+  opportunityId: string;
+  freelancerId: string;
+  coverLetter: string;
+  proposedAmount: number;
+  delivery: { value: number; unit: "days" | "weeks" | "months" };
+  screeningAnswers: { questionId: string; answer: string }[];
+  attachments: Proposal["attachments"];
+  status: ProposalStatus;
+  submittedDaysAgo: number;
+  extraTimeline?: { status: ProposalStatus; label: string; daysAgo: number }[];
+  rejectionReason?: string;
+}): void {
+  const at = daysAgo(seed.submittedDaysAgo);
+  const timeline = [
+    {
+      id: freshId("ev"),
+      status: PROPOSAL_STATUS.SUBMITTED,
+      label: "Proposal submitted",
+      at,
+    },
+    ...(seed.extraTimeline ?? []).map((e) => ({
+      id: freshId("ev"),
+      status: e.status,
+      label: e.label,
+      at: daysAgo(e.daysAgo),
+    })),
+  ];
+  const proposal: Proposal = {
+    id: seed.id,
+    opportunityId: seed.opportunityId,
+    freelancerId: seed.freelancerId,
+    coverLetter: seed.coverLetter,
+    proposedAmount: seed.proposedAmount,
+    delivery: seed.delivery,
+    screeningAnswers: seed.screeningAnswers.map((a) => ({ ...a })),
+    attachments: seed.attachments.map((a) => ({ ...a })),
+    status: seed.status,
+    createdAt: at,
+    updatedAt: seed.extraTimeline?.length
+      ? daysAgo(seed.extraTimeline[seed.extraTimeline.length - 1].daysAgo)
+      : at,
+    submittedAt: at,
+    rejectionReason: seed.rejectionReason,
+    timeline,
+  };
+  proposals.set(seed.id, proposal);
+}
+
+// Job: opp_my_open (video editor for launch promos — OPEN)
+seededProposal({
+  id: "ap_open_1",
+  opportunityId: "opp_my_open",
+  freelancerId: "u2",
+  coverLetter:
+    "Hi — I've cut promos for campus startups and local brands for two years, and your shot list is right in my wheelhouse. I can deliver all four cuts (plus vertical versions) with tight, trend-aware captions.\n\nI'd start with a rough of the first promo within 48 hours so you can lock the tone early, and I'll be on hand for one round of revisions per cut.",
+  proposedAmount: 180000,
+  delivery: { value: 7, unit: "days" },
+  screeningAnswers: [
+    {
+      questionId: "sq1",
+      answer: "Here's a 30s launch promo I recently edited: https://youtu.be/example-chioma-promo",
+    },
+  ],
+  attachments: [
+    { id: "att_o1", filename: "chioma-sample-reel.mp4", sizeBytes: 18400000, mimeType: "video/mp4" },
+  ],
+  status: PROPOSAL_STATUS.UNDER_REVIEW,
+  submittedDaysAgo: 2,
+  extraTimeline: [
+    { status: PROPOSAL_STATUS.UNDER_REVIEW, label: "Application is being reviewed", daysAgo: 1 },
+  ],
+});
+
+seededProposal({
+  id: "ap_open_2",
+  opportunityId: "opp_my_open",
+  freelancerId: "u3",
+  coverLetter:
+    "Editor and colorist here. I work in Premiere and Resolve, and I'll handle rough cuts, grade, captions and the vertical re-cuts for social. For this project I'd propose a structured week: Day 1–2 roughs, Day 3–4 revision round, Day 5–7 finals.\n\nMotion titles are a strength — happy to build a small branded pack you can reuse later.",
+  proposedAmount: 160000,
+  delivery: { value: 10, unit: "days" },
+  screeningAnswers: [
+    {
+      questionId: "sq1",
+      answer: "My Founder Stories series (ep 1): https://youtu.be/example-ibrahim-ep1",
+    },
+  ],
+  attachments: [
+    { id: "att_o2", filename: "ibrahim-brand-intro.mp4", sizeBytes: 21000000, mimeType: "video/mp4" },
+  ],
+  status: PROPOSAL_STATUS.SHORTLISTED,
+  submittedDaysAgo: 3,
+  extraTimeline: [
+    { status: PROPOSAL_STATUS.SHORTLISTED, label: "Shortlisted", daysAgo: 1 },
+  ],
+});
+
+seededProposal({
+  id: "ap_open_3",
+  opportunityId: "opp_my_open",
+  freelancerId: "u5",
+  coverLetter:
+    "Just applied for this — I specialise in short-form edits with fast pacing and bold captions. I can turn around a rough of the first promo within 48 hours and keep the cadence on the remaining three. I only use licensed music/brand kit assets.",
+  proposedAmount: 150000,
+  delivery: { value: 5, unit: "days" },
+  screeningAnswers: [
+    {
+      questionId: "sq1",
+      answer: "Sample vertical reel: https://www.instagram.com/reel/example-emeka",
+    },
+  ],
+  attachments: [],
+  status: PROPOSAL_STATUS.SUBMITTED,
+  submittedDaysAgo: 0,
+});
+
+seededProposal({
+  id: "ap_open_4",
+  opportunityId: "opp_my_open",
+  freelancerId: "u5",
+  coverLetter:
+    "I can handle the four launch promos incl. captions and vertical cuts — here's a link to a similar cafe-launch reel pack I built.",
+  proposedAmount: 120000,
+  delivery: { value: 6, unit: "days" },
+  screeningAnswers: [
+    {
+      questionId: "sq1",
+      answer: "Cafe launch reel: https://youtu.be/example-cafe-launch",
+    },
+  ],
+  attachments: [],
+  status: PROPOSAL_STATUS.WITHDRAWN,
+  submittedDaysAgo: 7,
+  extraTimeline: [
+    { status: PROPOSAL_STATUS.WITHDRAWN, label: "Proposal withdrawn", daysAgo: 6 },
+  ],
+});
+
+seededProposal({
+  id: "ap_open_5",
+  opportunityId: "opp_my_open",
+  freelancerId: "u4",
+  coverLetter:
+    "My background is product/UI design, but I also build motion titles and simple animated promos for brand sites, which may suit the lighter cuts in this scope. Full transparency that editing at this pace isn't my core service.",
+  proposedAmount: 135000,
+  delivery: { value: 14, unit: "days" },
+  screeningAnswers: [
+    {
+      questionId: "sq1",
+      answer: "Motion design sample: https://dribbble.com/shots/example-motion",
+    },
+  ],
+  attachments: [],
+  status: PROPOSAL_STATUS.REJECTED,
+  submittedDaysAgo: 5,
+  extraTimeline: [
+    { status: PROPOSAL_STATUS.REJECTED, label: "Application rejected", daysAgo: 2 },
+  ],
+  rejectionReason: "We need a dedicated video editor — editing pace and depth didn't match this scope.",
+});
+
+// Job: opp_my_closed (mobile app UI exploration — CLOSED)
+seededProposal({
+  id: "ap_closed_1",
+  opportunityId: "opp_my_closed",
+  freelancerId: "u4",
+  coverLetter:
+    "I proposed the UI exploration as a set of Figma flows: low-fi wireframes, two visual routes, and a clickable prototype with a compact style guide. My proposal issue mirrors the scope exactly — happy to zoom in on anything here.",
+  proposedAmount: 185000,
+  delivery: { value: 10, unit: "days" },
+  screeningAnswers: [],
+  attachments: [
+    { id: "att_c1", filename: "folashade-exploration.pdf", sizeBytes: 3400000, mimeType: "application/pdf" },
+  ],
+  status: PROPOSAL_STATUS.ACCEPTED,
+  submittedDaysAgo: 12,
+  extraTimeline: [
+    { status: PROPOSAL_STATUS.ACCEPTED, label: "Accepted", daysAgo: 6 },
+  ],
+});
+
+seededProposal({
+  id: "ap_closed_2",
+  opportunityId: "opp_my_closed",
+  freelancerId: "u2",
+  coverLetter:
+    "I can deliver the UI exploration scope — wireframes through hi-fi Figma prototype with a reusable component kit. I'd present two visual directions before polishing the selected route.",
+  proposedAmount: 175000,
+  delivery: { value: 8, unit: "days" },
+  screeningAnswers: [],
+  attachments: [],
+  status: PROPOSAL_STATUS.SHORTLISTED,
+  submittedDaysAgo: 13,
+  extraTimeline: [
+    { status: PROPOSAL_STATUS.SHORTLISTED, label: "Shortlisted", daysAgo: 9 },
+  ],
+});
+
+// ── Employer proposal reads (Module 28) ──────────────────────
+// Employers read the SAME Proposal records the freelancer submits — no
+// separate application model is ever created. Drafts are never exposed to
+// employers; ownership filtering happens at the service layer.
+
+export function getProposalsForOpportunity(opportunityId: string): Proposal[] {
+  return clone(
+    Array.from(proposals.values())
+      .filter(
+        (p) => p.opportunityId === opportunityId && p.status !== PROPOSAL_STATUS.DRAFT
+      )
+      .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
+  );
+}
+
+export function getProposalsForOpportunities(opportunityIds: string[]): Proposal[] {
+  const ids = new Set(opportunityIds);
+  return clone(
+    Array.from(proposals.values())
+      .filter((p) => ids.has(p.opportunityId) && p.status !== PROPOSAL_STATUS.DRAFT)
+      .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
+  );
+}
+
+export function getProposalCountForOpportunity(opportunityId: string): number {
+  let count = 0;
+  for (const p of proposals.values()) {
+    if (p.opportunityId !== opportunityId) continue;
+    if (
+      p.status === PROPOSAL_STATUS.DRAFT ||
+      p.status === PROPOSAL_STATUS.WITHDRAWN
+    ) {
+      continue;
+    }
+    count += 1;
+  }
+  return count;
+}
+
+export function countEmployerApplicationStatuses(
+  opportunityIds: string[]
+): Record<EmployerApplicationStatus | "all", number> {
+  const ids = new Set(opportunityIds);
+  const counts: Record<EmployerApplicationStatus | "all", number> = {
+    submitted: 0,
+    under_review: 0,
+    shortlisted: 0,
+    accepted: 0,
+    rejected: 0,
+    withdrawn: 0,
+    all: 0,
+  };
+  for (const p of proposals.values()) {
+    if (!ids.has(p.opportunityId)) continue;
+    if (p.status === PROPOSAL_STATUS.DRAFT) continue;
+    counts.all += 1;
+    counts[p.status] += 1;
+  }
+  return counts;
+}
+
+// ── Employer proposal transitions (backend-owned) ───────────
+// Status is only ever written here — never by the client. Each transition
+// enforces its allowed source states and records a timeline event.
+
+function pushTimelineEvent(
+  p: Proposal,
+  status: ProposalStatus,
+  label: string
+): void {
+  p.timeline.push({ id: freshId("ev"), status, label, at: nowIso() });
+}
+
+/** SUBMITTED → UNDER_REVIEW */
+export function setProposalUnderReviewRecord(id: string): Proposal | null {
+  const p = proposals.get(id);
+  if (!p || p.status !== PROPOSAL_STATUS.SUBMITTED) return null;
+  p.status = PROPOSAL_STATUS.UNDER_REVIEW;
+  p.updatedAt = nowIso();
+  pushTimelineEvent(p, PROPOSAL_STATUS.UNDER_REVIEW, "Application is being reviewed");
+  return clone(p);
+}
+
+/** SUBMITTED | UNDER_REVIEW → SHORTLISTED */
+export function setProposalShortlistedRecord(id: string): Proposal | null {
+  const p = proposals.get(id);
+  if (!p) return null;
+  const from: ProposalStatus[] = [
+    PROPOSAL_STATUS.SUBMITTED,
+    PROPOSAL_STATUS.UNDER_REVIEW,
+  ];
+  if (!from.includes(p.status)) return null;
+  p.status = PROPOSAL_STATUS.SHORTLISTED;
+  p.updatedAt = nowIso();
+  pushTimelineEvent(p, PROPOSAL_STATUS.SHORTLISTED, "Shortlisted");
+  return clone(p);
+}
+
+/** SUBMITTED | UNDER_REVIEW | SHORTLISTED → REJECTED (optional reason) */
+export function setProposalRejectedRecord(
+  id: string,
+  reason?: string
+): Proposal | null {
+  const p = proposals.get(id);
+  if (!p) return null;
+  const from: ProposalStatus[] = [
+    PROPOSAL_STATUS.SUBMITTED,
+    PROPOSAL_STATUS.UNDER_REVIEW,
+    PROPOSAL_STATUS.SHORTLISTED,
+  ];
+  if (!from.includes(p.status)) return null;
+  p.status = PROPOSAL_STATUS.REJECTED;
+  p.rejectionReason = reason?.trim() ? reason.trim() : undefined;
+  p.updatedAt = nowIso();
+  pushTimelineEvent(p, PROPOSAL_STATUS.REJECTED, "Application rejected");
+  return clone(p);
+}
+
+/** SUBMITTED | UNDER_REVIEW | SHORTLISTED → ACCEPTED (hire) */
+export function setProposalAcceptedRecord(id: string): Proposal | null {
+  const p = proposals.get(id);
+  if (!p) return null;
+  const from: ProposalStatus[] = [
+    PROPOSAL_STATUS.SUBMITTED,
+    PROPOSAL_STATUS.UNDER_REVIEW,
+    PROPOSAL_STATUS.SHORTLISTED,
+  ];
+  if (!from.includes(p.status)) return null;
+  p.status = PROPOSAL_STATUS.ACCEPTED;
+  p.updatedAt = nowIso();
+  pushTimelineEvent(p, PROPOSAL_STATUS.ACCEPTED, "Accepted");
   return clone(p);
 }
