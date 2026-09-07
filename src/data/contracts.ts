@@ -748,6 +748,17 @@ export function getContractsForFreelancer(userId: string): Contract[] {
     .map((r) => cloneContract(r.contract));
 }
 
+/**
+ * Returns all contracts where this user is the client/employer (Module 29).
+ * Authorized by contract.client.id (the employer identity recorded by the
+ * store at creation) — the same FK a future contracts API would enforce.
+ */
+export function getContractsForEmployer(userId: string): Contract[] {
+  return Array.from(store.values())
+    .filter((r) => r.contract.client.id === userId)
+    .map((r) => cloneContract(r.contract));
+}
+
 /** Returns a single contract by id if it belongs to the freelancer. */
 export function getContractForFreelancer(userId: string, contractId: string): Contract | null {
   const rec = Array.from(store.values()).find(

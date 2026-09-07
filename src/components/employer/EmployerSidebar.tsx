@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import {
   Briefcase,
   FilePlus,
+  FileText,
   Building2,
   MessageSquare,
   Bell,
   Home,
-  Lock,
   LayoutDashboard,
   Users,
 } from "lucide-react";
@@ -23,7 +23,6 @@ interface NavItem {
   label: string;
   icon: typeof Briefcase;
   badgeCount?: number;
-  placeholder?: boolean;
 }
 
 type NavSection = { title?: string; items: NavItem[] };
@@ -41,7 +40,7 @@ export function EmployerSidebar({
 
   const sections: NavSection[] = [
     {
-      items: [{ label: "Dashboard", href: "/employer", icon: LayoutDashboard, placeholder: true }],
+      items: [{ label: "Dashboard", href: "/employer/dashboard", icon: LayoutDashboard }],
     },
     {
       title: "Jobs",
@@ -49,6 +48,7 @@ export function EmployerSidebar({
         { label: "My Jobs", href: "/employer/jobs", icon: Briefcase },
         { label: "Create a Job", href: "/employer/jobs/create", icon: FilePlus },
         { label: "Applications", href: "/employer/applications", icon: Users },
+        { label: "Contracts", href: "/employer/contracts", icon: FileText },
       ],
     },
     {
@@ -90,23 +90,9 @@ export function EmployerSidebar({
                 {section.title}
               </p>
             )}
-            <ul className="space-y-0.5">
+<ul className="space-y-0.5">
               {section.items.map((item) => {
                 const Icon = item.icon;
-                if (item.placeholder) {
-                  return (
-                    <li key={item.label}>
-                      <span
-                        aria-disabled="true"
-                        className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/40"
-                      >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        <span className="flex-1 truncate">{item.label}</span>
-                        <Lock className="h-3.5 w-3.5 text-white/40" aria-label="Coming soon" />
-                      </span>
-                    </li>
-                  );
-                }
                 const active = item.href
                   ? pathname === item.href || pathname.startsWith(`${item.href}/`)
                   : false;

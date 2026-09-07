@@ -1,0 +1,76 @@
+"use client";
+
+import { ContractStatusBadge } from "@/components/contracts/ContractStatusBadge";
+import { useEmployerContracts } from "@/hooks/use-employer-dashboard";
+import { formatDate, formatNaira } from "@/lib/utils";
+import { getFriendlyErrorMessage } from "@/lib/error-messages";
+import {
+  EmployerDashboardEmpty,
+  EmployerDashboardError,
+  EmployerDashboardSkeleton,
+} from "./EmployerDashboardSection";
+
+export function EmployerContracts() {
+  const query = useEmployerContracts();
+  const contracts = query.data ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-kampmax-text">Contracts</h1>
+        <p className="mt-0.5 text-sm text-kampmax-text-secondary">
+          Work that started from the applications you hired.
+        </p>
+      </div>
+
+      {query.isPending ? (
+        <div className="rounded-xl border border-kampmax-border bg-white p-5">
+          <EmployerDashboardSkeleton rows={5} />
+        </div>
+      ) : query.isError ? (
+        <div className="rounded-xl border border-kampmax-border bg-white p-5">
+          <EmployerDashboardError message={getFriendlyErrorMessage(query.error)} onRetry={query.refetch} />
+        </div>
+      ) : contracts.length === 0 ? (
+        <EmployerDashboardEmpty
+          title="No contracts yet"
+          detail="Accepting an application automatically creates a contract for the hired freelancer."
+          action={{ href: "/employer/applications", label: "Review applications" }}
+        />
+      ) : (
+        <ul className="space-y-3">
+          {contracts.map((contract) => (
+            <li key={contract.id} className="rounded-xl border border-kampmax-border bg-white p-4 sm:p-5">
+              <article>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-kampmax-text">{contract.projectTitle}</h2>
+                    <p className="mt-0.5 text-xs text-kampmax-text-secondary">
+                      {contract.freelancerName}
+                      {contract.amount ? ` · ${formatNaira(contract.amount)}` : ""} · Due{" "}
+                      {formatDate(contract.deadline)}
+                    </p>
+                  </div>
+                  <ContractStatusBadge status={contract.status} />
+                </div>
+
+                {contract.nextAction && (
+                  <p className="mt-3 rounded-lg bg-kampmax-bg px-3 py-2 text-xs text-kampmax-text-secondary">
+                    {contract.nextAction}
+                  </p>
+                )}
+
+                {contract.outstandingDeliverables > 0 && (
+                  <p className="mt-2 text-xs font-medium text-info-700">
+                    {contract.outstandingDeliverables}{" "}
+                    {contract.outstandingDeliverables === 1 ? "deliverable" : "deliverables"} outstanding
+                  </p>
+                )}
+              </article>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

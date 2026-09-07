@@ -110,3 +110,17 @@ export const applicationKeys = {
   summary: (userId: string) =>
     ["applications", "summary", userId] as const,
 };
+
+/**
+ * Employer dashboard key factory (Module 29). The dashboard is an
+ * orchestration layer, so its summary aggregates owner-scoped data from
+ * the existing modules; every relevant mutation additionally invalidates
+ * the flat `all` key so the dashboard refreshes together with its sources.
+ */
+export const dashboardKeys = {
+  all: ["employer-dashboard"] as const,
+  summary: (userId: string) =>
+    ["employer-dashboard", "summary", userId] as const,
+  contracts: (userId: string) =>
+    ["employer-dashboard", "contracts", userId] as const,
+};

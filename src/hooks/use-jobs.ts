@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   EmployerJobListQuery,
   JobListQuery,
+  dashboardKeys,
   jobKeys,
 } from "@/lib/query-keys";
 import {
@@ -221,6 +222,7 @@ export function useEmployerJobsSummary() {
 
 function invalidateAllJobs(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: jobKeys.all });
+  queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
 }
 
 /** Creates a DRAFT job owned by the authenticated employer. */

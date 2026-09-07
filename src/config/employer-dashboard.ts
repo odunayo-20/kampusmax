@@ -8,7 +8,9 @@
 
 export const EMPLOYER_DASHBOARD_SECTIONS = [
   "/employer",
+  "/employer/dashboard",
   "/employer/jobs",
   "/employer/applications",
+  "/employer/contracts",
   "/employer/settings",
 ] as const;

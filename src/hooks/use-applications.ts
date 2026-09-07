@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import {
   applicationKeys,
+  dashboardKeys,
   EmployerApplicationListQuery,
   jobKeys,
 } from "@/lib/query-keys";
@@ -122,6 +123,7 @@ export function useEmployerApplicationsSummary() {
 
 function invalidateApplicationData(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: applicationKeys.all });
+  queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
 }
 
 function invalidateApplicationAndJobs(
