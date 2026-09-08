@@ -649,12 +649,196 @@ function disputedContract(): Contract {
   };
 }
 
+// ── Completed-work seed helper (Module 33 review eligibility) ──
+// The platform-reviews store grants a review ONLY when a COMPLETED contract
+// record exists between two parties. These seeds are genuine completed-work
+// records in the backend surrogate — reviews are derived from them, never
+// hardcoded as standalone review rows.
+
+interface CompletedSeedParams {
+  clientId: string;
+  clientDisplayName: string;
+  projectTitle: string;
+  agreedAmount: number;
+  startDaysAgo: number;
+  completeDaysAgo: number;
+  deliverables: string[];
+}
+
+function completedSeedContract(p: CompletedSeedParams): Contract {
+  const start = daysAgo(p.startDaysAgo);
+  const completed = daysAgo(p.completeDaysAgo);
+  const scope = `Deliver ${p.deliverables.join(", ")} to a professional standard with documented revision rounds.`;
+  return {
+    id: freshId("ct"),
+    proposalId: freshId("pr"),
+    projectTitle: p.projectTitle,
+    status: CONTRACT_STATUS.COMPLETED,
+    client: {
+      id: p.clientId,
+      displayName: p.clientDisplayName,
+      avatar: "",
+      organization: p.clientDisplayName,
+      verified: true,
+    },
+    agreedAmount: p.agreedAmount,
+    currency: "NGN",
+    startDate: start,
+    deadline: completed,
+    progress: 100,
+    currentMilestone: undefined,
+    nextAction: "This contract has been completed.",
+    lastActivity: completed,
+    totalMilestones: 1,
+    completedMilestones: 1,
+    outstandingDeliverables: 0,
+    agreement: {
+      scope,
+      terms: "Milestone-based payments. The client reviews each deliverable within 5 business days.",
+      expectations: "Deliver the agreed scope with all final source files at completion.",
+      deliverables: [...p.deliverables],
+      conditions: [
+        "All deliverables must be original and free of third-party licensing conflicts.",
+        "The client owns the final deliverables after completion.",
+      ],
+    },
+    projectScope: {
+      included: [...p.deliverables],
+      excluded: [],
+      requirements: ["Clean, maintainable output", "WCAG AA accessible where relevant"],
+    },
+    milestones: [
+      {
+        id: freshId("ms"),
+        contractId: "",
+        title: "Project delivery",
+        description: scope,
+        dueDate: completed,
+        status: "COMPLETED",
+        progress: 100,
+        deliverables: [
+          { id: freshId("md"), title: p.deliverables[0] ?? "Project delivery", status: "COMPLETED" },
+        ],
+        completedAt: completed,
+      },
+    ],
+    files: [],
+    timeline: [
+      {
+        id: freshId("tl"),
+        type: "CONTRACT_CREATED",
+        timestamp: start,
+        actor: { displayName: p.clientDisplayName },
+        description: "Contract created from an accepted proposal.",
+      },
+      {
+        id: freshId("tl"),
+        type: "CONTRACT_ACCEPTED",
+        timestamp: daysAgo(p.startDaysAgo - 1),
+        actor: { displayName: "You" },
+        description: "Contract accepted and work started.",
+      },
+      {
+        id: freshId("tl"),
+        type: "PROJECT_COMPLETED",
+        timestamp: completed,
+        actor: { displayName: "System" },
+        description: "Contract marked complete.",
+      },
+    ],
+    deliverables: [],
+    canAccept: false,
+    canCancel: false,
+    canComplete: false,
+    createdAt: start,
+    updatedAt: completed,
+  };
+}
+
 // ── Seed store at module load ───────────────────────────────
 
 store.set(freshId("ct"), { contract: pendingContract(), freelancerId: DEMO_FREELANCER_ID });
 store.set(freshId("ct"), { contract: activeContract(), freelancerId: DEMO_FREELANCER_ID });
 store.set(freshId("ct"), { contract: completedContract(), freelancerId: DEMO_FREELANCER_ID });
 store.set(freshId("ct"), { contract: disputedContract(), freelancerId: DEMO_FREELANCER_ID });
+
+// Module 33 seed completed-work records. Each grants exactly one review
+// between its parties via the platform-reviews store (never a raw review).
+store.set(freshId("ct"), {
+  contract: completedSeedContract({
+    clientId: "cl_005",
+    clientDisplayName: "GreenScape Designs",
+    projectTitle: "Portfolio Website Build",
+    agreedAmount: 320000,
+    startDaysAgo: 45,
+    completeDaysAgo: 14,
+    deliverables: ["Responsive portfolio site", "CMS integration", "SEO setup", "Source files + handover"],
+  }),
+  freelancerId: DEMO_FREELANCER_ID,
+});
+store.set(freshId("ct"), {
+  contract: completedSeedContract({
+    clientId: "cl_006",
+    clientDisplayName: "Pulse Wave Media",
+    projectTitle: "Social Media Content Pack",
+    agreedAmount: 180000,
+    startDaysAgo: 30,
+    completeDaysAgo: 10,
+    deliverables: ["Content calendar", "20 branded post designs", "Caption library", "Editing guidelines"],
+  }),
+  freelancerId: DEMO_FREELANCER_ID,
+});
+store.set(freshId("ct"), {
+  contract: completedSeedContract({
+    clientId: "cl_007",
+    clientDisplayName: "TechSprint Solutions",
+    projectTitle: "Mobile App Landing Page",
+    agreedAmount: 240000,
+    startDaysAgo: 25,
+    completeDaysAgo: 8,
+    deliverables: ["Landing page design", "Responsive markup", "Analytics tracking", "Deployment"],
+  }),
+  freelancerId: DEMO_FREELANCER_ID,
+});
+store.set(freshId("ct"), {
+  contract: completedSeedContract({
+    clientId: "cl_008",
+    clientDisplayName: "Nana's Kitchen",
+    projectTitle: "Menu & Delivery Flyer Design",
+    agreedAmount: 85000,
+    startDaysAgo: 18,
+    completeDaysAgo: 6,
+    deliverables: ["Menu redesign", "Delivery flyer", "Print-ready files"],
+  }),
+  freelancerId: DEMO_FREELANCER_ID,
+});
+store.set(freshId("ct"), {
+  contract: completedSeedContract({
+    clientId: "cl_009",
+    clientDisplayName: "Swift Logistics",
+    projectTitle: "Fleet Tracking Dashboard UI",
+    agreedAmount: 410000,
+    startDaysAgo: 50,
+    completeDaysAgo: 4,
+    deliverables: ["Dashboard wireframes", "UI component set", "Status flow screens", "Handoff notes"],
+  }),
+  freelancerId: DEMO_FREELANCER_ID,
+});
+// Completed employer-side work: employer u1 (Oluwaseun Labs) ↔ freelancer u4.
+// Grants the employer→freelancer review (u1 → u4) and the freelancer→employer
+// review (u4 → u1) — the two-sided trust loop on real user records.
+store.set(freshId("ct"), {
+  contract: completedSeedContract({
+    clientId: "u1",
+    clientDisplayName: "Oluwaseun Labs",
+    projectTitle: "Brand Identity Refresh",
+    agreedAmount: 200000,
+    startDaysAgo: 20,
+    completeDaysAgo: 3,
+    deliverables: ["Logo refresh", "Color system", "Typography guide", "Usage guidelines"],
+  }),
+  freelancerId: "u4",
+});
 
 // ── Store API ───────────────────────────────────────────────
 
@@ -757,6 +941,17 @@ export function getContractsForEmployer(userId: string): Contract[] {
   return Array.from(store.values())
     .filter((r) => r.contract.client.id === userId)
     .map((r) => cloneContract(r.contract));
+}
+
+/**
+ * All COMPLETED contracts (Module 33 review-eligibility source of truth).
+ * The platform-reviews store derives every review from a completed-work
+ * record returned here; it never invents relationships.
+ */
+export function getAllCompletedContracts(): { contract: Contract; freelancerId: string }[] {
+  return Array.from(store.values())
+    .filter((r) => r.contract.status === CONTRACT_STATUS.COMPLETED)
+    .map((r) => ({ contract: cloneContract(r.contract), freelancerId: r.freelancerId }));
 }
 
 /** Returns a single contract by id if it belongs to the freelancer. */
