@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { BadgeCheck, Building2, Clock, MapPin } from "lucide-react";
+import { BadgeCheck, Building2, Clock, Globe, MapPin, Users } from "lucide-react";
 import { formatNaira } from "@/lib/utils";
 import { DURATION_LABEL } from "@/config/opportunity";
 import { Badge } from "@/components/ui";
 import type { EmployerPublicProfile } from "@/types/employer";
+import { EmployerProfileActions } from "@/components/employer/public/EmployerProfileActions";
 
 function jobLocation(
   location: { city?: string; state?: string; campusId?: string }
@@ -22,6 +23,25 @@ function budgetLabel(budget: EmployerPublicProfile["openJobs"][number]["budget"]
     return `Up to ${formatNaira(budget.max)}`;
   }
   return "Budget TBD";
+}
+
+/** Only http(s) websites are ever rendered as links (defense in depth). */
+function safeExternalUrl(value?: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function hostname(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return value;
+  }
 }
 
 /**
@@ -44,25 +64,59 @@ export function EmployerPublicProfileContent({
         Back to jobs
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        <h1 className="text-2xl font-bold text-kampmax-text">{profile.name}</h1>
-        {profile.verified && (
-          <Badge variant="success">
-            <BadgeCheck className="mr-1 h-3.5 w-3.5" aria-hidden />
-            Verified
-          </Badge>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        {profile.logoUrl && (
+          <img
+            src={profile.logoUrl}
+            alt={`${profile.name} logo`}
+            className="h-12 w-12 rounded-lg border border-kampmax-border bg-white object-contain p-1"
+          />
         )}
+        <div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-kampmax-text">{profile.name}</h1>
+            {profile.verified && (
+              <Badge variant="success">
+                <BadgeCheck className="mr-1 h-3.5 w-3.5" aria-hidden />
+                Verified
+              </Badge>
+            )}
+          </div>
+
+          {profile.descriptor && (
+            <p className="mt-1 text-sm text-kampmax-text-secondary">{profile.descriptor}</p>
+          )}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-kampmax-text-secondary">
+            {profile.location && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" aria-hidden />
+                {profile.location}
+              </span>
+            )}
+            {profile.organizationSize && (
+              <span className="inline-flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" aria-hidden />
+                {profile.organizationSize}
+              </span>
+            )}
+            {safeExternalUrl(profile.website) && (
+              <Link
+                href={profile.website!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded"
+              >
+                <Globe className="h-3.5 w-3.5" aria-hidden />
+                {hostname(profile.website!)}
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
 
-      {profile.descriptor && (
-        <p className="mt-1 text-sm text-kampmax-text-secondary">{profile.descriptor}</p>
-      )}
-      {profile.location && (
-        <p className="mt-0.5 inline-flex items-center gap-1 text-sm text-kampmax-text-secondary">
-          <MapPin className="h-3.5 w-3.5" aria-hidden />
-          {profile.location}
-        </p>
-      )}
+      <div className="mt-4 flex justify-end">
+        <EmployerProfileActions employerUserId={profile.userId} />
+      </div>
 
       {profile.about && (
         <section className="mt-6 rounded-xl border border-kampmax-border bg-white p-5">

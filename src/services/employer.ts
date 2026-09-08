@@ -525,6 +525,10 @@ export function getEmployerPublicProfileBySlug(slug: string) {
 
   return {
     ...preview,
+    userId: draft.userId,
+    logoUrl: draft.profile.logoUrl ?? null,
+    website: draft.profile.website?.trim() || draft.organization.website?.trim() || "",
+    organizationSize: draft.organization.size?.trim() || "",
     slug: draft.approvedSlug ?? slug,
     openJobs,
   };

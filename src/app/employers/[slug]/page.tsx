@@ -34,6 +34,18 @@ export async function generateMetadata(
     description,
     alternates: { canonical },
     robots: { index: profile.verified === true, follow: true },
+    openGraph: {
+      title: `${profile.name} | Kampmax`,
+      description,
+      url: canonical,
+      type: "website",
+      siteName: "Kampmax",
+    },
+    twitter: {
+      card: "summary",
+      title: `${profile.name} | Kampmax`,
+      description,
+    },
   };
 }
 

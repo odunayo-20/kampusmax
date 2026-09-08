@@ -152,6 +152,19 @@ export function getMyServicesPage(query: FreelancerServiceQuery = {}): Freelance
   return { items: filtered, total: filtered.length };
 }
 
+// ── Public services reader (Module 32) ──────────────────────
+// Public freelancer profile preview: ONLY published + visible services are
+// surfaced. Ownership is passed by the server page (slug → owner), never taken
+// from the client. Status/visibility remain backend-authoritative.
+export function getPublicFreelancerServices(userId: string): FreelancerService[] {
+  if (!userId) return [];
+  return getServicesRecord(userId).filter(
+    (s) =>
+      s.status === FREELANCER_SERVICE_STATUS.PUBLISHED &&
+      s.visibility === "visible"
+  );
+}
+
 export function getMyService(serviceId: string): FreelancerService | null {
   const uid = currentUserId();
   if (!uid) return null;

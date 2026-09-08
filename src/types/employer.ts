@@ -241,10 +241,14 @@ export interface EmployerProfileUpdatePayload {
 // Opportunity "public pick" returned by the data layer.
 
 export interface EmployerPublicProfile {
+  userId: string;
   name: string;
   descriptor: string;
   about: string;
   location: string;
+  logoUrl?: string | null;
+  website?: string;
+  organizationSize?: string;
   verified: boolean;
   slug: string;
   openJobs: Pick<

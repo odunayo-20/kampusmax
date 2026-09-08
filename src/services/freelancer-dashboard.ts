@@ -21,6 +21,7 @@
 
 import { getCurrentUser, getUserById } from "@/services/users";
 import {
+  getFreelancerByApprovedSlug,
   getFreelancerOnboardingDraft,
   getFreelancerOnboardingStatus,
 } from "@/data/freelancer";
@@ -237,6 +238,28 @@ export function getPublicFreelancerProfile(
   if (!draft || draft.status !== FREELANCER_ONBOARDING_STATUS.APPROVED) {
     return null;
   }
+  return toPublicFreelancerProfile(draft);
+}
+
+/**
+ * Public freelancer profile lookup by approved slug (Module 32). Pure store
+ * lookup — mirrors getEmployerPublicProfileBySlug, so it is safe in server
+ * components and never derives from the authenticated client.
+ */
+export function getPublicFreelancerBySlug(
+  slug: string
+): PublicFreelancerProfile | null {
+  const draft = getFreelancerByApprovedSlug(slug);
+  if (!draft || draft.status !== FREELANCER_ONBOARDING_STATUS.APPROVED) {
+    return null;
+  }
+  return toPublicFreelancerProfile(draft);
+}
+
+function toPublicFreelancerProfile(
+  draft: FreelancerOnboardingDraft
+): PublicFreelancerProfile {
+  const userId = draft.userId;
   const user = getUserById(userId);
   const categoryLookup = new Map(
     FREELANCER_CATEGORIES.map((c) => [c.id, c.name])
