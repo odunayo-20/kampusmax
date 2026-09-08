@@ -173,3 +173,31 @@ export const searchKeys = {
   results: (query: GlobalSearchQuery) => ["search", "results", query] as const,
   suggestions: (q: string) => ["search", "suggestions", q] as const,
 };
+
+/**
+ * Admin console key factory (Module 34). Dashboard keys are scoped per
+ * campus so a campus-scoped operator's cached aggregates can never be
+ * mistaken for platform-wide data. Session/identity is owned by the
+ * admin-session store, not by react-query — the dashboard tree invalidates
+ * flat under `adminKeys.all` on logout.
+ */
+export const adminKeys = {
+  all: ["admin"] as const,
+  dashboard: {
+    overview: (scopeCampusId?: string | null) =>
+      ["admin", "dashboard", "overview", scopeCampusId ?? "platform"] as const,
+    revenue: (range: string) => ["admin", "dashboard", "revenue", range] as const,
+    growth: (kind: string) => ["admin", "dashboard", "growth", kind] as const,
+    campusSales: () => ["admin", "dashboard", "campus-sales"] as const,
+    topProducts: (limit: number) =>
+      ["admin", "dashboard", "top-products", limit] as const,
+    lowStock: (limit: number) =>
+      ["admin", "dashboard", "low-stock", limit] as const,
+    recentOrders: (limit: number) =>
+      ["admin", "dashboard", "recent-orders", limit] as const,
+    activity: (pageSize: number) =>
+      ["admin", "dashboard", "activity", pageSize] as const,
+    stats: (scopeCampusId?: string | null) =>
+      ["admin", "dashboard", "stats", scopeCampusId ?? "platform"] as const,
+  },
+};

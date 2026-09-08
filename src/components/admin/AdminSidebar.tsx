@@ -12,6 +12,7 @@ import { getNavForRole } from "@/lib/admin/navigation";
 function NavGroups({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   const { admin } = useAdminSession();
+  if (!admin) return null;
   const groups = getNavForRole(admin.role);
 
   return (
@@ -71,6 +72,7 @@ function NavGroups({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?:
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {
   const { admin } = useAdminSession();
+  if (!admin) return null;
 
   return (
     <div

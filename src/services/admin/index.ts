@@ -12,7 +12,7 @@
 // No component or page code changes required.
 // ============================================================
 
-import { mockActivityItems, mockDailyMetrics, mockGrowthSeries, mockNotifications, mockSettings, mockTopProducts, mockTopVendors, mockCampusSales, mockLowStock } from "@/data/admin/system";
+import { mockActivityItems, mockDailyMetrics, mockGrowthSeries, mockNotifications, mockSettings, mockTopProducts, mockCampusSales, mockLowStock } from "@/data/admin/system";
 import { mockCampuses } from "@/data/admin/campuses";
 import { mockUsers, mockVendors } from "@/data/admin/people";
 import { mockCategories, mockProducts } from "@/data/admin/catalog";
@@ -28,6 +28,17 @@ import { mockDisputes, mockPosts, mockReports, mockReviews } from "@/data/admin/
 import { DashboardService, createMockDashboardService } from "./dashboard.service";
 
 export type { ChartRange } from "./dashboard.service";
+import { AdminAuthService, createMockAdminAuthService } from "./auth.service";
+
+export type {
+  AdminAuthFailCode,
+  AdminAuthResult,
+  AdminLoginInput,
+} from "./auth.service";
+
+/** POST/GET admin auth session (Module 34 authorization boundary). */
+export const adminAuthService: AdminAuthService =
+  createMockAdminAuthService();
 import { AdminUserService, createMockUserService } from "./users.service";
 import {
   AdminUserManagementService,
@@ -82,22 +93,21 @@ import { AdminSettingService, createMockSettingService } from "./settings.servic
 
 export const dashboardService: DashboardService =
   createMockDashboardService({
-    stats: {
-      gmvToday: 4_812_500,
-      ordersToday: 214,
-      activeUsers: 18_942,
-      pendingWithdrawals: 7,
-      pendingWithdrawalsAmount: 1_240_000,
-      openDisputes: 11,
-      flaggedContent: 23,
-      commissionToday: 385_000,
-    },
+    users: mockUsers,
+    vendors: mockVendors,
+    products: mockProducts,
+    orders: mockOrders,
+    payments: mockPayments,
+    withdrawals: mockWithdrawals,
+    disputes: mockDisputes,
+    reviews: mockReviews,
+    reports: mockReports,
+    campuses: mockCampuses,
     dailyMetrics: mockDailyMetrics,
     growthSeries: mockGrowthSeries,
     campusSales: mockCampusSales,
     topProducts: mockTopProducts,
     lowStock: mockLowStock,
-    topVendors: mockTopVendors,
     recentOrders: mockOrders.slice(0, 12),
     activity: mockActivityItems,
   });

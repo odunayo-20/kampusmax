@@ -24,7 +24,6 @@ import {
   PROFILE_REVIEW_COMMENT_MAX,
   PROFILE_REVIEW_COMMENT_MIN,
   PROFILE_REVIEW_NOTIFICATION,
-  PROFILE_REVIEW_RATING_LABELS,
 } from "@/config/platform-reviews";
 import { getCurrentUser, getUserById } from "@/services/users";
 import { getAllCompletedContracts } from "@/data/contracts";
@@ -60,7 +59,7 @@ function isFreelancerTarget(userId: string): boolean {
 
 function isEmployerTarget(userId: string): boolean {
   const draft = getEmployerOnboardingDraft(userId);
-  return Boolean(draft && draft.status === "approved");
+  return Boolean(draft && draft.status === "APPROVED");
 }
 
 function targetExists(userId: string, kind: ProfileReviewTargetKind): boolean {

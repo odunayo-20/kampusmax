@@ -1,16 +1,24 @@
 import {
   ActivityFeedItem,
   AdminOrder,
+  AdminProduct,
+  AdminReview,
+  AdminVendor,
+  Campus,
   CampusSalesRow,
+  ContentReport,
   DashboardStats,
+  Dispute,
   GrowthPoint,
   ListQuery,
   LowStockRow,
   Paginated,
+  PaymentRecord,
   PlatformOverview,
+  PlatformUser,
   RevenuePoint,
   TopProductRow,
-  TopVendorRow,
+  WithdrawalRequest,
 } from "@/types/admin";
 import { apiDelay } from "@/lib/admin/api";
 import {
@@ -40,24 +48,52 @@ export interface DashboardService {
 
 // ------------------------------------------------------------
 // MOCK IMPLEMENTATION
+//
+// Every number is AGGREGATED from the seeded backend datasets (users,
+// vendors, products, orders, payments, withdrawals, reviews, reports,
+// disputes, campuses, daily revenue metrics). Deltas are computed
+// against the prior 7-day window. When `scopeCampusId` is provided
+// (campus-scoped operator) the campus-dimensioned rows are filtered;
+// rows without a campus dimension (payments, withdrawals, disputes,
+// reports, revenue series) stay platform-wide — a modeled gap until
+// the analytics API exposes scoped endpoints.
 // ------------------------------------------------------------
 
 export interface MockDashboardSources {
-  stats: Omit<
-    DashboardStats,
-    "gmvDeltaPct" | "ordersDeltaPct" | "activeUsersDeltaPct"
-  >;
+  users: PlatformUser[];
+  vendors: AdminVendor[];
+  products: AdminProduct[];
+  orders: AdminOrder[];
+  payments: PaymentRecord[];
+  withdrawals: WithdrawalRequest[];
+  disputes: Dispute[];
+  reviews: AdminReview[];
+  reports: ContentReport[];
+  campuses: Campus[];
   dailyMetrics: DailyMetric[];
   growthSeries: GrowthSeriesPoint[];
   campusSales: CampusSalesRow[];
   topProducts: TopProductRow[];
   lowStock: LowStockRow[];
-  topVendors: TopVendorRow[];
   recentOrders: AdminOrder[];
   activity: ActivityFeedItem[];
 }
 
 const RANGE_DAYS: Record<ChartRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
+
+function sumAmounts<T extends { amount: number }>(rows: readonly T[]): number {
+  return rows.reduce((acc, r) => acc + r.amount, 0);
+}
+
+function sumOrderTotals(rows: readonly AdminOrder[]): number {
+  return rows.reduce((acc, o) => acc + o.total, 0);
+}
+
+/** Signed percentage, 1 decimal, computed against a prior window. */
+function pctDelta(current: number, previous: number): number {
+  if (previous <= 0) return 0;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
+}
 
 function toRevenuePoints(metrics: DailyMetric[]): RevenuePoint[] {
   return metrics.map((m) => ({
@@ -77,6 +113,8 @@ function toGrowthPoints(series: GrowthSeriesPoint[], kind: "users" | "vendors"):
         : Math.max(0, p.vendorsTotal - (series[0]?.vendorsTotal ?? p.vendorsTotal)),
   }));
 }
+
+const PLATFORM_FEE_RATE = 0.08;
 
 export function createMockDashboardService(
   sources: MockDashboardSources
@@ -98,57 +136,138 @@ export function createMockDashboardService(
     );
   }
 
-  return {
-    async getStats() {
-      await apiDelay(120);
-      // Deltas would be computed server-side against the prior period.
+  /** Rows scoped to a campus for the campus-dimensioned datasets. */
+  function scoped(scopeCampusId?: string | null) {
+    if (!scopeCampusId) {
       return {
-        ...sources.stats,
-        gmvDeltaPct: 12.4,
-        ordersDeltaPct: 8.1,
-        activeUsersDeltaPct: -2.3,
+        users: sources.users,
+        vendors: sources.vendors,
+        products: sources.products,
+        orders: sources.orders,
+        reviews: sources.reviews,
+      };
+    }
+    return {
+      users: sources.users.filter((u) => u.campusId === scopeCampusId),
+      vendors: sources.vendors.filter((v) => v.campusId === scopeCampusId),
+      products: sources.products.filter((p) => p.campusId === scopeCampusId),
+      orders: sources.orders.filter((o) => o.campusId === scopeCampusId),
+      reviews: sources.reviews.filter((r) => r.campusId === scopeCampusId),
+    };
+  }
+
+  const OPEN_DISPUTE_STATUSES = new Set(["open", "under_review"]);
+  const OPEN_REPORT_STATUSES = new Set(["open", "reviewing"]);
+
+  function operationsQueue(scopeCampusId?: string | null) {
+    const rows = scoped(scopeCampusId);
+    return {
+      pendingVendorVerification: rows.vendors.filter(
+        (v) => v.status === "pending"
+      ).length,
+      pendingProductApproval: rows.products.filter(
+        (p) => p.status === "pending_review"
+      ).length,
+      pendingWithdrawalRequests: sources.withdrawals.filter(
+        (w) => w.status === "pending"
+      ).length,
+      reportedProducts: sources.reports.filter(
+        (r) => r.targetType === "product" && OPEN_REPORT_STATUSES.has(r.status)
+      ).length,
+      reportedUsers: sources.reports.filter(
+        (r) => r.targetType === "user" && OPEN_REPORT_STATUSES.has(r.status)
+      ).length,
+      openDisputes: sources.disputes.filter((d) =>
+        OPEN_DISPUTE_STATUSES.has(d.status)
+      ).length,
+    };
+  }
+
+  return {
+    async getStats(scopeCampusId?: string | null) {
+      await apiDelay(120);
+      const rows = scoped(scopeCampusId);
+      const gmvToday = sumRange(1).revenue;
+      const ordersToday = sumRange(1).orders;
+
+      const week = sumRange(7);
+      const through14 = sumRange(14);
+      const prevWeek = {
+        revenue: through14.revenue - week.revenue,
+        orders: through14.orders - week.orders,
+      };
+
+      return {
+        gmvToday,
+        gmvDeltaPct: pctDelta(week.revenue, prevWeek.revenue),
+        ordersToday,
+        ordersDeltaPct: pctDelta(week.orders, prevWeek.orders),
+        activeUsers: rows.users.filter((u) => u.status === "active").length,
+        activeUsersDeltaPct: 0, // no historical active-user baseline modeled
+        pendingWithdrawals: sources.withdrawals.filter(
+          (w) => w.status === "pending"
+        ).length,
+        pendingWithdrawalsAmount: sumAmounts(
+          sources.withdrawals.filter((w) => w.status === "pending")
+        ),
+        openDisputes: operationsQueue(scopeCampusId).openDisputes,
+        flaggedContent:
+          rows.reviews.filter((r) => r.status === "flagged").length +
+          rows.products.filter((p) => p.status === "flagged").length,
+        commissionToday: Math.round(gmvToday * PLATFORM_FEE_RATE),
       };
     },
 
-    async getOverview() {
+    async getOverview(scopeCampusId?: string | null) {
       await apiDelay(180);
+      const rows = scoped(scopeCampusId);
       const today = sumRange(1);
       const week = sumRange(7);
-      void today.signups;
+
+      const activeCampuses =
+        scopeCampusId
+          ? sources.campuses.some(
+              (c) => c.id === scopeCampusId && c.status === "active"
+            )
+            ? 1
+            : 0
+          : sources.campuses.filter((c) => c.status === "active").length;
+
+      const pendingWithdrawals = sources.withdrawals.filter(
+        (w) => w.status === "pending"
+      );
+      const pendingPayments = sources.payments.filter(
+        (p) => p.status === "pending"
+      );
 
       return {
         totals: {
-          users: 19_842,
-          activeUsers: 18_942,
-          vendors: 886,
-          verifiedVendors: 812,
-          campuses: 8,
-          products: 1_934,
-          orders: 41_268,
-          revenue: 284_600_000,
+          users: rows.users.length,
+          activeUsers: rows.users.filter((u) => u.status === "active").length,
+          vendors: rows.vendors.length,
+          verifiedVendors: rows.vendors.filter(
+            (v) => v.status === "approved"
+          ).length,
+          campuses: activeCampuses,
+          products: rows.products.length,
+          orders: rows.orders.length,
+          revenue: sumOrderTotals(rows.orders),
         },
         financial: {
           revenueToday: today.revenue,
           revenueWeek: week.revenue,
           revenueMonth: sumRange(30).revenue,
-          pendingPaymentsCount: sources.stats.pendingWithdrawals + 5,
-          pendingPaymentsAmount: 412_000,
-          pendingWithdrawalsCount: sources.stats.pendingWithdrawals,
-          pendingWithdrawalsAmount: sources.stats.pendingWithdrawalsAmount,
-          platformEarnings: Math.round(sumRange(30).revenue * 0.08),
+          pendingPaymentsCount: pendingPayments.length,
+          pendingPaymentsAmount: sumAmounts(pendingPayments),
+          pendingWithdrawalsCount: pendingWithdrawals.length,
+          pendingWithdrawalsAmount: sumAmounts(pendingWithdrawals),
+          platformEarnings: Math.round(sumRange(30).revenue * PLATFORM_FEE_RATE),
         },
         marketplace: {
           ordersToday: today.orders,
           ordersThisWeek: week.orders,
         },
-        operations: {
-          pendingVendorVerification: 6,
-          pendingProductApproval: 14,
-          pendingWithdrawalRequests: sources.stats.pendingWithdrawals,
-          reportedProducts: 15,
-          reportedUsers: 4,
-          openDisputes: sources.stats.openDisputes,
-        },
+        operations: operationsQueue(scopeCampusId),
       };
     },
 
@@ -179,7 +298,7 @@ export function createMockDashboardService(
 
     async getRecentOrders(limit = 8) {
       await apiDelay(160);
-      return sources.recentOrders.slice(0, limit);
+      return sources.orders.slice(0, limit);
     },
 
     async getActivity(query = {}) {

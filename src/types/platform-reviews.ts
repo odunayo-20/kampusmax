@@ -19,6 +19,9 @@
 // server-owned. The UI never decides who may review, whether a review is
 // authentic, or whether it is published.
 
+import type { ReviewReportReason } from "@/types";
+export type { ReviewReportReason };
+
 export const PROFILE_REVIEW_TARGET_KINDS = ["freelancer", "employer"] as const;
 export type ProfileReviewTargetKind = (typeof PROFILE_REVIEW_TARGET_KINDS)[number];
 
@@ -125,6 +128,7 @@ export type ProfileReviewResultCode =
   | "NOT_FOUND"
   | "NOT_ELIGIBLE"
   | "ALREADY_REVIEWED"
+  | "ALREADY_REPORTED"
   | "RATE_LIMITED"
   | "INVALID_INPUT"
   | "SELF_REVIEW";

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
@@ -11,11 +12,12 @@ import {
   Settings,
   UserCog,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import { useAdminSession } from "@/lib/admin/admin-auth-context";
 import { useAdminUI } from "@/lib/admin/admin-ui-context";
+import { notificationService } from "@/services/admin";
+import type { AdminNotification } from "@/types/admin";
 import { AdminBreadcrumbs } from "./AdminBreadcrumbs";
-import { timeAgo } from "@/lib/utils";
 
 const ROLE_LABELS = {
   SUPER_ADMIN: "Super Admin",
@@ -44,15 +46,34 @@ function useOutsideClose(onClose: () => void) {
   return ref;
 }
 
-const RECENT_ALERTS = [
-  { id: 1, title: "Withdrawal request ₦85,000", at: new Date(Date.now() - 12 * 60_000).toISOString(), tone: "warning" },
-  { id: 2, title: "Urgent dispute opened on KMP-2429", at: new Date(Date.now() - 46 * 60_000).toISOString(), tone: "error" },
-  { id: 3, title: "New vendor application: FreshMart Express", at: new Date(Date.now() - 3 * 3_600_000).toISOString(), tone: "info" },
-];
+function notificationTone(status: AdminNotification["status"]): "info" | "warning" | "error" | "neutral" {
+  switch (status) {
+    case "scheduled":
+      return "warning";
+    case "draft":
+      return "neutral";
+    default:
+      return "info";
+  }
+}
 
 export function AdminHeader() {
+  const router = useRouter();
   const { setMobileNavOpen } = useAdminUI();
-  const { admin, admins, switchAccount } = useAdminSession();
+  const { admin, admins, switchAccount, logout } = useAdminSession();
+
+  const [notifications, setNotifications] = useState<AdminNotification[] | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    // Real broadcast history from the notification service - no hardcoded alerts.
+    notificationService
+      .list()
+      .then((rows) => mounted && setNotifications(rows))
+      .catch(() => mounted && setNotifications([]));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -60,6 +81,26 @@ export function AdminHeader() {
 
   const notifRef = useOutsideClose(() => setNotifOpen(false));
   const profileRef = useOutsideClose(() => setProfileOpen(false));
+
+  // Rendered only inside the authenticated console chrome, but keep the
+  // null-safe check so the component never assumes a session exists.
+  if (!admin) return null;
+
+  const isSuperAdmin = admin.role === "SUPER_ADMIN";
+  const alertCount = notifications?.length ?? 0;
+
+  async function handleSignOut() {
+    await logout();
+    router.push("/admin/login");
+    router.refresh();
+  }
+
+  async function handleSwitchAccount(accountId: string) {
+    const result = await switchAccount(accountId);
+    if (result.success) {
+      setProfileOpen(false);
+    }
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-kampmax-border bg-white px-3 sm:px-4">
@@ -109,25 +150,29 @@ export function AdminHeader() {
         )}
       </div>
 
-      {/* Notifications */}
+      {/* Notifications (real broadcast history) */}
       <div className="relative" ref={notifRef}>
         <button
           type="button"
           onClick={() => setNotifOpen((o) => !o)}
-          aria-label={`Notifications (${RECENT_ALERTS.length} unread)`}
+          aria-label={`Notifications (${alertCount})`}
           aria-expanded={notifOpen}
           className="relative rounded-md p-2 text-kampmax-text-secondary transition-colors hover:bg-kampmax-muted hover:text-kampmax-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-kampmax-blue"
         >
           <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-kampmax-error px-1 text-[10px] font-bold leading-none text-white">
-            {RECENT_ALERTS.length}
-          </span>
+          {alertCount > 0 && (
+            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-kampmax-error px-1 text-[10px] font-bold leading-none text-white">
+              {alertCount > 9 ? "9+" : alertCount}
+            </span>
+          )}
         </button>
 
         {notifOpen && (
           <div className="absolute right-0 top-11 z-40 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-kampmax-border bg-white shadow-lg">
             <div className="flex items-center justify-between border-b border-kampmax-border px-3.5 py-2.5">
-              <p className="text-sm font-semibold text-kampmax-text">Notifications</p>
+              <p className="text-sm font-semibold text-kampmax-text">
+                Broadcasts &amp; alerts
+              </p>
               <Link
                 href="/admin/notifications"
                 onClick={() => setNotifOpen(false)}
@@ -136,37 +181,54 @@ export function AdminHeader() {
                 View all
               </Link>
             </div>
-            <ul className="divide-y divide-kampmax-border/70">
-              {RECENT_ALERTS.map((n) => (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    className="flex w-full flex-col gap-0.5 px-3.5 py-2.5 text-left transition-colors hover:bg-kampmax-muted/50"
-                  >
-                    <span className="flex items-center gap-2 text-sm font-medium text-kampmax-text">
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "h-1.5 w-1.5 shrink-0 rounded-full",
-                          n.tone === "error" && "bg-kampmax-error",
-                          n.tone === "warning" && "bg-kampmax-warning",
-                          n.tone === "info" && "bg-kampmax-info"
-                        )}
-                      />
-                      {n.title}
-                    </span>
-                    <span className="pl-3.5 text-xs text-kampmax-text-secondary">
-                      {timeAgo(n.at)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {!notifications ? (
+              <div className="space-y-2 p-3.5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex gap-2">
+                    <div className="h-3.5 w-3.5 shrink-0 animate-pulse rounded-full bg-kampmax-muted" />
+                    <div className="h-3.5 flex-1 animate-pulse rounded bg-kampmax-muted" />
+                  </div>
+                ))}
+              </div>
+            ) : notifications.length === 0 ? (
+              <p className="px-3.5 py-6 text-center text-sm text-kampmax-text-secondary">
+                No notifications yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-kampmax-border/70">
+                {notifications.slice(0, 4).map((n) => (
+                  <li key={n.id}>
+                    <Link
+                      href="/admin/notifications"
+                      onClick={() => setNotifOpen(false)}
+                      className="flex w-full flex-col gap-0.5 px-3.5 py-2.5 text-left transition-colors hover:bg-kampmax-muted/50"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium text-kampmax-text">
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "h-1.5 w-1.5 shrink-0 rounded-full",
+                            notificationTone(n.status) === "error" && "bg-kampmax-error",
+                            notificationTone(n.status) === "warning" && "bg-kampmax-warning",
+                            notificationTone(n.status) === "info" && "bg-kampmax-info",
+                            notificationTone(n.status) === "neutral" && "bg-kampmax-text-secondary/50"
+                          )}
+                        />
+                        <span className="truncate">{n.title}</span>
+                      </span>
+                      <span className="pl-3.5 text-xs text-kampmax-text-secondary">
+                        {n.status} · {timeAgo(n.sentAt)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>
 
-      {/* Profile / role switcher */}
+      {/* Profile & role */}
       <div className="relative" ref={profileRef}>
         <button
           type="button"
@@ -203,36 +265,35 @@ export function AdminHeader() {
               </p>
             </div>
 
-            <div className="px-3.5 py-2.5">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-kampmax-text-secondary">
-                Switch account (demo)
-              </p>
-              <ul className="space-y-0.5">
-                {admins.map((a) => (
-                  <li key={a.id}>
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={a.id === admin.id}
-                      onClick={() => {
-                        switchAccount(a.id);
-                        setProfileOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-kampmax-muted",
-                        a.id === admin.id && "font-semibold text-kampmax-blue"
-                      )}
-                    >
-                      <UserCog className="h-3.5 w-3.5 shrink-0 text-kampmax-text-secondary" />
-                      <span className="min-w-0 flex-1 truncate">{a.name}</span>
-                      <span className="shrink-0 text-[10px] text-kampmax-text-secondary">
-                        {ROLE_LABELS[a.role]}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {isSuperAdmin && (
+              <div className="px-3.5 py-2.5">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-kampmax-text-secondary">
+                  Switch account (demo · Super Admin only)
+                </p>
+                <ul className="space-y-0.5">
+                  {admins.map((a) => (
+                    <li key={a.id}>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={a.id === admin.id}
+                        onClick={() => void handleSwitchAccount(a.id)}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-kampmax-muted",
+                          a.id === admin.id && "font-semibold text-kampmax-blue"
+                        )}
+                      >
+                        <UserCog className="h-3.5 w-3.5 shrink-0 text-kampmax-text-secondary" />
+                        <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                        <span className="shrink-0 text-[10px] text-kampmax-text-secondary">
+                          {ROLE_LABELS[a.role]}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="border-t border-kampmax-border">
               <Link
@@ -247,6 +308,7 @@ export function AdminHeader() {
               <button
                 type="button"
                 role="menuitem"
+                onClick={() => void handleSignOut()}
                 className="flex w-full items-center gap-2 px-3.5 py-2.5 text-xs font-medium text-kampmax-error transition-colors hover:bg-kampmax-error/5"
               >
                 <LogOut className="h-3.5 w-3.5" />
