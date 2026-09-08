@@ -137,3 +137,21 @@ export const employerKeys = {
   publicProfile: (slug: string) =>
     ["employer", "public", slug] as const,
 };
+
+/**
+ * Settings key factory (Module 30). Reads are scoped per user so cached
+ * account/settings data can never leak between sessions. Mutations
+ * invalidate the flat `all` key — since the platform preference stores
+ * (notification / privacy / security) are shared records, every settings
+ * query refreshes together after a change.
+ */
+export const settingsKeys = {
+  all: ["settings"] as const,
+  account: (userId: string) => ["settings", "account", userId] as const,
+  notificationPreferences: (userId: string) =>
+    ["settings", "notification-preferences", userId] as const,
+  privacySettings: (userId: string) =>
+    ["settings", "privacy", userId] as const,
+  securitySettings: (userId: string) =>
+    ["settings", "security", userId] as const,
+};

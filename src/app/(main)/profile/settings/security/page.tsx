@@ -14,16 +14,19 @@ import {
   getSecuritySettings,
   updateSecuritySettings,
 } from "@/services/profile";
+import { useChangePassword } from "@/hooks/use-employer-settings";
 import { formatDate } from "@/lib/utils";
 
 export default function SecuritySettingsPage() {
   const router = useRouter();
+  const changePassword = useChangePassword();
   const [settings, setSettings] = useState<SecuritySettingsType>(getSecuritySettings);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   function toggle2FA() {
     const updated = { ...settings, twoFactorEnabled: !settings.twoFactorEnabled };
@@ -37,8 +40,17 @@ export default function SecuritySettingsPage() {
     updateSecuritySettings({ loginNotifications: updated.loginNotifications });
   }
 
-  function handlePasswordChange() {
+  async function handlePasswordChange() {
     if (!currentPassword || !newPassword || newPassword !== confirmPassword) return;
+    setPasswordError(null);
+    const result = await changePassword.mutateAsync({
+      currentPassword,
+      newPassword,
+    });
+    if (!result.success) {
+      setPasswordError(result.message);
+      return;
+    }
     setPasswordSaved(true);
     setCurrentPassword("");
     setNewPassword("");
@@ -112,13 +124,18 @@ export default function SecuritySettingsPage() {
               {confirmPassword && newPassword !== confirmPassword && (
                 <p className="text-[11px] text-kampmax-error mt-1">Passwords do not match</p>
               )}
+              {passwordError && (
+                <p role="alert" className="text-[11px] text-kampmax-error mt-1">
+                  {passwordError}
+                </p>
+              )}
             </div>
             <button
-              onClick={handlePasswordChange}
-              disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}
+              onClick={() => void handlePasswordChange()}
+              disabled={!currentPassword || !newPassword || newPassword !== confirmPassword || changePassword.isPending}
               className="w-full py-2.5 rounded-lg bg-kampmax-blue text-white text-sm font-semibold disabled:opacity-40"
             >
-              Update Password
+              {changePassword.isPending ? "Updating…" : "Update Password"}
             </button>
           </div>
         )}

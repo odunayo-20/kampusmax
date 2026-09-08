@@ -12,6 +12,7 @@ import {
   Home,
   LayoutDashboard,
   Users,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EmployerOnboardingStatus } from "@/types/employer";
@@ -55,6 +56,7 @@ export function EmployerSidebar({
       title: "Account",
       items: [
         { label: "Employer Profile", href: "/employer/profile", icon: Building2 },
+        { label: "Settings", href: "/employer/settings", icon: Settings },
         { href: "/chat", label: "Messages", icon: MessageSquare, badgeCount: unreadMessages },
         { href: "/notifications", label: "Notifications", icon: Bell },
       ],
