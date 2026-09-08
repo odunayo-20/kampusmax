@@ -3,19 +3,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { cn, isValidEmail, isValidPhone } from "@/lib/utils";
-import type {
-  ManagedUser,
-  ManagedUserRole,
-  ManagedUserUpdateInput,
-} from "@/types/admin";
+import type { ManagedUserListItem, ManagedUserUpdateInput } from "@/types/admin";
 import { Input } from "@/components/ui/Input";
 import { UserAvatar } from "./UserBadges";
-import { USER_ROLE_LABELS } from "./users-meta";
 
 interface EditUserDialogProps {
   open: boolean;
-  user: ManagedUser | null;
-  campuses: { id: string; label: string }[];
+  user: ManagedUserListItem | null;
   saving?: boolean;
   onClose: () => void;
   onSave: (patch: ManagedUserUpdateInput) => Promise<void>;
@@ -27,10 +21,14 @@ interface FormErrors {
   phone?: string;
 }
 
+/**
+ * Identity-only editor (Module 35). Role and campus are intentionally not
+ * editable here — assignments require the dedicated RBAC/permissions module
+ * on the backend (spec §11, §43, §44).
+ */
 export function EditUserDialog({
   open,
   user,
-  campuses,
   saving = false,
   onClose,
   onSave,
@@ -38,8 +36,6 @@ export function EditUserDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<ManagedUserRole>("customer");
-  const [campusId, setCampusId] = useState("all");
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState(false);
 
@@ -48,8 +44,6 @@ export function EditUserDialog({
     setName(user.name);
     setEmail(user.email);
     setPhone(user.phone);
-    setRole(user.role);
-    setCampusId(user.campusId);
     setErrors({});
     setTouched(false);
   }, [open, user]);
@@ -74,14 +68,8 @@ export function EditUserDialog({
 
   const dirty = useMemo(() => {
     if (!user) return false;
-    return (
-      name !== user.name ||
-      email !== user.email ||
-      phone !== user.phone ||
-      role !== user.role ||
-      campusId !== user.campusId
-    );
-  }, [user, name, email, phone, role, campusId]);
+    return name !== user.name || email !== user.email || phone !== user.phone;
+  }, [user, name, email, phone]);
 
   if (!open || !user) return null;
 
@@ -104,8 +92,6 @@ export function EditUserDialog({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim(),
-      role,
-      campusId,
     });
   }
 
@@ -177,41 +163,6 @@ export function EditUserDialog({
             error={touched ? errors.phone : undefined}
             autoComplete="off"
           />
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-kampmax-text">Role</span>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as ManagedUserRole)}
-              className="h-11 w-full rounded-lg border border-kampmax-border bg-white px-3 text-sm text-kampmax-text focus:outline-none focus:ring-1 focus:ring-kampmax-blue"
-            >
-              {(Object.keys(USER_ROLE_LABELS) as ManagedUserRole[]).map((r) => (
-                <option key={r} value={r}>
-                  {USER_ROLE_LABELS[r]}
-                </option>
-              ))}
-            </select>
-            {role !== user.role && (
-              <p className="mt-1 text-xs text-kampmax-warning">
-                Changing roles takes effect immediately.
-              </p>
-            )}
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-kampmax-text">Campus</span>
-            <select
-              value={campusId}
-              onChange={(e) => setCampusId(e.target.value)}
-              className="h-11 w-full rounded-lg border border-kampmax-border bg-white px-3 text-sm text-kampmax-text focus:outline-none focus:ring-1 focus:ring-kampmax-blue"
-            >
-              {campuses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         {/* Footer */}

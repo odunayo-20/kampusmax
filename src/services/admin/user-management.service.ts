@@ -1,7 +1,11 @@
 import {
+  AdminProfile,
+  AdminRole,
   ListQuery,
   ManagedUser,
   ManagedUserDetail,
+  ManagedUserListItem,
+  ManagedUserRole,
   ManagedUserStatus,
   ManagedUserUpdateInput,
   Paginated,
@@ -16,6 +20,16 @@ import {
 
 // ------------------------------------------------------------
 // CONTRACT (future NestJS resource: /admin/users)
+//
+// Module 35 hardens this surrogate into the authorization boundary for the
+// user directory. Every method requires an acting `AdminProfile` context:
+//   - CAMPUS_ADMIN operators are read-only AND campus-scoped (their rows,
+//     counts, details and activity never cross campus boundaries).
+//   - Status/reset/identity mutations are restricted to SUPER_ADMIN/ADMIN.
+//   - Self and higher-privilege accounts are protected from mutating actions.
+//   - `update()` is identity-only; role/campus are never accepted.
+// The UI reflects these rules via `getUserActionPolicy()`, but the service
+// remains authoritative — the checks below run for every call.
 // ------------------------------------------------------------
 
 export type ManagedUserSortField =
@@ -33,14 +47,170 @@ export interface ManagedUserListFilters {
 
 export interface ManagedUserListQuery extends ListQuery, ManagedUserListFilters {}
 
+/** Acting operator context. Future backend derives this from the session. */
+export interface AdminActingContext {
+  actor: AdminProfile;
+}
+
+/** Hierarchy used to decide who may manage whom. */
+const ACTOR_RANK: Record<AdminRole, number> = {
+  SUPER_ADMIN: 5,
+  ADMIN: 4,
+  CAMPUS_ADMIN: 3,
+};
+
+const USER_PRIVILEGE_RANK: Record<ManagedUserRole, number> = {
+  super_admin: 5,
+  admin: 4,
+  campus_admin: 3,
+  vendor: 2,
+  customer: 1,
+};
+
+/** Roles allowed to perform account management (mutations). */
+const ACCOUNT_MANAGER_ROLES: ReadonlySet<AdminRole> = new Set([
+  "SUPER_ADMIN",
+  "ADMIN",
+]);
+
+/** Directory staff accounts – protected by the LAST_STAFF guard. */
+const STAFF_ROLES: ReadonlySet<ManagedUserRole> = new Set(["admin", "super_admin"]);
+
+const VALID_STATUSES: ReadonlySet<ManagedUserStatus> = new Set([
+  "active",
+  "suspended",
+  "pending_verification",
+  "deactivated",
+]);
+
+const STATUS_VERB: Record<ManagedUserStatus, string> = {
+  active: "activated",
+  suspended: "suspended",
+  pending_verification: "moved to pending verification",
+  deactivated: "deactivated",
+};
+
+// ------------------------------------------------------------
+// POLICY (shared with the UI for consistent gating)
+// ------------------------------------------------------------
+
+export type UserManageLevel = "platform" | "campus_read_only" | "none";
+
+export interface UserActionPolicy {
+  /** True when the actor may run mutating actions on this account. */
+  canManage: boolean;
+  /** Operator convenience flags – same authorization as `canManage`. */
+  canEdit: boolean;
+  canSuspend: boolean;
+  canActivate: boolean;
+  canDeactivate: boolean;
+  canResetState: boolean;
+  /** Target is the operator's own account. */
+  isSelf: boolean;
+  /** Target holds equal or higher privilege than the operator. */
+  isHigherPrivilege: boolean;
+  level: UserManageLevel;
+  /** Human-safe reasons describing why actions are restricted. */
+  reasons: string[];
+}
+
+export type UserActionPolicyTarget = Pick<ManagedUser, "email" | "role" | "status">;
+
+export function getUserActionPolicy(
+  actor: AdminProfile,
+  target: UserActionPolicyTarget
+): UserActionPolicy {
+  const isSelf = actor.email.toLowerCase() === target.email.toLowerCase();
+  const isHigherPrivilege =
+    USER_PRIVILEGE_RANK[target.role] >= ACTOR_RANK[actor.role];
+  const canManage =
+    ACCOUNT_MANAGER_ROLES.has(actor.role) && !isSelf && !isHigherPrivilege;
+
+  const reasons: string[] = [];
+  if (!ACCOUNT_MANAGER_ROLES.has(actor.role)) {
+    reasons.push("This role has read-only access to the directory.");
+  }
+  if (isSelf) {
+    reasons.push("An operator cannot manage their own account.");
+  }
+  if (isHigherPrivilege) {
+    reasons.push("This account is at or above your privilege level.");
+  }
+
+  return {
+    canManage,
+    canEdit: canManage,
+    canSuspend: canManage,
+    canActivate: canManage,
+    canDeactivate: canManage,
+    canResetState: canManage,
+    isSelf,
+    isHigherPrivilege,
+    level: ACCOUNT_MANAGER_ROLES.has(actor.role)
+      ? "platform"
+      : actor.role === "CAMPUS_ADMIN"
+        ? "campus_read_only"
+        : "none",
+    reasons,
+  };
+}
+
+// ------------------------------------------------------------
+// RESULTS
+// ------------------------------------------------------------
+
+export type UserReadFailure = {
+  ok: false;
+  code: "NOT_FOUND" | "FORBIDDEN";
+  message: string;
+};
+
+export type ManagedUserDetailResult =
+  | { ok: true; detail: ManagedUserDetail; policy: UserActionPolicy }
+  | UserReadFailure;
+
+export type UserActivityResult =
+  | { ok: true; items: UserActivityEvent[] }
+  | UserReadFailure;
+
+export type UserCommandFailureCode =
+  | "NOT_FOUND"
+  | "FORBIDDEN"
+  | "SELF_ACTION"
+  | "HIGHER_PRIVILEGE"
+  | "LAST_STAFF"
+  | "EMAIL_TAKEN"
+  | "INVALID_STATUS";
+
+export type UserCommandFailure = {
+  ok: false;
+  code: UserCommandFailureCode;
+  message: string;
+};
+
+export type UserCommandResult =
+  | { ok: true; user: ManagedUser; message: string }
+  | UserCommandFailure;
+
 export interface AdminUserManagementService {
-  list(query?: ManagedUserListQuery): Promise<Paginated<ManagedUser>>;
-  getById(id: string): Promise<ManagedUserDetail | null>;
-  getCounts(): Promise<UserStatusCounts>;
-  update(id: string, patch: ManagedUserUpdateInput): Promise<ManagedUser>;
-  setStatus(id: string, status: ManagedUserStatus): Promise<ManagedUser>;
-  resetAccountState(id: string): Promise<ManagedUser>;
-  getActivity(id: string): Promise<UserActivityEvent[]>;
+  list(
+    query: ManagedUserListQuery | undefined,
+    ctx: AdminActingContext
+  ): Promise<Paginated<ManagedUserListItem>>;
+  getById(id: string, ctx: AdminActingContext): Promise<ManagedUserDetailResult>;
+  getCounts(ctx: AdminActingContext): Promise<UserStatusCounts>;
+  update(
+    id: string,
+    patch: ManagedUserUpdateInput,
+    ctx: AdminActingContext
+  ): Promise<UserCommandResult>;
+  setStatus(
+    id: string,
+    status: ManagedUserStatus,
+    ctx: AdminActingContext
+  ): Promise<UserCommandResult>;
+  resetAccountState(id: string, ctx: AdminActingContext): Promise<UserCommandResult>;
+  getActivity(id: string, ctx: AdminActingContext): Promise<UserActivityResult>;
 }
 
 // ------------------------------------------------------------
@@ -60,10 +230,62 @@ export function createUserManagementService(
   // Deep-copy details so module-level mock data stays pristine.
   dataset.details.forEach((detail, id) => details.set(id, structuredCopy(detail)));
 
-  function findOrThrow(id: string): ManagedUser {
-    const user = users.find((u) => u.id === id);
-    if (!user) throw new Error(`User ${id} not found`);
-    return user;
+  // ── internal helpers ────────────────────────────────────────
+
+  function inCampusScope(actor: AdminProfile, user: ManagedUser): boolean {
+    if (actor.role !== "CAMPUS_ADMIN") return true;
+    return user.campusId === actor.campusId;
+  }
+
+  /** Read authorization. Campus admins may only inspect their own campus. */
+  function authorizeRead(
+    actor: AdminProfile,
+    user: ManagedUser
+  ): UserReadFailure | null {
+    if (!inCampusScope(actor, user)) {
+      return {
+        ok: false,
+        code: "FORBIDDEN",
+        message: "This account is outside your campus scope.",
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Mutating authorization. Mutations are platform-only, never self, and
+   * never against a target holding equal or higher privilege.
+   */
+  function authorizeManage(
+    actor: AdminProfile,
+    user: ManagedUser
+  ): UserCommandFailure | null {
+    if (!ACCOUNT_MANAGER_ROLES.has(actor.role)) {
+      return {
+        ok: false,
+        code: "FORBIDDEN",
+        message: "Your role does not have permission to manage accounts.",
+      };
+    }
+    if (actor.email.toLowerCase() === user.email.toLowerCase()) {
+      return {
+        ok: false,
+        code: "SELF_ACTION",
+        message: "An operator cannot suspend, change, or reset their own account.",
+      };
+    }
+    if (USER_PRIVILEGE_RANK[user.role] >= ACTOR_RANK[actor.role]) {
+      return {
+        ok: false,
+        code: "HIGHER_PRIVILEGE",
+        message: "This account is at or above your privilege level.",
+      };
+    }
+    return null;
+  }
+
+  function findUserOrNull(id: string): ManagedUser | undefined {
+    return users.find((u) => u.id === id);
   }
 
   function syncDetail(id: string): void {
@@ -84,9 +306,45 @@ export function createUserManagementService(
     });
   }
 
+  /** Last active staff guard: never remove the final staff account. */
+  function lastActiveStaffUsernames(): Set<string> {
+    return new Set(
+      users
+        .filter((u) => STAFF_ROLES.has(u.role) && u.status === "active")
+        .map((u) => u.id)
+    );
+  }
+
+  function applyStatusGuards(
+    actor: AdminProfile,
+    user: ManagedUser,
+    status: ManagedUserStatus
+  ): UserCommandFailure | null {
+    if (status === "suspended" || status === "deactivated") {
+      const lastActive = lastActiveStaffUsernames();
+      if (lastActive.size <= 1 && lastActive.has(user.id)) {
+        return {
+          ok: false,
+          code: "LAST_STAFF",
+          message:
+            "This is the last active staff account. Reassign permissions before removing it.",
+        };
+      }
+    }
+    return null;
+  }
+
+  function stripSensitive(row: ManagedUser): ManagedUserListItem {
+    const { walletBalance: _omit, ...rest } = row;
+    return rest;
+  }
+
+  // ── service surface ─────────────────────────────────────────
+
   return {
-    async list(query = {}) {
+    async list(query = {}, ctx) {
       await apiDelay();
+      const { actor } = ctx;
       const {
         search,
         sortBy,
@@ -100,6 +358,7 @@ export function createUserManagementService(
 
       let rows = users.filter(
         (u) =>
+          inCampusScope(actor, u) &&
           (role === "all" || u.role === role) &&
           (campusId === "all" || u.campusId === campusId) &&
           (status === "all" || u.status === status)
@@ -127,50 +386,128 @@ export function createUserManagementService(
         "joinedAt"
       );
 
-      return paginate(rows, { page, pageSize });
+      const paged = paginate(rows, { page, pageSize });
+      return { ...paged, items: paged.items.map(stripSensitive) };
     },
 
-    async getById(id) {
+    async getById(id, ctx) {
       await apiDelay(160);
-      return details.get(id) ?? null;
-    },
-
-    async getCounts() {
-      await apiDelay(80);
+      const { actor } = ctx;
+      const detail = details.get(id);
+      if (!detail) {
+        return { ok: false, code: "NOT_FOUND", message: "User not found." };
+      }
+      const denied = authorizeRead(actor, detail.user);
+      if (denied) return denied;
       return {
-        all: users.length,
-        active: users.filter((u) => u.status === "active").length,
-        suspended: users.filter((u) => u.status === "suspended").length,
-        pending_verification: users.filter((u) => u.status === "pending_verification").length,
-        deactivated: users.filter((u) => u.status === "deactivated").length,
+        ok: true,
+        detail,
+        policy: getUserActionPolicy(actor, detail.user),
       };
     },
 
-    async update(id, patch) {
-      await apiDelay();
-      const idx = users.findIndex((u) => u.id === id);
-      if (idx === -1) throw new Error(`User ${id} not found`);
-      users[idx] = { ...users[idx], ...patch };
-      syncDetail(id);
-      logActivity(
-        id,
-        `Profile updated by platform admin${patch.role ? ` \u00b7 role set to ${patch.role.replace(/_/g, " ")}` : ""}`
-      );
-      return users[idx];
+    async getCounts(ctx) {
+      await apiDelay(80);
+      const scoped = users.filter((u) => inCampusScope(ctx.actor, u));
+      return {
+        all: scoped.length,
+        active: scoped.filter((u) => u.status === "active").length,
+        suspended: scoped.filter((u) => u.status === "suspended").length,
+        pending_verification: scoped.filter(
+          (u) => u.status === "pending_verification"
+        ).length,
+        deactivated: scoped.filter((u) => u.status === "deactivated").length,
+      };
     },
 
-    async setStatus(id, status) {
+    async update(id, patch, ctx) {
       await apiDelay();
-      const user = findOrThrow(id);
-      users[users.indexOf(user)] = { ...user, status };
+      const { actor } = ctx;
+      const user = findUserOrNull(id);
+      if (!user) {
+        return { ok: false, code: "NOT_FOUND", message: "User not found." };
+      }
+      const denied = authorizeManage(actor, user);
+      if (denied) return denied;
+
+      // Identity-only surface: role/campus are never accepted here, even if a
+      // malicious client smuggles them in (no mass assignment, spec §43/§44).
+      const sanitized: ManagedUserUpdateInput = {};
+      if (typeof patch.name === "string") sanitized.name = patch.name.trim();
+      if (typeof patch.email === "string") sanitized.email = patch.email.trim();
+      if (typeof patch.phone === "string") sanitized.phone = patch.phone.trim();
+
+      const email = sanitized.email;
+      if (
+        email &&
+        email.toLowerCase() !== user.email.toLowerCase() &&
+        users.some(
+          (u) =>
+            u.id !== user.id && u.email.toLowerCase() === email.toLowerCase()
+        )
+      ) {
+        return {
+          ok: false,
+          code: "EMAIL_TAKEN",
+          message: "That email is already in use by another account.",
+        };
+      }
+
+      if (Object.keys(sanitized).length === 0) {
+        return { ok: true, user, message: "No changes were made." };
+      }
+
+      const idx = users.indexOf(user);
+      users[idx] = { ...users[idx], ...sanitized };
+      syncDetail(id);
+      logActivity(id, "Profile updated by platform admin");
+      return { ok: true, user: users[idx], message: "Profile updated." };
+    },
+
+    async setStatus(id, status, ctx) {
+      await apiDelay();
+      const { actor } = ctx;
+      if (!VALID_STATUSES.has(status)) {
+        return {
+          ok: false,
+          code: "INVALID_STATUS",
+          message: "That is not a valid account status.",
+        };
+      }
+      const user = findUserOrNull(id);
+      if (!user) {
+        return { ok: false, code: "NOT_FOUND", message: "User not found." };
+      }
+      const denied = authorizeManage(actor, user);
+      if (denied) return denied;
+      const guardFail = applyStatusGuards(actor, user, status);
+      if (guardFail) return guardFail;
+
+      if (user.status === status) {
+        return {
+          ok: true,
+          user,
+          message: `Account is already ${STATUS_VERB[status]}.`,
+        };
+      }
+
+      const idx = users.indexOf(user);
+      users[idx] = { ...user, status };
       syncDetail(id);
       logActivity(id, `Account ${STATUS_VERB[status]} by platform admin`);
-      return users[users.indexOf(user)];
+      return { ok: true, user: users[idx], message: `Account ${STATUS_VERB[status]}.` };
     },
 
-    async resetAccountState(id) {
+    async resetAccountState(id, ctx) {
       await apiDelay();
-      const user = findOrThrow(id);
+      const { actor } = ctx;
+      const user = findUserOrNull(id);
+      if (!user) {
+        return { ok: false, code: "NOT_FOUND", message: "User not found." };
+      }
+      const denied = authorizeManage(actor, user);
+      if (denied) return denied;
+
       const idx = users.indexOf(user);
       const restored: ManagedUser = {
         ...user,
@@ -187,25 +524,29 @@ export function createUserManagementService(
         syncDetail(id);
         logActivity(
           id,
-          "Account state reset \u00b7 open reports dismissed and moderation flags cleared"
+          "Account state reset · open reports dismissed and moderation flags cleared"
         );
       }
-      return restored;
+      return {
+        ok: true,
+        user: restored,
+        message: "Account state reset.",
+      };
     },
 
-    async getActivity(id) {
+    async getActivity(id, ctx) {
       await apiDelay(120);
-      return details.get(id)?.activity ?? [];
+      const { actor } = ctx;
+      const detail = details.get(id);
+      if (!detail) {
+        return { ok: false, code: "NOT_FOUND", message: "User not found." };
+      }
+      const denied = authorizeRead(actor, detail.user);
+      if (denied) return denied;
+      return { ok: true, items: detail.activity };
     },
   };
 }
-
-const STATUS_VERB: Record<ManagedUserStatus, string> = {
-  active: "activated",
-  suspended: "suspended",
-  pending_verification: "moved to pending verification",
-  deactivated: "deactivated",
-};
 
 /** Structured clone with Date-free plain objects only. */
 function structuredCopy<T>(value: T): T {

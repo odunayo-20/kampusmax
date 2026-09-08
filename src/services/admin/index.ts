@@ -119,6 +119,19 @@ export const userManagementService: AdminUserManagementService =
   createUserManagementService();
 
 export type { ManagedUserSortField } from "./user-management.service";
+export type {
+  AdminActingContext,
+  ManagedUserListQuery,
+  ManagedUserDetailResult,
+  UserActivityResult,
+  UserCommandFailure,
+  UserCommandFailureCode,
+  UserCommandResult,
+  UserActionPolicy,
+  UserActionPolicyTarget,
+  UserManageLevel,
+} from "./user-management.service";
+export { getUserActionPolicy } from "./user-management.service";
 
 /** /admin/campuses console (campus lifecycle + admin assignments). */
 export const campusManagementService: AdminCampusManagementService =

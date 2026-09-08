@@ -1,43 +1,42 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Users, XCircle } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
-  ConfirmDialog,
   DeactivateConfirm,
   ResetStateConfirm,
   SuspendConfirm,
 } from "@/components/admin/ConfirmDialog";
 import { Pagination } from "@/components/admin/Pagination";
 import { EditUserDialog } from "@/components/admin/users/EditUserDialog";
-import { UserProfileDrawer, type DrawerTab } from "@/components/admin/users/UserProfileDrawer";
 import { UsersFilters, type UsersFilterState } from "@/components/admin/users/UsersFilters";
 import { UsersTable } from "@/components/admin/users/UsersTable";
 import { useDebounce } from "@/hooks/use-debounce";
 import { mockCampuses } from "@/data/admin/campuses";
-import { userManagementService } from "@/services/admin";
+import { getUserActionPolicy } from "@/services/admin";
+import {
+  useAdminUserCounts,
+  useAdminUserResetStateMutation,
+  useAdminUserSetStatusMutation,
+  useAdminUserUpdateMutation,
+  useAdminUsers,
+} from "@/hooks/admin/use-admin-users";
+import { useAdminSession } from "@/lib/admin/admin-auth-context";
 import { USER_ROLE_LABELS, USER_STATUS_LABELS } from "@/components/admin/users/users-meta";
 import type {
-  ManagedUser,
+  ManagedUserListItem,
   ManagedUserRole,
   ManagedUserStatus,
   ManagedUserUpdateInput,
-  Paginated,
   SortDir,
-  UserStatusCounts,
 } from "@/types/admin";
 import type { ManagedUserSortField } from "@/services/admin";
 
-type ListState =
-  | { status: "loading" }
-  | { status: "error" }
-  | { status: "ready"; data: Paginated<ManagedUser> };
-
 type PendingConfirm = {
   kind: "suspend" | "deactivate" | "reset";
-  user: ManagedUser;
+  user: ManagedUserListItem;
 };
 
 interface ToastMessage {
@@ -54,6 +53,8 @@ const CAMPUS_NAMES: Record<string, string> = Object.fromEntries(
   mockCampuses.map((c) => [c.id, c.shortName])
 );
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
 function parseInitialFilters(params: URLSearchParams): UsersFilterState {
   const rawStatus = params.get("status");
   const status =
@@ -69,6 +70,14 @@ function parseInitialFilters(params: URLSearchParams): UsersFilterState {
   };
 }
 
+function parsePage(params: URLSearchParams): { page: number; pageSize: number } {
+  const rawPage = Number(params.get("page"));
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+  const rawSize = Number(params.get("pageSize"));
+  const pageSize = PAGE_SIZE_OPTIONS.includes(rawSize) ? rawSize : 10;
+  return { page, pageSize };
+}
+
 export default function AdminUsersPage() {
   return (
     <Suspense fallback={<UsersSkeleton />}>
@@ -78,39 +87,79 @@ export default function AdminUsersPage() {
 }
 
 function AdminUsersPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { admin } = useAdminSession();
+  const isCampusScoped = admin?.role === "CAMPUS_ADMIN";
 
-  // ----- filters / query state -----
-  const [filters, setFilters] = useState<UsersFilterState>(() =>
-    parseInitialFilters(new URLSearchParams(searchParams.toString()))
-  );
+  // ----- filters / query state (URL-persisted) -----
+  const [filters, setFilters] = useState<UsersFilterState>(() => {
+    const initial = parseInitialFilters(new URLSearchParams(searchParams.toString()));
+    // Campus-scoped operators only ever see their own campus; the scope is
+    // enforced in the service layer, so the selector stays neutral here.
+    if (admin?.role === "CAMPUS_ADMIN") initial.campusId = "all";
+    return initial;
+  });
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebounce(searchInput, 350);
   const [sortBy, setSortBy] = useState<ManagedUserSortField>("joinedAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // ----- data state -----
-  const [list, setList] = useState<ListState>({ status: "loading" });
-  const [counts, setCounts] = useState<UserStatusCounts | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  // ----- overlays -----
-  const [drawerUserId, setDrawerUserId] = useState<string | null>(null);
-  const [drawerTab, setDrawerTab] = useState<DrawerTab>("overview");
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
-  const [confirmWorking, setConfirmWorking] = useState(false);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const toastId = useRef(0);
+  const [{ page, pageSize }, setPageState] = useState(() =>
+    parsePage(new URLSearchParams(searchParams.toString()))
+  );
 
   // Keep the debounced query in sync with the immediate input.
   useEffect(() => {
     setFilters((f) => (f.search === debouncedSearch ? f : { ...f, search: debouncedSearch }));
   }, [debouncedSearch]);
+
+  // Mirror filter state to the URL so views stay deep-linkable/shareable.
+  const urlQuery = useMemo(() => {
+    const p = new URLSearchParams();
+    if (filters.search.trim()) p.set("q", filters.search.trim());
+    if (filters.role !== "all") p.set("role", filters.role);
+    if (filters.campusId !== "all" && !isCampusScoped) p.set("campus", filters.campusId);
+    if (filters.status !== "all") p.set("status", filters.status);
+    if (page > 1) p.set("page", String(page));
+    if (pageSize !== 10) p.set("pageSize", String(pageSize));
+    return p.toString();
+  }, [filters, page, pageSize, isCampusScoped]);
+
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    const target = urlQuery ? `/admin/users?${urlQuery}` : "/admin/users";
+    router.replace(target, { scroll: false });
+  }, [urlQuery, router]);
+
+  // ----- data (TanStack Query) -----
+  const listQuery = useAdminUsers({
+    search: filters.search,
+    role: filters.role,
+    campusId: filters.campusId,
+    status: filters.status,
+    sortBy,
+    sortDir,
+    page,
+    pageSize,
+  });
+  const countsQuery = useAdminUserCounts();
+
+  // ----- mutations -----
+  const setStatusMutation = useAdminUserSetStatusMutation();
+  const updateMutation = useAdminUserUpdateMutation();
+  const resetMutation = useAdminUserResetStateMutation();
+
+  // ----- overlays -----
+  const [editingUser, setEditingUser] = useState<ManagedUserListItem | null>(null);
+  const [softSaving, setSoftSaving] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [confirmWorking, setConfirmWorking] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastId = useRef(0);
 
   const pushToast = useCallback((tone: ToastMessage["tone"], text: string) => {
     const id = ++toastId.current;
@@ -118,48 +167,12 @@ function AdminUsersPageInner() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800);
   }, []);
 
-  const loadList = useCallback(async () => {
-    setList((prev) => (prev.status === "ready" ? prev : { status: "loading" }));
-    try {
-      const data = await userManagementService.list({
-        search: filters.search,
-        role: filters.role,
-        campusId: filters.campusId,
-        status: filters.status === "all" ? "all" : filters.status,
-        sortBy,
-        sortDir,
-        page,
-        pageSize,
-      });
-      setList({ status: "ready", data });
-      setPage(data.page);
-    } catch {
-      setList({ status: "error" });
-    }
-  }, [filters, sortBy, sortDir, page, pageSize]);
-
-  const loadCounts = useCallback(async () => {
-    try {
-      setCounts(await userManagementService.getCounts());
-    } catch {
-      /* counts are non-critical */
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadList();
-  }, [loadList, reloadKey]);
-
-  useEffect(() => {
-    void loadCounts();
-  }, [loadCounts, reloadKey]);
-
   // ----- handlers -----
 
   const patchFilters = useCallback((patch: Partial<UsersFilterState>) => {
     if ("search" in patch) setSearchInput(patch.search ?? "");
     setFilters((f) => ({ ...f, ...patch }));
-    setPage(1);
+    setPageState((s) => ({ ...s, page: 1 }));
   }, []);
 
   const toggleSort = useCallback(
@@ -170,32 +183,26 @@ function AdminUsersPageInner() {
         setSortBy(field);
         setSortDir(field === "name" ? "asc" : "desc");
       }
-      setPage(1);
+      setPageState((s) => ({ ...s, page: 1 }));
     },
     [sortBy]
   );
 
-  const afterMutation = useCallback(
-    (message: string) => {
-      setReloadKey((k) => k + 1);
-      setRefreshKey((k) => k + 1);
-      pushToast("success", message);
-    },
-    [pushToast]
-  );
-
-  async function activateUser(user: ManagedUser) {
-    try {
-      await userManagementService.setStatus(user.id, "active");
-      afterMutation(`${user.name} can sign in again - account activated.`);
-    } catch {
-      pushToast("error", `Couldn't activate ${user.name}. Try again.`);
-    }
+  function openUser(user: ManagedUserListItem) {
+    router.push(`/admin/users/${user.id}`);
   }
 
-  function openDrawer(user: ManagedUser, tab: DrawerTab = "overview") {
-    setDrawerTab(tab);
-    setDrawerUserId(user.id);
+  async function runSetStatus(
+    user: ManagedUserListItem,
+    status: ManagedUserStatus,
+    successMessage: string
+  ) {
+    const result = await setStatusMutation.mutateAsync({ id: user.id, status });
+    if (result.ok) {
+      pushToast("success", successMessage);
+    } else {
+      pushToast("error", result.message);
+    }
   }
 
   async function runConfirmedAction() {
@@ -204,17 +211,17 @@ function AdminUsersPageInner() {
     setConfirmWorking(true);
     try {
       if (kind === "suspend") {
-        await userManagementService.setStatus(user.id, "suspended");
-        afterMutation(`${user.name} has been suspended.`);
+        await runSetStatus(user, "suspended", `${user.name} has been suspended.`);
       } else if (kind === "deactivate") {
-        await userManagementService.setStatus(user.id, "deactivated");
-        afterMutation(`${user.name}'s account was deactivated.`);
+        await runSetStatus(user, "deactivated", `${user.name}'s account was deactivated.`);
       } else {
-        await userManagementService.resetAccountState(user.id);
-        afterMutation(`${user.name}'s account state was reset.`);
+        const result = await resetMutation.mutateAsync(user.id);
+        if (result.ok) {
+          pushToast("success", `${user.name}'s account state was reset.`);
+        } else {
+          pushToast("error", result.message);
+        }
       }
-    } catch {
-      pushToast("error", "The action failed. Try again.");
     } finally {
       setConfirmWorking(false);
       setPendingConfirm(null);
@@ -223,15 +230,17 @@ function AdminUsersPageInner() {
 
   async function saveEdit(patch: ManagedUserUpdateInput) {
     if (!editingUser) return;
-    setSavingEdit(true);
+    setSoftSaving(true);
     try {
-      const updated = await userManagementService.update(editingUser.id, patch);
-      setEditingUser(null);
-      afterMutation(`${updated.name} was updated successfully.`);
-    } catch {
-      pushToast("error", "Couldn't save changes. Try again.");
+      const result = await updateMutation.mutateAsync({ id: editingUser.id, patch });
+      if (result.ok) {
+        setEditingUser(null);
+        pushToast("success", `${result.user.name} was updated successfully.`);
+      } else {
+        pushToast("error", result.message);
+      }
     } finally {
-      setSavingEdit(false);
+      setSoftSaving(false);
     }
   }
 
@@ -241,7 +250,15 @@ function AdminUsersPageInner() {
     filters.campusId !== "all" ||
     filters.status !== "all";
 
-  const readyData = list.status === "ready" ? list.data : null;
+  const readyData = listQuery.data ?? null;
+  const loading = listQuery.isPending && !listQuery.data;
+
+  // Keep the effective page canonical when the dataset shrank (e.g. search).
+  useEffect(() => {
+    if (readyData && readyData.totalPages > 0 && page > readyData.totalPages) {
+      setPageState((s) => ({ ...s, page: readyData.totalPages }));
+    }
+  }, [readyData, page]);
 
   return (
     <>
@@ -251,7 +268,7 @@ function AdminUsersPageInner() {
         actions={
           <span className="inline-flex items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-3 py-1.5 text-xs font-medium text-kampmax-text-secondary">
             <Users className="h-3.5 w-3.5" />
-            {counts ? `${counts.all.toLocaleString("en-NG")} total accounts` : "…"}
+            {countsQuery.data ? `${countsQuery.data.all.toLocaleString("en-NG")} total accounts` : "…"}
           </span>
         }
       />
@@ -260,29 +277,39 @@ function AdminUsersPageInner() {
         <UsersFilters
           filters={{ ...filters, search: searchInput }}
           campuses={CAMPUS_OPTIONS}
-          counts={counts}
+          counts={countsQuery.data ?? null}
+          hideCampus={isCampusScoped}
           onChange={patchFilters}
         />
+        {isCampusScoped && admin && (
+          <p className="mt-2 text-xs text-kampmax-text-secondary">
+            Scoped view — only {CAMPUS_NAMES[admin.campusId ?? ""] ?? "your campus"}&apos;s
+            accounts are shown, and account management is read-only.
+          </p>
+        )}
       </div>
 
       <UsersTable
         page={readyData}
-        loading={list.status === "loading"}
-        error={list.status === "error"}
+        loading={loading}
+        error={listQuery.isError}
         campusNames={CAMPUS_NAMES}
         sortBy={sortBy}
         sortDir={sortDir}
         onSort={toggleSort}
-        onRetry={() => setReloadKey((k) => k + 1)}
+        onRetry={() => listQuery.refetch()}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={() =>
           patchFilters({ search: "", role: "all", campusId: "all", status: "all" })
         }
-        onView={(u) => openDrawer(u)}
+        getPolicy={(user) => getUserActionPolicy(admin!, user)}
+        onView={openUser}
         onEdit={(u) => setEditingUser(u)}
-        onViewActivity={(u) => openDrawer(u, "activity")}
+        onViewActivity={openUser}
         onSuspend={(u) => setPendingConfirm({ kind: "suspend", user: u })}
-        onActivate={activateUser}
+        onActivate={(u) =>
+          void runSetStatus(u, "active", `${u.name} can sign in again - account activated.`)
+        }
         onDeactivate={(u) => setPendingConfirm({ kind: "deactivate", user: u })}
         onResetState={(u) => setPendingConfirm({ kind: "reset", user: u })}
       />
@@ -294,39 +321,18 @@ function AdminUsersPageInner() {
           pageSize={pageSize}
           total={readyData.total}
           totalPages={readyData.totalPages}
-          onPageChange={setPage}
-          onPageSizeChange={(n) => {
-            setPageSize(n);
-            setPage(1);
-          }}
+          onPageChange={(n) => setPageState((s) => ({ ...s, page: n }))}
+          onPageSizeChange={(n) => setPageState((s) => ({ ...s, pageSize: n, page: 1 }))}
         />
       )}
 
       {/* ---------- Overlays ---------- */}
 
-      <UserProfileDrawer
-        userId={drawerUserId}
-        initialTab={drawerTab}
-        refreshKey={refreshKey}
-        onClose={() => setDrawerUserId(null)}
-        onView={(u) => {
-          setDrawerUserId(null);
-          setTimeout(() => openDrawer(u), 30);
-        }}
-        onEdit={(u) => setEditingUser(u)}
-        onViewActivity={(u) => openDrawer(u, "activity")}
-        onSuspend={(u) => setPendingConfirm({ kind: "suspend", user: u })}
-        onActivate={activateUser}
-        onDeactivate={(u) => setPendingConfirm({ kind: "deactivate", user: u })}
-        onResetState={(u) => setPendingConfirm({ kind: "reset", user: u })}
-      />
-
       <EditUserDialog
         open={editingUser !== null}
         user={editingUser}
-        campuses={CAMPUS_OPTIONS}
-        saving={savingEdit}
-        onClose={() => !savingEdit && setEditingUser(null)}
+        saving={softSaving}
+        onClose={() => !softSaving && setEditingUser(null)}
         onSave={saveEdit}
       />
 

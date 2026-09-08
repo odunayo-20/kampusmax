@@ -12,17 +12,18 @@ import {
   UserX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ManagedUser } from "@/types/admin";
+import type { ManagedUserListItem } from "@/types/admin";
+import type { UserActionPolicy } from "@/services/admin";
 import { getActionAvailability } from "./users-meta";
 
 export interface UserActionHandlers {
-  onView: (user: ManagedUser) => void;
-  onEdit: (user: ManagedUser) => void;
-  onViewActivity: (user: ManagedUser) => void;
-  onSuspend: (user: ManagedUser) => void;
-  onActivate: (user: ManagedUser) => void;
-  onDeactivate: (user: ManagedUser) => void;
-  onResetState: (user: ManagedUser) => void;
+  onView: (user: ManagedUserListItem) => void;
+  onEdit: (user: ManagedUserListItem) => void;
+  onViewActivity: (user: ManagedUserListItem) => void;
+  onSuspend: (user: ManagedUserListItem) => void;
+  onActivate: (user: ManagedUserListItem) => void;
+  onDeactivate: (user: ManagedUserListItem) => void;
+  onResetState: (user: ManagedUserListItem) => void;
 }
 
 const MENU_WIDTH = 210;
@@ -30,9 +31,14 @@ const MENU_WIDTH = 210;
 /**
  * Kebab menu for one user row. Rendered with fixed coordinates so
  * the table's overflow-x container can never clip it.
+ *
+ * Visibility combines the account state-machine (`getActionAvailability`)
+ * with the operator's authorization (`policy`) — the service layer remains
+ * the authoritative enforcement point.
  */
 export function RowActionsMenu({
   user,
+  policy,
   onView,
   onEdit,
   onViewActivity,
@@ -40,7 +46,7 @@ export function RowActionsMenu({
   onActivate,
   onDeactivate,
   onResetState,
-}: { user: ManagedUser } & UserActionHandlers) {
+}: { user: ManagedUserListItem; policy: UserActionPolicy } & UserActionHandlers) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -89,7 +95,7 @@ export function RowActionsMenu({
     setOpen((v) => !v);
   }
 
-  function run(fn: (u: ManagedUser) => void) {
+  function run(fn: (u: ManagedUserListItem) => void) {
     return () => {
       setOpen(false);
       fn(user);
@@ -122,12 +128,17 @@ export function RowActionsMenu({
           className="fixed z-50 overflow-hidden rounded-lg border border-kampmax-border bg-white py-1 shadow-lg"
         >
           <MenuItem icon={Eye} label="View profile" onClick={run(onView)} />
-          <MenuItem icon={Pencil} label="Edit user" onClick={run(onEdit)} />
+          <MenuItem
+            icon={Pencil}
+            label="Edit user"
+            onClick={run(onEdit)}
+            disabled={!policy.canEdit}
+          />
           <MenuItem icon={History} label="View activity" onClick={run(onViewActivity)} />
 
           <div className="my-1 border-t border-kampmax-border" role="separator" />
 
-          {availability.canSuspend && (
+          {policy.canSuspend && availability.canSuspend && (
             <MenuItem
               icon={Ban}
               label="Suspend user"
@@ -135,7 +146,7 @@ export function RowActionsMenu({
               onClick={run(onSuspend)}
             />
           )}
-          {availability.canDeactivate && (
+          {policy.canDeactivate && availability.canDeactivate && (
             <MenuItem
               icon={UserX}
               label="Deactivate account"
@@ -143,7 +154,7 @@ export function RowActionsMenu({
               onClick={run(onDeactivate)}
             />
           )}
-          {availability.canActivate && (
+          {policy.canActivate && availability.canActivate && (
             <MenuItem
               icon={ShieldCheck}
               label="Activate account"
@@ -153,7 +164,7 @@ export function RowActionsMenu({
           <MenuItem
             icon={RotateCcw}
             label="Reset account state"
-            disabled={!availability.canResetState}
+            disabled={!policy.canResetState || !availability.canResetState}
             onClick={run(onResetState)}
           />
         </div>

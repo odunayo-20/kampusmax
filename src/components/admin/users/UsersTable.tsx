@@ -10,14 +10,14 @@ import { cn, formatDate, timeAgo } from "@/lib/utils";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ErrorState } from "@/components/admin/ErrorState";
 import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
-import type { ManagedUser, Paginated, SortDir } from "@/types/admin";
-import type { ManagedUserSortField } from "@/services/admin";
+import type { ManagedUserListItem, Paginated, SortDir } from "@/types/admin";
+import type { ManagedUserSortField, UserActionPolicy } from "@/services/admin";
 import { UserAvatar, UserRoleBadge, UserStatusBadge } from "./UserBadges";
 import type { UserActionHandlers } from "./UserActionMenu";
 import { RowActionsMenu } from "./UserActionMenu";
 
 interface UsersTableProps extends UserActionHandlers {
-  page: Paginated<ManagedUser> | null;
+  page: Paginated<ManagedUserListItem> | null;
   loading: boolean;
   error: boolean;
   campusNames: Record<string, string>;
@@ -27,6 +27,7 @@ interface UsersTableProps extends UserActionHandlers {
   onRetry: () => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  getPolicy: (user: ManagedUserListItem) => UserActionPolicy;
 }
 
 export function UsersTable({
@@ -40,6 +41,7 @@ export function UsersTable({
   onRetry,
   hasActiveFilters,
   onClearFilters,
+  getPolicy,
   ...actions
 }: UsersTableProps) {
   if (loading && !page) {
@@ -115,6 +117,7 @@ export function UsersTable({
                 key={user.id}
                 user={user}
                 campusName={campusNames[user.campusId] ?? "—"}
+                policy={getPolicy(user)}
                 actions={actions}
               />
             ))}
@@ -195,10 +198,12 @@ function SortableTh({
 function Row({
   user,
   campusName,
+  policy,
   actions,
 }: {
-  user: ManagedUser;
+  user: ManagedUserListItem;
   campusName: string;
+  policy: UserActionPolicy;
   actions: UserActionHandlers;
 }) {
   return (
@@ -270,7 +275,7 @@ function Row({
 
       {/* Actions */}
       <td className="px-4 py-2.5 text-right">
-        <RowActionsMenu user={user} {...actions} />
+        <RowActionsMenu user={user} policy={policy} {...actions} />
       </td>
     </tr>
   );

@@ -112,6 +112,15 @@ export type ManagedUserStatus =
   | "pending_verification"
   | "deactivated";
 
+/**
+ * Row DTO for directory list endpoints (Module 35).
+ * The backend surrogate strips sensitive wallet details from list payloads
+ * (spec §9); readable rows are `Omit<ManagedUser, "walletBalance">`. The full
+ * `ManagedUser` shape is only returned by detail endpoints, and only to
+ * roles authorized to inspect it.
+ */
+export type ManagedUserListItem = Omit<ManagedUser, "walletBalance">;
+
 /** Store details attached when role === "vendor". */
 export interface ManagedVendorProfile {
   storeName: string;
@@ -143,12 +152,16 @@ export interface ManagedUser {
   vendorProfile: ManagedVendorProfile | null;
 }
 
+/**
+ * Identity-only patch surface (Module 35). Role and campus are NOT editable
+ * here: assignment requires the dedicated RBAC/permissions module on the
+ * backend (spec §11). The service defensively strips role/campus fields even
+ * if a future client attempts to send them (no mass assignment, §43/§44).
+ */
 export interface ManagedUserUpdateInput {
   name?: string;
   email?: string;
   phone?: string;
-  role?: ManagedUserRole;
-  campusId?: string;
 }
 
 export interface UserStatusCounts {

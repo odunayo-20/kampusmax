@@ -23,9 +23,17 @@ interface UsersFiltersProps {
   campuses: CampusOption[];
   counts: UserStatusCounts | null;
   onChange: (patch: Partial<UsersFilterState>) => void;
+  /** Hides the campus selector for campus-scoped operators (scope is enforced server-side). */
+  hideCampus?: boolean;
 }
 
-export function UsersFilters({ filters, campuses, counts, onChange }: UsersFiltersProps) {
+export function UsersFilters({
+  filters,
+  campuses,
+  counts,
+  onChange,
+  hideCampus = false,
+}: UsersFiltersProps) {
   const hasActiveFilters =
     filters.search.trim() !== "" ||
     filters.role !== "all" ||
@@ -87,19 +95,26 @@ export function UsersFilters({ filters, campuses, counts, onChange }: UsersFilte
             ))}
           </select>
 
-          <select
-            aria-label="Filter by campus"
-            value={filters.campusId}
-            onChange={(e) => onChange({ campusId: e.target.value })}
-            className="h-9 max-w-[190px] rounded-lg border border-kampmax-border bg-white px-2.5 text-sm text-kampmax-text focus:outline-none focus:ring-1 focus:ring-kampmax-blue"
-          >
-            <option value="all">All campuses</option>
-            {campuses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          {hideCampus ? (
+            <span className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-kampmax-border bg-kampmax-muted/40 px-2.5 text-xs font-medium text-kampmax-text-secondary">
+              <Building2 className="h-3.5 w-3.5" />
+              Scope: {campuses[0]?.label ?? "your campus"}
+            </span>
+          ) : (
+            <select
+              aria-label="Filter by campus"
+              value={filters.campusId}
+              onChange={(e) => onChange({ campusId: e.target.value })}
+              className="h-9 max-w-[190px] rounded-lg border border-kampmax-border bg-white px-2.5 text-sm text-kampmax-text focus:outline-none focus:ring-1 focus:ring-kampmax-blue"
+            >
+              <option value="all">All campuses</option>
+              {campuses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          )}
 
           {hasActiveFilters && (
             <button

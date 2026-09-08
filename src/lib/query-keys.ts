@@ -200,4 +200,33 @@ export const adminKeys = {
     stats: (scopeCampusId?: string | null) =>
       ["admin", "dashboard", "stats", scopeCampusId ?? "platform"] as const,
   },
+  /**
+   * User directory (Module 35). Keys are scope-qualified by the acting
+   * operator's campus so a campus-scoped admin's cache can never leak
+   * rows/counts across campus boundaries. `list` embeds the full query
+   * object; React Query structural-hashes it, so identical params share
+   * one cache entry.
+   */
+  users: {
+    all: ["admin", "users"] as const,
+    list: (
+      query: {
+        search?: string;
+        role?: string;
+        campusId?: string;
+        status?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "users", "list", scopeCampusId ?? "platform", query] as const,
+    counts: (scopeCampusId?: string | null) =>
+      ["admin", "users", "counts", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "users", "detail", id, scopeCampusId ?? "platform"] as const,
+    activity: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "users", "activity", id, scopeCampusId ?? "platform"] as const,
+  },
 };
