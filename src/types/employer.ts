@@ -11,6 +11,8 @@
 // blocking statuses, and a draft (form data model) that maps 1:1 to the
 // fields a future NestJS employer-profile DTO would accept.
 
+import type { Opportunity } from "./opportunity";
+
 // ── Onboarding status ───────────────────────────────────────
 
 export const EMPLOYER_ONBOARDING_STATUS = {
@@ -188,3 +190,65 @@ export const EMPLOYER_SUBMIT_RESULT = {
 
 export type EmployerSubmitResult =
   (typeof EMPLOYER_SUBMIT_RESULT)[keyof typeof EMPLOYER_SUBMIT_RESULT];
+
+// ── Profile update payload (mass-assignment safe) ────────────
+// Only editable fields are included. Never send status, verification,
+// userId, applicationId, approvedSlug, adminMessage, reviewReason,
+// currentStep, submittedAt, or clientType — those are backend-owned.
+
+export interface EmployerProfileUpdatePayload {
+  profile?: {
+    displayName?: string;
+    headline?: string;
+    about?: string;
+    industry?: string;
+    website?: string;
+    logoUrl?: string | null;
+  };
+  organization?: {
+    name?: string;
+    businessType?: string;
+    industry?: string;
+    description?: string;
+    size?: string;
+    website?: string;
+  };
+  contact?: {
+    email?: string;
+    phone?: string;
+    preferredContact?: string;
+  };
+  location?: {
+    campusId?: string;
+    city?: string;
+    state?: string;
+    workPreference?: EmployerWorkPreference | "";
+    remoteAvailable?: boolean;
+  };
+  preferences?: {
+    categories?: string[];
+    experience?: string;
+    workType?: string;
+    projectDuration?: string;
+    budgetMin?: number;
+    budgetMax?: number;
+  };
+}
+
+// ── Public employer profile (server-side store lookup) ───────
+// Only fields the backend deems public. Contact details and internal
+// notes are never part of this projection. openJobs mirrors the
+// Opportunity "public pick" returned by the data layer.
+
+export interface EmployerPublicProfile {
+  name: string;
+  descriptor: string;
+  about: string;
+  location: string;
+  verified: boolean;
+  slug: string;
+  openJobs: Pick<
+    Opportunity,
+    "id" | "title" | "summary" | "budget" | "duration" | "experienceLevel" | "postedAt" | "location"
+  >[];
+}

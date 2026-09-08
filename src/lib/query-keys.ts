@@ -124,3 +124,16 @@ export const dashboardKeys = {
   contracts: (userId: string) =>
     ["employer-dashboard", "contracts", userId] as const,
 };
+
+/**
+ * Employer profile key factory (Module 29A). Profile queries are per-user
+ * so owner-only data never leaks between sessions. Profile updates invalidate
+ * both `employerKeys.all` (profile reads) and `dashboardKeys.all` (dashboard
+ * summary, header and completion).
+ */
+export const employerKeys = {
+  all: ["employer"] as const,
+  profile: (userId: string) => ["employer", "profile", userId] as const,
+  publicProfile: (slug: string) =>
+    ["employer", "public", slug] as const,
+};

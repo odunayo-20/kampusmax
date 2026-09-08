@@ -391,6 +391,25 @@ export function getOpportunityRecord(id: string): Opportunity | null {
   return opp ? hydrateOpportunityCounts(opp) : null;
 }
 
+/** Public open jobs for an employer's public profile page (no auth required). */
+export function getOpenJobsForEmployer(
+  employerUserId: string
+): Pick<Opportunity, "id" | "title" | "summary" | "budget" | "duration" | "experienceLevel" | "postedAt" | "location">[] {
+  return Array.from(opportunities.values())
+    .filter((o) => o.employerUserId === employerUserId && o.status === "open")
+    .sort((a, b) => b.postedAt.localeCompare(a.postedAt))
+    .map((o) => ({
+      id: o.id,
+      title: o.title,
+      summary: o.summary,
+      budget: o.budget,
+      duration: o.duration,
+      experienceLevel: o.experienceLevel,
+      postedAt: o.postedAt,
+      location: o.location,
+    }));
+}
+
 export function incrementOpportunityViews(id: string): void {
   const opp = opportunities.get(id);
   if (opp) opp.viewCount += 1;

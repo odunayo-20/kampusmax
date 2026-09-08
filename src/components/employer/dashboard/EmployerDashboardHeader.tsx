@@ -61,7 +61,7 @@ export function EmployerDashboardHeader({
           )}
         </Link>
         <Link
-          href="/onboarding/employer"
+          href="/employer/profile"
           className="inline-flex items-center gap-1.5 rounded-lg border border-kampmax-border bg-white px-3 py-1.5 text-xs font-semibold text-kampmax-text hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
         >
           <Building2 className="h-3.5 w-3.5" aria-hidden />

@@ -29,17 +29,32 @@ import {
   getEmployerOnboardingStatus,
   getEmployerVerificationStatus,
   submitEmployerApplication,
+  getEmployerByApprovedSlug,
 } from "@/data/employer";
+import { getOpenJobsForEmployer } from "@/data/opportunity";
 import type {
   EmployerOnboardingDraft,
   EmployerOnboardingStatus,
   EmployerVerificationStatus,
+  EmployerProfileUpdatePayload,
 } from "@/types/employer";
 import {
   EMPLOYER_ONBOARDING_STEPS,
   isEmployerBlockingStatus,
 } from "@/types/employer";
+import {
+  EMPLOYER_HIRING_CATEGORIES,
+  EMPLOYER_EXPERIENCE_LEVELS,
+  EMPLOYER_WORK_TYPES,
+  EMPLOYER_PROJECT_DURATIONS,
+  EMPLOYER_BUSINESS_TYPES,
+  EMPLOYER_ORG_SIZES,
+  EMPLOYER_WORK_PREFERENCES,
+  EMPLOYER_CONTACT_METHODS,
+} from "@/config/employer";
+import { isValidEmail } from "@/lib/utils";
 import { EMPLOYER_DASHBOARD_SECTIONS } from "@/config/employer-dashboard";
+import { EMPLOYER_GATE_EXEMPT_PATHS } from "@/config/employer-dashboard";
 
 // ── Owner context ───────────────────────────────────────────
 
@@ -316,9 +331,215 @@ export function getEmployerCampusOptions() {
   return getCampuses();
 }
 
+// ── Profile update (mass-assignment safe) ────────────────────
+
+const VALID_CATEGORY_IDS = new Set<string>(EMPLOYER_HIRING_CATEGORIES.map((c) => c.id));
+const VALID_EXPERIENCE = new Set<string>(EMPLOYER_EXPERIENCE_LEVELS.map((e) => e.value));
+const VALID_WORK_TYPES = new Set<string>(EMPLOYER_WORK_TYPES.map((w) => w.value));
+const VALID_DURATIONS = new Set<string>(EMPLOYER_PROJECT_DURATIONS.map((d) => d.value));
+const VALID_BIZ_TYPES = new Set<string>(EMPLOYER_BUSINESS_TYPES.map((b) => b.value));
+const VALID_ORG_SIZES = new Set<string>(EMPLOYER_ORG_SIZES.map((s) => s.value));
+const VALID_WORK_PREFS = new Set<string>(EMPLOYER_WORK_PREFERENCES.map((w) => w.value));
+const VALID_CONTACT_METHODS = new Set<string>(EMPLOYER_CONTACT_METHODS.map((c) => c.value));
+
+function cap(input: string | undefined | null, max: number): string | undefined {
+  if (!input) return undefined;
+  const trimmed = input.trim();
+  return trimmed.length > 0 ? trimmed.slice(0, max) : undefined;
+}
+
+function capOrNull(input: string | undefined | null, max: number): string | null | undefined {
+  if (input === null) return null;
+  return cap(input, max);
+}
+
+/**
+ * Updates the authenticated employer's profile. Only allow-listed fields are
+ * applied; admin-owned fields (status, verification, userId, applicationId,
+ * approvedSlug, currentStep, submittedAt, adminMessage, reviewReason,
+ * clientType) are never modified.
+ */
+export function updateEmployerProfileForUser(
+  payload: EmployerProfileUpdatePayload
+): { success: boolean; error?: string } {
+  const uid = currentUserId();
+  if (!uid) return { success: false, error: "Not authenticated." };
+
+  const draft = getEmployerOnboardingDraft(uid);
+  if (!draft) return { success: false, error: "No employer profile found." };
+
+  // Build the merged draft — only apply allowed fields.
+  const next: EmployerOnboardingDraft = { ...draft };
+
+  if (payload.profile) {
+    next.profile = {
+      displayName: cap(payload.profile.displayName, 80),
+      headline: cap(payload.profile.headline, 100),
+      about: cap(payload.profile.about, 800),
+      industry: cap(payload.profile.industry, 60),
+      website: cap(payload.profile.website, 200),
+      logoUrl: payload.profile.logoUrl,
+    };
+  }
+
+  if (payload.organization) {
+    next.organization = {
+      name: cap(payload.organization.name, 100),
+      businessType: cap(payload.organization.businessType, 40),
+      industry: cap(payload.organization.industry, 60),
+      description: cap(payload.organization.description, 800),
+      size: cap(payload.organization.size, 40),
+      website: cap(payload.organization.website, 200),
+    };
+  }
+
+  if (payload.contact) {
+    next.contact = {
+      email: cap(payload.contact.email, 200),
+      phone: cap(payload.contact.phone, 40),
+      preferredContact: cap(payload.contact.preferredContact, 40),
+    };
+  }
+
+  if (payload.location) {
+    next.location = {
+      campusId: capOrNull(payload.location.campusId, 60) ?? undefined,
+      city: cap(payload.location.city, 60),
+      state: cap(payload.location.state, 60),
+      workPreference: payload.location.workPreference || "",
+      remoteAvailable: !!payload.location.remoteAvailable,
+    };
+  }
+
+  if (payload.preferences) {
+    const rawCats = Array.isArray(payload.preferences.categories)
+      ? payload.preferences.categories
+      : [];
+    const categories = rawCats.filter((c) => VALID_CATEGORY_IDS.has(c)).slice(0, 12);
+
+    next.preferences = {
+      categories,
+      experience: cap(payload.preferences.experience, 40),
+      workType: cap(payload.preferences.workType, 40),
+      projectDuration: cap(payload.preferences.projectDuration, 40),
+      budgetMin:
+        typeof payload.preferences.budgetMin === "number" &&
+        Number.isFinite(payload.preferences.budgetMin) &&
+        payload.preferences.budgetMin >= 0
+          ? payload.preferences.budgetMin
+          : undefined,
+      budgetMax:
+        typeof payload.preferences.budgetMax === "number" &&
+        Number.isFinite(payload.preferences.budgetMax) &&
+        payload.preferences.budgetMax >= 0
+          ? payload.preferences.budgetMax
+          : undefined,
+    };
+    // Enforce min ≤ max when both present
+    if (
+      typeof next.preferences.budgetMin === "number" &&
+      typeof next.preferences.budgetMax === "number" &&
+      next.preferences.budgetMin > next.preferences.budgetMax
+    ) {
+      const swap = next.preferences.budgetMin;
+      next.preferences.budgetMin = next.preferences.budgetMax;
+      next.preferences.budgetMax = swap;
+    }
+  }
+
+  // Validate optional URLs
+  if (next.profile.website && !isSafeUrlCandidate(next.profile.website)) {
+    next.profile.website = undefined;
+  }
+  if (next.organization.website && !isSafeUrlCandidate(next.organization.website)) {
+    next.organization.website = undefined;
+  }
+
+  // Validate contact email
+  if (next.contact.email && !isValidEmail(next.contact.email)) {
+    next.contact.email = draft.contact.email; // revert to original
+  }
+
+  // Sanitize select values
+  if (next.organization.businessType && !VALID_BIZ_TYPES.has(next.organization.businessType)) {
+    next.organization.businessType = draft.organization.businessType;
+  }
+  if (next.organization.size && !VALID_ORG_SIZES.has(next.organization.size)) {
+    next.organization.size = draft.organization.size;
+  }
+  if (next.contact.preferredContact && !VALID_CONTACT_METHODS.has(next.contact.preferredContact)) {
+    next.contact.preferredContact = draft.contact.preferredContact;
+  }
+  if (next.location.workPreference && !VALID_WORK_PREFS.has(next.location.workPreference as string)) {
+    next.location.workPreference = draft.location.workPreference;
+  }
+  if (next.preferences.experience && !VALID_EXPERIENCE.has(next.preferences.experience)) {
+    next.preferences.experience = draft.preferences.experience;
+  }
+  if (next.preferences.workType && !VALID_WORK_TYPES.has(next.preferences.workType)) {
+    next.preferences.workType = draft.preferences.workType;
+  }
+  if (next.preferences.projectDuration && !VALID_DURATIONS.has(next.preferences.projectDuration)) {
+    next.preferences.projectDuration = draft.preferences.projectDuration;
+  }
+
+  // Preserve all admin/immutable fields
+  next.userId = draft.userId;
+  next.status = draft.status;
+  next.currentStep = draft.currentStep;
+  next.createdAt = draft.createdAt;
+  next.submittedAt = draft.submittedAt;
+  next.applicationId = draft.applicationId;
+  next.adminMessage = draft.adminMessage;
+  next.reviewReason = draft.reviewReason;
+  next.approvedSlug = draft.approvedSlug;
+  next.clientType = draft.clientType;
+  next.verification = draft.verification;
+
+  // If this is a DRAFT user, advance to IN_PROGRESS on first meaningful edit
+  if (next.status === "DRAFT" && next.profile.displayName?.trim()) {
+    next.status = "IN_PROGRESS" as EmployerOnboardingStatus;
+    next.currentStep = Math.max(next.currentStep, 1) as 1;
+  }
+
+  saveEmployerDraft(next);
+
+  return { success: true };
+}
+
+// ── Public employer profile lookup (by slug) ────────────────
+
+/**
+ * Returns the public employer profile for a given slug, plus their open jobs.
+ * Used by the public /employers/[slug] page. No auth derivation — purely
+ * a store lookup, identical to how a backend endpoint would work.
+ */
+export function getEmployerPublicProfileBySlug(slug: string) {
+  const draft = getEmployerByApprovedSlug(slug);
+  if (!draft) return null;
+
+  const preview = getEmployerPublicPreview(draft);
+  if (!preview) return null;
+
+  const openJobs = getOpenJobsForEmployer(draft.userId);
+
+  return {
+    ...preview,
+    slug: draft.approvedSlug ?? slug,
+    openJobs,
+  };
+}
+
 /** True when the pathname belongs to the full-screen Employer dashboard shell. */
 export function isEmployerDashboardPath(pathname: string): boolean {
   return EMPLOYER_DASHBOARD_SECTIONS.some(
+    (section) => pathname === section || pathname.startsWith(`${section}/`)
+  );
+}
+
+/** True when the path is inside the employer shell but exempt from the access gate. */
+export function isEmployerGateExemptPath(pathname: string): boolean {
+  return EMPLOYER_GATE_EXEMPT_PATHS.some(
     (section) => pathname === section || pathname.startsWith(`${section}/`)
   );
 }

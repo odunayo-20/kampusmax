@@ -193,4 +193,17 @@ export function submitEmployerApplication(
   return { success: true, message: "Employer profile submitted for review." };
 }
 
+/**
+ * Looks up an employer record by their approved slug (public lookup).
+ * Returns a clone of the full draft, or null if no match.
+ */
+export function getEmployerByApprovedSlug(
+  slug: string
+): EmployerOnboardingDraft | null {
+  for (const [, rec] of store) {
+    if (rec.draft.approvedSlug === slug) return cloneDraft(rec.draft);
+  }
+  return null;
+}
+
 export { cloneDraft, freshId, EMPLOYER_ONBOARDING_STATUS };

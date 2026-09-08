@@ -1,0 +1,49 @@
+import type { Metadata, ResolvingMetadata } from "next";
+import { notFound } from "next/navigation";
+import { getEmployerPublicProfileBySlug } from "@/services/employer";
+import { getSiteBaseUrl } from "@/lib/utils";
+import { EmployerPublicProfileContent } from "@/components/employer/public/EmployerPublicProfileContent";
+
+interface EmployerPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata(
+  { params }: EmployerPageProps
+): Promise<Metadata> {
+  const { slug } = await params;
+  const profile = getEmployerPublicProfileBySlug(slug);
+
+  if (!profile) {
+    return {
+      title: "Employer not found | Kampmax",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const canonical = `${getSiteBaseUrl()}/employers/${profile.slug}`;
+  const description =
+    profile.about ||
+    profile.descriptor ||
+    `${profile.name} hires on Kampmax. ${profile.openJobs.length} open job${
+      profile.openJobs.length === 1 ? "" : "s"
+    }.`;
+
+  return {
+    title: `${profile.name} | Kampmax Employer`,
+    description,
+    alternates: { canonical },
+    robots: { index: profile.verified === true, follow: true },
+  };
+}
+
+export default async function EmployerPage({ params }: EmployerPageProps) {
+  const { slug } = await params;
+  const profile = getEmployerPublicProfileBySlug(slug);
+
+  if (!profile) {
+    notFound();
+  }
+
+  return <EmployerPublicProfileContent profile={profile} />;
+}

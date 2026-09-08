@@ -54,7 +54,7 @@ export function EmployerSidebar({
     {
       title: "Account",
       items: [
-        { label: "Employer Profile", href: "/onboarding/employer", icon: Building2 },
+        { label: "Employer Profile", href: "/employer/profile", icon: Building2 },
         { href: "/chat", label: "Messages", icon: MessageSquare, badgeCount: unreadMessages },
         { href: "/notifications", label: "Notifications", icon: Bell },
       ],

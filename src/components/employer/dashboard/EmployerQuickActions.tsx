@@ -9,7 +9,7 @@ const ACTIONS = [
   { href: "/jobs", label: "Find talent", icon: Search, hint: "Browse the marketplace" },
   { href: "/employer/contracts", label: "View contracts", icon: FileText, hint: "Track hired work" },
   { href: "/chat", label: "Messages", icon: MessageSquare, hint: "Talk to candidates" },
-  { href: "/onboarding/employer", label: "Manage profile", icon: Building2, hint: "Keep it up to date" },
+  { href: "/employer/profile", label: "Manage profile", icon: Building2, hint: "Keep it up to date" },
 ] as const;
 
 export function EmployerQuickActions() {

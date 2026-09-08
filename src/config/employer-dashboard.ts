@@ -12,5 +12,12 @@ export const EMPLOYER_DASHBOARD_SECTIONS = [
   "/employer/jobs",
   "/employer/applications",
   "/employer/contracts",
+  "/employer/profile",
   "/employer/settings",
 ] as const;
+
+// Paths inside the employer shell that must stay reachable regardless of
+// onboarding/approval state (the profile page shows an onboarding CTA instead
+// of being hard-gated). The employer layout renders these fully rather than
+// wrapping them in the access gate.
+export const EMPLOYER_GATE_EXEMPT_PATHS = ["/employer/profile"] as const;

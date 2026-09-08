@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getEmployerDashboardAccess, isEmployerDashboardPath } from "@/services/employer";
+import { isEmployerGateExemptPath } from "@/services/employer";
 import { EmployerAccessGate } from "@/components/employer/EmployerAccessGate";
 import { EmployerSidebar } from "@/components/employer/EmployerSidebar";
 import { EmployerOnboardingStatus } from "@/types/employer";
@@ -34,8 +35,12 @@ export default function EmployerLayout({ children }: { children: React.ReactNode
   }
 
   const access = getEmployerDashboardAccess();
+  const gateExempt = isEmployerGateExemptPath(pathname);
 
-  if (!access.canUseDashboard) {
+  // The profile page is exempt from the approval gate so an employer can view /
+  // edit their profile in any onboarding state (an onboarding CTA is shown when
+  // incomplete). Everything else inside the shell is gated.
+  if (!gateExempt && !access.canUseDashboard) {
     return <EmployerAccessGate access={access}>{children}</EmployerAccessGate>;
   }
 
