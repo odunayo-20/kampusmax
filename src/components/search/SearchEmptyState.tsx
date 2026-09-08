@@ -1,69 +1,86 @@
 "use client";
 
-import { Search, TrendingUp, Package, Store, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { Package, SearchX } from "lucide-react";
+import { Button } from "@/components/ui";
+import { getCategories } from "@/services/categories";
+import { getServiceCategories } from "@/services/service-marketplace";
 import { cn } from "@/lib/utils";
-import { TrendingSearch } from "@/types";
 
 interface SearchEmptyStateProps {
   query: string;
-  trending?: TrendingSearch[];
-  onTrendingClick?: (query: string) => void;
+  /** Whether any non-term filter is active (campus / price / type). */
+  hasActiveFilters?: boolean;
+  onClearFilters?: () => void;
   className?: string;
 }
 
+/**
+ * Honest empty state (spec §22): when nothing matches we say so, then offer
+ * a path forward — Clear Filters when a filter reduced results to zero, and
+ * category browsing whenever there are zero results at all. Never fabricates
+ * results.
+ */
 export function SearchEmptyState({
   query,
-  trending,
-  onTrendingClick,
+  hasActiveFilters,
+  onClearFilters,
   className,
 }: SearchEmptyStateProps) {
+  const serviceCategories = getServiceCategories();
+  const browseLinks: { label: string; href: string }[] = [
+    {
+      label: "Marketplace",
+      href: "/marketplace",
+    },
+    ...getCategories()
+      .slice(0, 4)
+      .map((c) => ({
+        label: `${c.name} products`,
+        href: `/marketplace/category/${c.id}`,
+      })),
+    ...serviceCategories.slice(0, 4).map((c) => ({
+      label: `${c.name} services`,
+      href: `/services/categories/${c.slug}`,
+    })),
+  ];
+
   return (
-    <div className={cn("py-16 text-center", className)}>
-      <div className="w-16 h-16 rounded-2xl bg-kampmax-muted flex items-center justify-center mx-auto mb-4">
-        <Search className="h-7 w-7 text-kampmax-text-secondary/40" />
+    <div className={cn("py-10 text-center", className)}>
+      <div className="mx-auto w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-4">
+        <SearchX className="h-6 w-6 text-neutral-400" />
       </div>
-
-      <p className="text-sm font-semibold text-kampmax-text">
-        No results for &ldquo;{query}&rdquo;
+      <h2 className="text-base font-semibold text-neutral-900">
+        No results for &quot;{query}&quot;
+      </h2>
+      <p className="text-sm text-neutral-500 mt-1 max-w-sm mx-auto">
+        Try a different keyword, check the spelling, or browse by category
+        below.
       </p>
-      <p className="text-xs text-kampmax-text-secondary mt-1 max-w-xs mx-auto">
-        Try different keywords or browse categories below
-      </p>
 
-      <div className="flex justify-center gap-3 mt-6">
-        {[
-          { icon: Package, label: "Products", color: "text-kampmax-blue" },
-          { icon: Store, label: "Vendors", color: "text-kampmax-navy" },
-          { icon: MessageSquare, label: "Posts", color: "text-kampmax-success" },
-        ].map((item) => (
-          <div key={item.label} className="flex flex-col items-center gap-1.5">
-            <div className="w-10 h-10 rounded-xl bg-kampmax-muted flex items-center justify-center">
-              <item.icon className={cn("h-5 w-5", item.color)} />
-            </div>
-            <span className="text-[10px] text-kampmax-text-secondary">{item.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {trending && trending.length > 0 && onTrendingClick && (
-        <div className="mt-8 space-y-3">
-          <p className="text-xs font-semibold text-kampmax-text-secondary uppercase tracking-wider">
-            Try searching for
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {trending.slice(0, 5).map((t) => (
-              <button
-                key={t.query}
-                onClick={() => onTrendingClick(t.query)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-kampmax-muted text-xs font-medium text-kampmax-text hover:bg-kampmax-blue/10 hover:text-kampmax-blue transition-colors"
-              >
-                <TrendingUp className="h-3 w-3" />
-                {t.query}
-              </button>
-            ))}
-          </div>
-        </div>
+      {hasActiveFilters && onClearFilters && (
+        <Button variant="outline" size="sm" className="mt-4" onClick={onClearFilters}>
+          <Package className="h-3.5 w-3.5" />
+          Clear filters
+        </Button>
       )}
+
+      <div className="mt-6 pt-6 border-t border-neutral-200">
+        <h3 className="text-xs font-semibold text-neutral-700 uppercase tracking-wider mb-3">
+          Browse categories
+        </h3>
+        <div className="flex flex-wrap justify-center gap-2">
+          {browseLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-200 text-xs font-medium text-neutral-700 hover:border-primary-300 hover:text-primary-700 transition-colors"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

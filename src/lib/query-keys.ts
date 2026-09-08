@@ -1,5 +1,6 @@
 import { NotificationCategory } from "@/types";
 import type { EmployerApplicationStatus } from "@/types/opportunity";
+import type { GlobalSearchQuery } from "@/types";
 
 /**
  * Structured TanStack Query key factory for Kampmax.
@@ -154,4 +155,21 @@ export const settingsKeys = {
     ["settings", "privacy", userId] as const,
   securitySettings: (userId: string) =>
     ["settings", "security", userId] as const,
+};
+
+/**
+ * Global search key factory (Module 31).
+ *
+ * Results and suggestion keys embed the FULL normalized search query
+ * (term + type + sort + page + campus + price range) so every unique
+ * search carries its own cached response — the same convention as the
+ * vertical list keys. Results are public discovery data (not user
+ * scoped), so keys stay user-agnostic.
+ */
+export interface GlobalSearchQueryKey extends GlobalSearchQuery {}
+
+export const searchKeys = {
+  all: ["search"] as const,
+  results: (query: GlobalSearchQuery) => ["search", "results", query] as const,
+  suggestions: (q: string) => ["search", "suggestions", q] as const,
 };

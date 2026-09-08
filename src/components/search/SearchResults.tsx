@@ -1,114 +1,265 @@
 "use client";
 
-import Image from "next/image";
+import { useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  Package, Store, Tag, MessageSquare, CalendarDays,
-  Star, MapPin, ChevronRight,
+  Briefcase,
+  CalendarDays,
+  ChevronRight,
+  MessageSquare,
+  Package,
+  ShieldCheck,
+  Star,
+  Store,
+  Tag,
+  User,
+  Wrench,
+  type LucideIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { SearchResultItem, SearchEntityType } from "@/types";
-import { formatNaira } from "@/lib/utils";
+import { cn, formatNaira } from "@/lib/utils";
+import { Avatar } from "@/components/ui";
+import type { SearchEntityType, SearchResultItem } from "@/types";
+import { getProductById } from "@/services/products";
+import { vendors } from "@/data/users";
+import { getDiscoverableOpportunity } from "@/services/opportunity";
+import {
+  getMarketplaceProvider,
+  getProviderActiveServices,
+  getServiceDetail,
+} from "@/services/service-marketplace";
+import { ProductCard } from "@/components/marketplace/ProductCard";
+import { OpportunityCard } from "@/components/freelancer/opportunities/OpportunityCard";
+import { ServiceCard } from "@/components/service-marketplace/ServiceCard";
+import { ProviderCard } from "@/components/service-marketplace/ProviderCard";
 
-const typeConfig: Record<
+const SECTION_ORDER: SearchEntityType[] = [
+  "product",
+  "vendor",
+  "job",
+  "service",
+  "provider",
+  "category",
+  "post",
+  "event",
+];
+
+const SECTION_CONFIG: Record<
   SearchEntityType,
-  { icon: React.ElementType; color: string; bg: string; label: string }
+  { icon: LucideIcon; label: string }
 > = {
-  product: { icon: Package, color: "text-kampmax-blue", bg: "bg-kampmax-blue/10", label: "Product" },
-  vendor: { icon: Store, color: "text-kampmax-navy", bg: "bg-kampmax-navy/10", label: "Vendor" },
-  category: { icon: Tag, color: "text-kampmax-gold", bg: "bg-kampmax-gold/10", label: "Category" },
-  post: { icon: MessageSquare, color: "text-kampmax-success", bg: "bg-kampmax-success/10", label: "Post" },
-  event: { icon: CalendarDays, color: "text-kampmax-gold-dark", bg: "bg-kampmax-gold/10", label: "Event" },
+  product: { icon: Package, label: "Products" },
+  vendor: { icon: Store, label: "Vendors" },
+  job: { icon: Briefcase, label: "Jobs" },
+  service: { icon: Wrench, label: "Services" },
+  provider: { icon: User, label: "Service providers" },
+  category: { icon: Tag, label: "Categories" },
+  post: { icon: MessageSquare, label: "Posts" },
+  event: { icon: CalendarDays, label: "Events" },
 };
 
 interface SearchResultsProps {
-  results: SearchResultItem[];
+  items: SearchResultItem[];
   query: string;
+  /** Saved job ids for the authenticated user (reuse of Module 27 saved jobs). */
+  savedJobIds?: string[];
   className?: string;
 }
 
-export function SearchResults({ results, query, className }: SearchResultsProps) {
-  if (results.length === 0) return null;
+/**
+ * Paginated unified results, grouped by entity type. Each type renders an
+ * intentional card that reuses the owning vertical's component so search
+ * results stay visually consistent with the rest of the app:
+ *   product → ProductCard, job → OpportunityCard (Module 27),
+ *   service → ServiceCard, provider → ProviderCard,
+ *   vendor/category/post/event → dedicated rows.
+ */
+export function SearchResults({ items, query, savedJobIds, className }: SearchResultsProps) {
+  const grouped = useMemo(() => {
+    const byType: Partial<Record<SearchEntityType, SearchResultItem[]>> = {};
+    for (const item of items) {
+      (byType[item.type] = byType[item.type] || []).push(item);
+    }
+    return byType;
+  }, [items]);
 
-  // Group by type
-  const grouped = results.reduce(
-    (acc, r) => {
-      (acc[r.type] = acc[r.type] || []).push(r);
-      return acc;
-    },
-    {} as Record<SearchEntityType, SearchResultItem[]>
-  );
+  const sections = SECTION_ORDER.filter((type) => (grouped[type]?.length ?? 0) > 0);
+
+  if (sections.length === 0) return null;
 
   return (
-    <div className={cn("space-y-5", className)}>
-      {Object.entries(grouped).map(([type, items]) => {
-        const config = typeConfig[type as SearchEntityType];
+    <div className={cn("space-y-8", className)}>
+      {sections.map((type) => {
+        const config = SECTION_CONFIG[type];
         const Icon = config.icon;
+        const sectionItems = grouped[type]!;
 
         return (
-          <div key={type}>
-            <div className="flex items-center gap-2 mb-2">
-              <div className={cn("w-6 h-6 rounded flex items-center justify-center", config.bg)}>
-                <Icon className={cn("h-3.5 w-3.5", config.color)} />
+          <section key={type} aria-label={`${config.label} results`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-md bg-neutral-100 flex items-center justify-center">
+                <Icon className="h-3.5 w-3.5 text-neutral-500" />
               </div>
-              <h3 className="text-xs font-semibold text-kampmax-text uppercase tracking-wider">
-                {config.label}s
+              <h3 className="text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                {config.label}
               </h3>
-              <span className="text-[10px] text-kampmax-text-secondary">({items.length})</span>
+              <span className="text-xs text-neutral-500">({sectionItems.length})</span>
             </div>
 
-            <div className="space-y-2">
-              {items.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.url}
-                  className="flex items-center gap-3 p-3 bg-white border border-kampmax-border rounded-xl hover:border-kampmax-blue/30 hover:shadow-sm transition-all group"
-                >
-                  {item.image ? (
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-kampmax-muted shrink-0 relative">
-                      <Image
-                        src={item.image}
-                        alt={item.title}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                    </div>
-                  ) : (
-                    <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center shrink-0", config.bg)}>
-                      <Icon className={cn("h-5 w-5", config.color)} />
-                    </div>
-                  )}
+            {type === "product" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sectionItems.map((item) => {
+                  const product = getProductById(item.id);
+                  if (!product) return null;
+                  const store = vendors.find((v) => v.id === product.vendorId);
+                  return (
+                    <ProductCard
+                      key={item.id}
+                      product={product}
+                      vendorName={store?.storeName}
+                      vendorVerified={store?.verified}
+                      className="h-full"
+                    />
+                  );
+                })}
+              </div>
+            )}
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-kampmax-text truncate group-hover:text-kampmax-blue transition-colors">
-                        {item.title}
-                      </p>
-                      {item.rating !== undefined && item.rating > 0 && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-kampmax-gold shrink-0">
-                          <Star className="h-3 w-3 fill-kampmax-gold" />
-                          {item.rating}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-kampmax-text-secondary truncate mt-0.5">
-                      {item.subtitle}
-                    </p>
-                    {item.price !== undefined && (
-                      <p className="text-xs font-bold text-kampmax-navy mt-0.5">
-                        {formatNaira(item.price)}
-                      </p>
-                    )}
-                  </div>
+            {type === "job" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sectionItems.map((item) => {
+                  const opportunity = getDiscoverableOpportunity(item.id);
+                  if (!opportunity) return null;
+                  return (
+                    <OpportunityCard
+                      key={item.id}
+                      opportunity={opportunity}
+                      saved={savedJobIds?.includes(item.id)}
+                      href={`/jobs/${item.id}`}
+                    />
+                  );
+                })}
+              </div>
+            )}
 
-                  <ChevronRight className="h-4 w-4 text-kampmax-text-secondary/40 shrink-0 group-hover:text-kampmax-blue transition-colors" />
-                </Link>
-              ))}
-            </div>
-          </div>
+            {type === "service" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sectionItems.map((item) => {
+                  const detail = getServiceDetail(item.id);
+                  if (!detail) return null;
+                  return (
+                    <ServiceCard
+                      key={item.id}
+                      service={detail.service}
+                      provider={detail.provider}
+                      className="h-full"
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {type === "provider" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {sectionItems.map((item) => {
+                  const provider = getMarketplaceProvider(item.id);
+                  if (!provider) return null;
+                  return (
+                    <ProviderCard
+                      key={item.id}
+                      provider={provider}
+                      serviceCount={getProviderActiveServices(item.id).length}
+                      className="h-full"
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {type === "vendor" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {sectionItems.map((item) => (
+                  <VendorRow key={item.id} item={item} />
+                ))}
+              </div>
+            )}
+
+            {(type === "category" || type === "post" || type === "event") && (
+              <ResultsRows items={sectionItems} />
+            )}
+          </section>
         );
       })}
+      {query && (
+        <p className="sr-only">Search results for &quot;{query}&quot;</p>
+      )}
+    </div>
+  );
+}
+
+function VendorRow({ item }: { item: SearchResultItem }) {
+  const store = vendors.find((v) => v.id === item.id);
+  return (
+    <Link
+      href={item.url}
+      className="group flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl hover:border-primary-300 hover:shadow-sm transition-all"
+    >
+      <Avatar name={store?.storeName ?? item.title} size="md" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium text-neutral-900 truncate group-hover:text-primary-700 transition-colors">
+            {item.title}
+          </p>
+          {store?.verified && (
+            <ShieldCheck className="h-3.5 w-3.5 text-primary-600 shrink-0" aria-label="Verified vendor" />
+          )}
+        </div>
+        {typeof item.rating === "number" && item.rating > 0 && (
+          <div className="flex items-center gap-0.5 mt-0.5">
+            <Star className="h-3 w-3 fill-accent-500 text-accent-500" />
+            <span className="text-xs text-neutral-600">{item.rating}</span>
+            {store && (
+              <span className="text-xs text-neutral-400">· {store.totalSales} sales</span>
+            )}
+          </div>
+        )}
+        <p className="text-xs text-neutral-500 truncate mt-0.5">{item.subtitle}</p>
+      </div>
+      <ChevronRight className="h-4 w-4 text-neutral-300 shrink-0 group-hover:text-primary-600 transition-colors" />
+    </Link>
+  );
+}
+
+function ResultsRows({ items }: { items: SearchResultItem[] }) {
+  return (
+    <div className="space-y-2">
+      {items.map((item) => (
+        <Link
+          key={item.id}
+          href={item.url}
+          className="group flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl hover:border-primary-300 hover:shadow-sm transition-all"
+        >
+          {item.image ? (
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-100 shrink-0 relative">
+              <Image src={item.image} alt={item.title} fill className="object-cover" sizes="48px" />
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
+              <Tag className="h-5 w-5 text-neutral-400" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-neutral-900 truncate group-hover:text-primary-700 transition-colors">
+              {item.title}
+            </p>
+            <p className="text-xs text-neutral-500 truncate mt-0.5">{item.subtitle}</p>
+            {typeof item.price === "number" && (
+              <p className="text-xs font-bold text-neutral-900 mt-0.5">{formatNaira(item.price)}</p>
+            )}
+          </div>
+          <ChevronRight className="h-4 w-4 text-neutral-300 shrink-0 group-hover:text-primary-600 transition-colors" />
+        </Link>
+      ))}
     </div>
   );
 }

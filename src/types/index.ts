@@ -864,9 +864,24 @@ export interface StoreSettings {
 // GLOBAL SEARCH
 // ============================================================
 
-export type SearchEntityType = "product" | "vendor" | "category" | "post" | "event";
+export type SearchEntityType =
+  | "product"
+  | "vendor"
+  | "category"
+  | "post"
+  | "event"
+  | "job"
+  | "service"
+  | "provider";
 
 export type SearchFilterType = "all" | SearchEntityType;
+
+export type SearchSortOption =
+  | "relevance"
+  | "recent"
+  | "popular"
+  | "price_low"
+  | "price_high";
 
 export interface SearchResultItem {
   id: string;
@@ -877,6 +892,7 @@ export interface SearchResultItem {
   image?: string;
   url: string;
   rating?: number;
+  ratingCount?: number;
   price?: number;
   campusId?: string;
   tags?: string[];
@@ -889,19 +905,33 @@ export interface SearchSuggestion {
   entityId?: string;
 }
 
-export interface SearchResults {
-  query: string;
-  results: SearchResultItem[];
-  totalCount: number;
-  suggestions: SearchSuggestion[];
+/**
+ * Unified global-search query. Mirrors the future NestJS
+ * `GET /search` DTO — only backend-supported filters are exposed.
+ * `type`, `sort`, `campusId`, `priceMin` and `priceMax` are the only
+ * filter axes; every axis is reflected in the URL (`q/type/sort/page/
+ * campus/priceMin/priceMax`) so a search can be shared and restored.
+ */
+export interface GlobalSearchQuery {
+  q?: string;
+  type?: SearchFilterType;
+  sort?: SearchSortOption;
+  page?: number;
+  pageSize?: number;
+  campusId?: string;
+  priceMin?: number;
+  priceMax?: number;
 }
 
-export interface SearchFilters {
-  type: SearchFilterType;
-  campusId?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sortBy?: "relevance" | "recent" | "popular" | "price_low" | "price_high";
+/** Paginated global-search response (server-side, backend-authoritative). */
+export interface SearchPage {
+  query: string;
+  items: SearchResultItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  suggestions: SearchSuggestion[];
 }
 
 export interface TrendingSearch {

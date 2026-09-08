@@ -1,163 +1,189 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Search, X, ArrowLeft } from "lucide-react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getSuggestions } from "@/services/search";
-import { SearchSuggestion } from "@/types";
+import { useSearchSuggestions } from "@/hooks/use-search";
+import type { SearchSuggestion } from "@/types";
 
 interface SearchInputProps {
-  defaultValue?: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  onSubmit?: (query: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
-  showBackButton?: boolean;
-  onFocus?: () => void;
-  onBlur?: () => void;
   className?: string;
 }
 
+const SUGGESTION_TYPE_LABEL: Record<string, string> = {
+  product: "Product",
+  vendor: "Vendor",
+  category: "Category",
+  job: "Job",
+  service: "Service",
+  provider: "Provider",
+  post: "Post",
+  event: "Event",
+};
+
+/**
+ * Controlled global-search input with type-ahead suggestions rendered as a
+ * combobox (spec §18/§33 — keyboard navigable listbox, no focus trap).
+ * Suggestions come from useSearchSuggestions ≥2 chars; selecting one
+ * submits that text as the query, so the results URL always uses our exact
+ * term.
+ */
 export function SearchInput({
-  defaultValue = "",
-  placeholder = "Search products, vendors, events...",
-  autoFocus = false,
-  showBackButton = false,
-  onFocus,
-  onBlur,
+  value,
+  onValueChange,
+  onSubmit,
+  placeholder = "Search products, services, jobs, vendors…",
+  autoFocus,
   className,
 }: SearchInputProps) {
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [value, setValue] = useState(defaultValue);
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const optionIds = useRef(new Map<number, string>());
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  useEffect(() => {
-    if (autoFocus) inputRef.current?.focus();
-  }, [autoFocus]);
+  const { data: suggestions = [], isFetching } = useSearchSuggestions(value);
 
-  useEffect(() => {
-    if (value.trim().length >= 2) {
-      const s = getSuggestions(value);
-      setSuggestions(s);
-      setShowSuggestions(s.length > 0);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
+  const showSuggestions = open && suggestions.length > 0;
+
+  function optionId(index: number): string {
+    if (!optionIds.current.has(index)) {
+      optionIds.current.set(index, `${listboxId}-suggestion-${index}`);
     }
-    setSelectedIndex(-1);
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  function handleSubmit(query?: string) {
-    const q = (query || value).trim();
-    if (!q) return;
-    setShowSuggestions(false);
-    router.push(`/search?q=${encodeURIComponent(q)}`);
+    return optionIds.current.get(index)!;
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  function handleSubmit(e?: FormEvent) {
+    e?.preventDefault();
+    if (activeIndex >= 0 && activeIndex < suggestions.length) {
+      onSubmit?.(suggestions[activeIndex].text);
+    } else {
+      onSubmit?.(value);
+    }
+    optionIds.current.clear();
+    setOpen(false);
+    setActiveIndex(-1);
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (!showSuggestions) {
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, suggestions.length - 1));
+      setActiveIndex((i) => (i + 1) % suggestions.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex((i) => Math.max(i - 1, -1));
+      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-        handleSubmit(suggestions[selectedIndex].text);
-      } else {
-        handleSubmit();
-      }
+      handleSubmit();
     } else if (e.key === "Escape") {
-      setShowSuggestions(false);
-      inputRef.current?.blur();
+      setOpen(false);
+      setActiveIndex(-1);
     }
   }
 
   return (
-    <div ref={wrapperRef} className={cn("relative", className)}>
-      <div className="flex items-center gap-2">
-        {showBackButton && (
+    <div className={cn("relative", className)}>
+      <div className="flex items-stretch overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-100 transition-all">
+        <div className="flex items-center pl-3.5 text-neutral-400">
+          <Search className="h-4 w-4" aria-hidden />
+        </div>
+        <form onSubmit={handleSubmit} className="flex-1 flex items-center">
+          <input
+            type="text"
+            role="combobox"
+            aria-label="Search Kampmax"
+            aria-expanded={showSuggestions}
+            aria-controls={showSuggestions ? listboxId : undefined}
+            aria-activedescendant={
+              showSuggestions && activeIndex >= 0
+                ? optionId(activeIndex)
+                : undefined
+            }
+            aria-autocomplete="list"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={placeholder}
+            value={value}
+            autoFocus={autoFocus}
+            onChange={(e) => {
+              onValueChange(e.target.value);
+              setActiveIndex(-1);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onKeyDown={handleKeyDown}
+            className="w-full min-w-0 bg-transparent px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+          />
+        </form>
+        {value && (
           <button
-            onClick={() => router.back()}
-            className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-kampmax-muted transition-colors shrink-0"
+            onClick={() => {
+              onValueChange("");
+              setActiveIndex(-1);
+              setOpen(false);
+            }}
+            aria-label="Clear search"
+            className="flex items-center px-3 text-neutral-400 hover:text-neutral-600 transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 text-kampmax-text" />
+            <X className="h-4 w-4" />
           </button>
         )}
-
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-kampmax-text-secondary pointer-events-none" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onFocus={() => {
-              if (suggestions.length > 0) setShowSuggestions(true);
-              onFocus?.();
-            }}
-            onBlur={() => {
-              onBlur?.();
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="w-full h-10 pl-10 pr-10 rounded-xl bg-kampmax-muted border border-transparent text-sm text-kampmax-text placeholder:text-kampmax-text-secondary/60 focus:outline-none focus:border-kampmax-blue focus:bg-white transition-colors"
-          />
-          {value && (
-            <button
-              onClick={() => {
-                setValue("");
-                setSuggestions([]);
-                setShowSuggestions(false);
-                inputRef.current?.focus();
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-kampmax-text-secondary/20 flex items-center justify-center hover:bg-kampmax-text-secondary/30 transition-colors"
-            >
-              <X className="h-3 w-3 text-kampmax-text-secondary" />
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-kampmax-border rounded-xl shadow-lg py-1 z-50 max-h-72 overflow-y-auto">
-          {suggestions.map((s, i) => (
-            <button
-              key={`${s.text}-${i}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSubmit(s.text);
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
-                i === selectedIndex ? "bg-kampmax-blue/5" : "hover:bg-kampmax-muted"
-              )}
-            >
-              <Search className="h-3.5 w-3.5 text-kampmax-text-secondary shrink-0" />
-              <span className="text-sm text-kampmax-text truncate">{s.text}</span>
-              {s.entityType && (
-                <span className="text-[10px] text-kampmax-text-secondary bg-kampmax-muted px-1.5 py-0.5 rounded capitalize ml-auto shrink-0">
-                  {s.entityType}
-                </span>
-              )}
-            </button>
-          ))}
+      {showSuggestions && (
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="Search suggestions"
+          className="absolute left-0 right-0 top-full mt-1.5 z-30 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg"
+        >
+          <ul className="py-1 max-h-80 overflow-y-auto">
+            {suggestions.map((s: SearchSuggestion, index) => (
+              <li role="option" id={optionId(index)} key={`${s.type}-${s.text}`}>
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setActiveIndex(index);
+                  }}
+                  onClick={() => {
+                    onSubmit?.(s.text);
+                    optionIds.current.clear();
+                    setOpen(false);
+                    setActiveIndex(-1);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-3 px-3.5 py-2 text-left text-sm transition-colors",
+                    activeIndex === index
+                      ? "bg-primary-50 text-primary-800"
+                      : "text-neutral-800"
+                  )}
+                >
+                  <span className="truncate font-medium">{s.text}</span>
+                  <span className="text-[11px] text-neutral-400 shrink-0">
+                    {SUGGESTION_TYPE_LABEL[s.type] ?? s.type}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
+      {isFetching && (
+        <p className="mt-1 text-[11px] text-neutral-400">Searching…</p>
       )}
     </div>
   );

@@ -1,16 +1,51 @@
+// ============================================================
+// UNIFIED GLOBAL SEARCH SERVICE  (Module 31)
+// ============================================================
+//
+// Federated discovery over the canonical mock stores. This module is the
+// client-side projection of a future NestJS `GET /search` endpoint — it
+// does NOT create new stores or duplicate the vertical search systems;
+// every entity is sourced from the SAME store the owning module reads,
+// and applies the SAME visibility rules that module enforces:
+//
+//   - products  → only `status === "available"`  (matches the marketplace list)
+//   - jobs      → only `OPPORTUNITY_STATUS.OPEN` (matches Find Work / Jobs)
+//   - services  → only `isActive` services whose provider exists (matches /services)
+//   - providers → only providers with ≥1 active service (no empty providers)
+//   - vendors/categories/posts/events → their public store as-is
+//
+// SECURITY: result URLs are built only from public slugs/ids (never the
+// authenticated user, never a userId query param). All text is escaped by
+// React at render time — this module never returns HTML. Counts are real
+// store counts; there are no fabricated totals.
+//
+// The real backend gap is documented in MODULE-31-REPORT.md: the current
+// backend exposes per-vertical search (jobs, services) but no unified
+// search index; suggestions and relevance ranking are local heuristics
+// until a real search API exists.
+
 import {
-  SearchResultItem,
-  SearchSuggestion,
-  SearchResults,
-  SearchFilters,
   SearchFilterType,
+  SearchResultItem,
+  SearchSortOption,
+  SearchSuggestion,
+  SearchPage,
   TrendingSearch,
 } from "@/types";
 import { products } from "@/data/products";
-import { users } from "@/data/users";
+import { users, vendors } from "@/data/users";
 import { categories } from "@/data/categories";
 import { campusPosts } from "@/data/posts";
 import { events } from "@/data/events";
+import { getAllOpportunities } from "@/data/opportunity";
+import {
+  marketplaceServices,
+  marketplaceServiceProviders,
+} from "@/data/service-marketplace";
+import { OPPORTUNITY_STATUS } from "@/types/opportunity";
+import { getServiceCategoryName } from "@/services/service-marketplace";
+import { getCampusById } from "@/services/campus";
+import { JOB_CATEGORIES } from "@/config/opportunity";
 
 const RECENT_KEY = "kampmax_recent_searches";
 const MAX_RECENT = 10;
@@ -31,6 +66,30 @@ function scoreMatch(text: string, query: string): number {
   return 0;
 }
 
+function campusLabel(campusId?: string): string {
+  if (!campusId) return "RUGIPO";
+  return getCampusById(campusId)?.abbreviation ?? campusId.toUpperCase();
+}
+
+function providerMatchesCampus(
+  provider: { primaryCampusId: string; additionalCampusIds: string[] },
+  campusId: string
+): boolean {
+  return (
+    provider.primaryCampusId === campusId ||
+    provider.additionalCampusIds.includes(campusId)
+  );
+}
+
+function jobCategoryName(categoryId: string): string {
+  return JOB_CATEGORIES.find((c) => c.id === categoryId)?.name ?? "Other";
+}
+
+function toTimestamp(value: string | number | undefined): number {
+  const t = value ? +new Date(value) : Number.NaN;
+  return Number.isFinite(t) ? t : 0;
+}
+
 // ── Trending ─────────────────────────────────────────────
 
 const trendingSearches: TrendingSearch[] = [
@@ -39,18 +98,18 @@ const trendingSearches: TrendingSearch[] = [
   { query: "sneakers", count: 156, category: "Fashion" },
   { query: "calculator", count: 143, category: "Electronics" },
   { query: "jollof rice", count: 128, category: "Food" },
+  { query: "tutoring", count: 112, category: "Services" },
   { query: "ankara", count: 98, category: "Fashion" },
   { query: "power bank", count: 87, category: "Electronics" },
-  { query: "headphones", count: 76, category: "Electronics" },
-  { query: "food", count: 65, category: "Food" },
-  { query: "notes", count: 54, category: "Books" },
+  { query: "web design", count: 76, category: "Services" },
+  { query: "headphones", count: 61, category: "Electronics" },
 ];
 
 export function getTrendingSearches(): TrendingSearch[] {
   return trendingSearches;
 }
 
-// ── Recent Searches ──────────────────────────────────────
+// ── Recent Searches (local-only; not sent anywhere) ──────
 
 export function getRecentSearches(): string[] {
   if (typeof window === "undefined") return [];
@@ -95,6 +154,12 @@ export function clearRecentSearches(): void {
 }
 
 // ── Suggestions ──────────────────────────────────────────
+// Local heuristic type-ahead over the same public stores. The real backend
+// has no suggestion API yet — documented in MODULE-31-REPORT.md.
+
+function providersById(): Record<string, (typeof marketplaceServiceProviders)[number]> {
+  return Object.fromEntries(marketplaceServiceProviders.map((p) => [p.id, p]));
+}
 
 export function getSuggestions(query: string): SearchSuggestion[] {
   if (!query.trim()) return [];
@@ -102,51 +167,51 @@ export function getSuggestions(query: string): SearchSuggestion[] {
   const suggestions: SearchSuggestion[] = [];
   const seen = new Set<string>();
 
-  // Category matches
   for (const cat of categories) {
     if (matchesQuery(cat.name, q) && !seen.has(cat.name)) {
       seen.add(cat.name);
-      suggestions.push({
-        text: cat.name,
-        type: "entity",
-        entityType: "category",
-        entityId: cat.id,
-      });
+      suggestions.push({ text: cat.name, type: "entity", entityType: "category", entityId: cat.id });
     }
   }
 
-  // Product title matches
   for (const p of products) {
-    if (matchesQuery(p.title, q) && !seen.has(p.title)) {
+    if (p.status === "available" && matchesQuery(p.title, q) && !seen.has(p.title)) {
       seen.add(p.title);
-      suggestions.push({
-        text: p.title,
-        type: "entity",
-        entityType: "product",
-        entityId: p.id,
-      });
+      suggestions.push({ text: p.title, type: "entity", entityType: "product", entityId: p.id });
     }
   }
 
-  // Vendor matches
-  for (const u of users) {
-    if (u.role === "vendor") {
-      const vendor = users.find((v) => v.id === u.id);
-      if (vendor && matchesQuery(vendor.name, q) && !seen.has(vendor.name)) {
-        seen.add(vendor.name);
-        suggestions.push({
-          text: vendor.name,
-          type: "entity",
-          entityType: "vendor",
-          entityId: vendor.id,
-        });
-      }
+  for (const o of getAllOpportunities()) {
+    if (o.status === OPPORTUNITY_STATUS.OPEN && matchesQuery(o.title, q) && !seen.has(o.title)) {
+      seen.add(o.title);
+      suggestions.push({ text: o.title, type: "entity", entityType: "job", entityId: o.id });
     }
   }
 
-  // Tag matches
+  const providers = providersById();
+  for (const s of marketplaceServices) {
+    if (s.isActive && providers[s.providerId] && matchesQuery(s.name, q) && !seen.has(s.name)) {
+      seen.add(s.name);
+      suggestions.push({ text: s.name, type: "entity", entityType: "service", entityId: s.id });
+    }
+  }
+
+  for (const p of marketplaceServiceProviders) {
+    if (matchesQuery(p.displayName, q) && !seen.has(p.displayName)) {
+      seen.add(p.displayName);
+      suggestions.push({ text: p.displayName, type: "entity", entityType: "provider", entityId: p.id });
+    }
+  }
+
+  for (const v of vendors) {
+    if (matchesQuery(v.storeName, q) && !seen.has(v.storeName)) {
+      seen.add(v.storeName);
+      suggestions.push({ text: v.storeName, type: "entity", entityType: "vendor", entityId: v.id });
+    }
+  }
+
   for (const p of products) {
-    if (p.tags) {
+    if (p.status === "available" && p.tags) {
       for (const tag of p.tags) {
         if (matchesQuery(tag, q) && !seen.has(tag)) {
           seen.add(tag);
@@ -161,152 +226,316 @@ export function getSuggestions(query: string): SearchSuggestion[] {
 
 // ── Search ───────────────────────────────────────────────
 
-export function search(query: string, filters?: SearchFilters): SearchResults {
+export interface SearchFiltersInput {
+  type?: SearchFilterType;
+  sort?: SearchSortOption;
+  campusId?: string;
+  priceMin?: number;
+  priceMax?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+interface Candidate {
+  item: SearchResultItem;
+  score: number;
+  date: number;
+  price?: number;
+}
+
+const PUBLIC_PRODUCT_STATUS = "available";
+
+export function search(query: string, filters: SearchFiltersInput = {}): SearchPage {
   const q = (query || "").trim();
-  const typeFilter = filters?.type || "all";
-  const results: SearchResultItem[] = [];
+  const typeFilter = filters.type || "all";
+  const page = Math.max(1, filters.page || 1);
+  const pageSize = Math.min(Math.max(filters.pageSize || 12, 1), 30);
 
-  if (!q) {
-    return { query: q, results: [], totalCount: 0, suggestions: [] };
-  }
+  const empty: SearchPage = {
+    query: q,
+    items: [],
+    total: 0,
+    page: 1,
+    pageSize,
+    totalPages: 1,
+    suggestions: [],
+  };
+  if (!q) return empty;
 
-  // Search products
+  const candidates: Candidate[] = [];
+  const providers = providersById();
+
+  // Products — available only (mirrors the marketplace list).
   if (typeFilter === "all" || typeFilter === "product") {
     for (const p of products) {
-      const score = scoreMatch(p.title, q)
-        + scoreMatch(p.description, q)
-        + (p.tags?.reduce((s, t) => s + scoreMatch(t, q), 0) || 0);
-      if (score > 0) {
-        results.push({
+      if (p.status !== PUBLIC_PRODUCT_STATUS) continue;
+      if (filters.campusId && p.campusId !== filters.campusId) continue;
+      const score =
+        scoreMatch(p.title, q) +
+        scoreMatch(p.description, q) +
+        (p.tags?.reduce((s, t) => s + scoreMatch(t, q), 0) || 0);
+      if (score <= 0) continue;
+      candidates.push({
+        item: {
           id: p.id,
           type: "product",
           title: p.title,
-          subtitle: `${p.condition} · ${p.location || "RUGIPO"}`,
-          description: p.description.slice(0, 100),
+          subtitle: `${p.condition} · ${p.location || campusLabel(p.campusId)}`,
+          description: p.description.slice(0, 120),
           image: p.images[0],
           url: `/marketplace/${p.id}`,
           rating: p.rating,
+          ratingCount: p.ratingCount,
           price: p.price,
           campusId: p.campusId,
           tags: p.tags,
-        });
-      }
+        },
+        score,
+        date: toTimestamp(p.createdAt),
+        price: p.price,
+      });
     }
   }
 
-  // Search vendors (via users with vendor role)
+  // Vendors (public storefront records).
   if (typeFilter === "all" || typeFilter === "vendor") {
-    const { vendors: vendorData } = require("@/data/users");
-    for (const v of vendorData) {
+    for (const v of vendors) {
+      if (filters.campusId && v.campusId !== filters.campusId) continue;
       const score = scoreMatch(v.storeName, q) + scoreMatch(v.description, q);
-      if (score > 0) {
-        const owner = users.find((u) => u.id === v.userId);
-        results.push({
+      if (score <= 0) continue;
+      const owner = users.find((u) => u.id === v.userId);
+      candidates.push({
+        item: {
           id: v.id,
           type: "vendor",
           title: v.storeName,
-          subtitle: v.specialties.join(", "),
-          description: v.description.slice(0, 100),
-          image: owner?.avatar,
-          url: `/marketplace?vendor=${v.id}`,
+          subtitle: `${v.specialties.join(" · ")} · ${campusLabel(v.campusId)}`,
+          description: v.description.slice(0, 120),
+          image: owner?.avatar || undefined,
+          url: v.slug ? `/store/${v.slug}` : `/marketplace?vendor=${v.id}`,
           rating: v.rating,
+          ratingCount: undefined,
           campusId: v.campusId,
-        });
-      }
+        },
+        score,
+        date: v.joinDate ? toTimestamp(v.joinDate) : 0,
+      });
     }
   }
 
-  // Search categories
+  // Jobs — OPEN only (mirrors Find Work / Jobs discovery).
+  if (typeFilter === "all" || typeFilter === "job") {
+    for (const o of getAllOpportunities()) {
+      if (o.status !== OPPORTUNITY_STATUS.OPEN) continue;
+      const skillScore = o.skills.slice(0, 6).reduce((s, t) => s + scoreMatch(t, q), 0);
+      const score = scoreMatch(o.title, q) + scoreMatch(o.summary, q) + skillScore;
+      if (score <= 0) continue;
+      candidates.push({
+        item: {
+          id: o.id,
+          type: "job",
+          title: o.title,
+          subtitle: `${jobCategoryName(o.categoryId)} · ${o.employer.name}${o.employer.verified ? " · Verified" : ""}`,
+          description: o.summary.slice(0, 120),
+          url: `/jobs/${o.id}`,
+          campusId: o.location.campusId,
+          tags: o.skills.slice(0, 6),
+        },
+        score,
+        date: toTimestamp(o.postedAt),
+      });
+    }
+  }
+
+  // Services — ACTIVE only, provider must exist (mirrors /services).
+  if (typeFilter === "all" || typeFilter === "service") {
+    for (const s of marketplaceServices) {
+      if (!s.isActive || !providers[s.providerId]) continue;
+      const provider = providers[s.providerId];
+      if (filters.campusId && !providerMatchesCampus(provider, filters.campusId)) continue;
+      const score =
+        scoreMatch(s.name, q) +
+        scoreMatch(s.description, q) +
+        (s.tags?.reduce((a, t) => a + scoreMatch(t, q), 0) || 0) +
+        scoreMatch(provider.displayName, q);
+      if (score <= 0) continue;
+      const price = s.pricingModel === "quote" ? undefined : s.price;
+      candidates.push({
+        item: {
+          id: s.id,
+          type: "service",
+          title: s.name,
+          subtitle: `${provider.displayName} · ${getServiceCategoryName(s.categoryId)}`,
+          description: s.description.slice(0, 120),
+          image: s.imageUrl,
+          url: `/services/${s.id}`,
+          rating: provider.rating,
+          ratingCount: provider.ratingCount,
+          price,
+          campusId: provider.primaryCampusId,
+          tags: s.tags,
+        },
+        score,
+        date: toTimestamp(s.createdAt),
+        price,
+      });
+    }
+  }
+
+  // Providers — only those with ≥1 active service (no empty providers).
+  if (typeFilter === "all" || typeFilter === "provider") {
+    for (const p of marketplaceServiceProviders) {
+      const active =
+        marketplaceServices.some((s) => s.providerId === p.id && s.isActive);
+      if (!active) continue;
+      if (filters.campusId && !providerMatchesCampus(p, filters.campusId)) continue;
+      const score =
+        scoreMatch(p.displayName, q) +
+        scoreMatch(p.tagline ?? "", q) +
+        p.specialties.reduce((a, t) => a + scoreMatch(t, q), 0);
+      if (score <= 0) continue;
+      candidates.push({
+        item: {
+          id: p.id,
+          type: "provider",
+          title: p.displayName,
+          subtitle: `${p.primaryCampusId.toUpperCase()} · ${p.specialties.slice(0, 2).join(" · ")}`,
+          description: p.tagline?.slice(0, 120) ?? "",
+          image: p.logoUrl ?? undefined,
+          url: `/services/providers/${p.id}`,
+          rating: p.rating,
+          ratingCount: p.ratingCount,
+          campusId: p.primaryCampusId,
+        },
+        score,
+        date: p.joinedYear ? toTimestamp(`${p.joinedYear}-01-01`) : 0,
+      });
+    }
+  }
+
+  // Marketplace category taxonomy.
   if (typeFilter === "all" || typeFilter === "category") {
     for (const c of categories) {
       const score = scoreMatch(c.name, q);
-      if (score > 0) {
-        results.push({
+      if (score <= 0) continue;
+      candidates.push({
+        item: {
           id: c.id,
           type: "category",
           title: c.name,
           subtitle: `${c.productCount} products`,
-          url: `/marketplace?category=${c.id}`,
-        });
-      }
+          url: `/marketplace/category/${c.id}`,
+        },
+        score,
+        date: 0,
+      });
     }
   }
 
-  // Search campus posts
+  // Campus posts.
   if (typeFilter === "all" || typeFilter === "post") {
     for (const post of campusPosts) {
+      if (filters.campusId && post.campusId !== filters.campusId) continue;
       const score = scoreMatch(post.title, q) + scoreMatch(post.content, q);
-      if (score > 0) {
-        const author = users.find((u) => u.id === post.userId);
-        results.push({
+      if (score <= 0) continue;
+      const author = users.find((u) => u.id === post.userId);
+      candidates.push({
+        item: {
           id: post.id,
           type: "post",
           title: post.title,
           subtitle: `${post.type} · by ${author?.name || "Unknown"}`,
-          description: post.content.slice(0, 100),
+          description: post.content.slice(0, 120),
           image: post.images?.[0],
           url: `/community/${post.id}`,
+          campusId: post.campusId,
           tags: post.tags,
-        });
-      }
+        },
+        score,
+        date: toTimestamp(post.createdAt),
+      });
     }
   }
 
-  // Search events
+  // Events.
   if (typeFilter === "all" || typeFilter === "event") {
     for (const event of events) {
+      if (filters.campusId && event.campusId !== filters.campusId) continue;
       const score = scoreMatch(event.title, q) + scoreMatch(event.description, q);
-      if (score > 0) {
-        results.push({
+      if (score <= 0) continue;
+      candidates.push({
+        item: {
           id: event.id,
           type: "event",
           title: event.title,
           subtitle: `${event.location} · ${new Date(event.startDate).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}`,
-          description: event.description.slice(0, 100),
+          description: event.description.slice(0, 120),
           image: event.imageUrl,
           url: `/community/${event.id}`,
+          campusId: event.campusId,
           tags: event.tags,
-        });
-      }
+        },
+        score,
+        date: toTimestamp(event.startDate),
+      });
     }
   }
 
-  // Sort by score relevance
-  results.sort((a, b) => {
-    const scoreA = scoreMatch(a.title, q) + scoreMatch(a.subtitle, q);
-    const scoreB = scoreMatch(b.title, q) + scoreMatch(b.subtitle, q);
-    return scoreB - scoreA;
-  });
-
-  // Apply price filter
-  let filtered = results;
-  if (filters?.minPrice !== undefined) {
-    filtered = filtered.filter((r) => !r.price || r.price >= filters.minPrice!);
-  }
-  if (filters?.maxPrice !== undefined) {
-    filtered = filtered.filter((r) => !r.price || r.price <= filters.maxPrice!);
-  }
-  if (filters?.campusId) {
-    filtered = filtered.filter((r) => !r.campusId || r.campusId === filters.campusId);
+  // Price range filter — applies to priced entities only (products &
+  // services). Unpriced entities (jobs, vendors, providers, categories,
+  // posts, events) drop out when a range is set — honest, documented.
+  let filtered = candidates;
+  if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
+    filtered = filtered.filter((c) => {
+      if (!c.price) return false;
+      if (filters.priceMin !== undefined && c.price < filters.priceMin) return false;
+      if (filters.priceMax !== undefined && c.price > filters.priceMax) return false;
+      return true;
+    });
   }
 
-  // Sort
-  if (filters?.sortBy === "recent") {
-    filtered.sort((a, b) => (b.id > a.id ? 1 : -1));
-  } else if (filters?.sortBy === "popular") {
-    filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-  } else if (filters?.sortBy === "price_low") {
-    filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-  } else if (filters?.sortBy === "price_high") {
-    filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-  }
+  const items = sortCandidates(filtered, filters.sort || "relevance");
 
-  const suggestions = getSuggestions(q);
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * pageSize;
 
   return {
     query: q,
-    results: filtered,
-    totalCount: filtered.length,
-    suggestions,
+    items: items.slice(start, start + pageSize).map((c) => c.item),
+    total,
+    page: safePage,
+    pageSize,
+    totalPages,
+    suggestions: getSuggestions(q),
   };
+}
+
+function sortCandidates(candidates: Candidate[], sort: SearchSortOption): Candidate[] {
+  switch (sort) {
+    case "recent":
+      return [...candidates].sort((a, b) => b.date - a.date);
+    case "popular":
+      return [...candidates].sort(
+        (a, b) =>
+          (b.item.rating || 0) - (a.item.rating || 0) ||
+          (b.item.ratingCount || 0) - (a.item.ratingCount || 0) ||
+          b.date - a.date
+      );
+    case "price_low":
+    case "price_high": {
+      const priced = candidates.filter((c) => c.price !== undefined);
+      const unpriced = candidates.filter((c) => c.price === undefined);
+      priced.sort((a, b) =>
+        sort === "price_low"
+          ? (a.price as number) - (b.price as number)
+          : (b.price as number) - (a.price as number)
+      );
+      return [...priced, ...unpriced];
+    }
+    case "relevance":
+    default:
+      return [...candidates].sort((a, b) => b.score - a.score || b.date - a.date);
+  }
 }
