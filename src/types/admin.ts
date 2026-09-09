@@ -2093,6 +2093,174 @@ export interface TrustSafetyReportListQuery extends ListQuery {
 }
 
 // ------------------------------------------------------------
+// ADMIN VERIFICATION & KYC OPERATIONS (/admin/verifications)  [Module 43]
+// ------------------------------------------------------------
+// One normalized view over the REAL verification state held by the vendor,
+// employer and freelancer (marketplace provider) stores. No Kampmax store
+// holds a unified "verification request" entity, admin task assignment,
+// expiry or resubmission history, so nothing here invents those. Rows are
+// derived from the owning store's real status value; the console vocabulary
+// below is a LABEL on top of that value, never a fabricated backend field.
+// Decisions exist only where a real backend path does (vendor approval /
+// rejection) and are delegated to the vendor management service.
+
+export const MANAGED_VERIFICATION_APPLICANT_TYPES = [
+  "vendor",
+  "freelancer",
+  "employer",
+] as const;
+export type ManagedVerificationApplicantType =
+  (typeof MANAGED_VERIFICATION_APPLICANT_TYPES)[number];
+
+export const MANAGED_VERIFICATION_STATUSES = [
+  "awaiting_review",
+  "verified",
+  "rejected",
+  "action_required",
+] as const;
+export type ManagedVerificationStatus =
+  (typeof MANAGED_VERIFICATION_STATUSES)[number];
+
+export const MANAGED_VERIFICATION_TYPES = [
+  "identity",
+  "business",
+  "address",
+  "email",
+  "professional",
+] as const;
+export type ManagedVerificationType =
+  (typeof MANAGED_VERIFICATION_TYPES)[number];
+
+export type ManagedVerificationSortField =
+  | "applicantName"
+  | "verificationType"
+  | "submittedAt"
+  | "updatedAt";
+
+/** One normalized verification row derived from a real owning store. */
+export interface ManagedVerificationRow {
+  id: string;
+  applicantType: ManagedVerificationApplicantType;
+  applicantId: string;
+  applicantName: string;
+  /** Short descriptor shown next to the name in lists. */
+  applicantSummary: string;
+  verificationType: ManagedVerificationType | null;
+  /** Console vocabulary — a label derived from `statusNote`+`sourceStatus`. */
+  status: ManagedVerificationStatus;
+  /** Raw backend-owned status value from the owning store. */
+  sourceStatus: string;
+  /** Human explanation of how `status` was derived (never invented data). */
+  statusNote: string;
+  submittedAt: string | null;
+  updatedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  rejectionReason: string | null;
+  /** Uploaded/approved documents actually on record. */
+  documentsCount: number;
+  /** Required documents where the store carries a requirement list. */
+  documentsTotal: number;
+  campusId: string | null;
+  campusName: string | null;
+  /** Person responsible for the applicant (real user). */
+  ownerName: string;
+  /** Deep link into the responsible admin console (Modules 35-39). */
+  applicantHref: string;
+}
+
+export interface ManagedVerificationCounts {
+  all: number;
+  byStatus: Record<ManagedVerificationStatus, number>;
+  byApplicantType: Record<ManagedVerificationApplicantType, number>;
+  /** Rows that actually carry document records in a real store. */
+  withDocuments: number;
+}
+
+export interface ManagedVerificationListQuery extends ListQuery {
+  status?: ManagedVerificationStatus | "all";
+  applicantType?: ManagedVerificationApplicantType | "all";
+  verificationType?: ManagedVerificationType | "all";
+  campusId?: string | "all";
+  sortBy?: ManagedVerificationSortField;
+  sortDir?: SortDir;
+}
+
+/** Document metadata surfaced from a real store (never raw refs). */
+export interface ManagedVerificationDocument {
+  id: string;
+  documentType: string;
+  label: string;
+  required: boolean;
+  /** Real document status value (e.g. not_uploaded / uploaded). */
+  status: string;
+  fileName: string | null;
+  acceptedFormats: string[];
+  maxSizeMb: number;
+  /** Private storage handle exists in the store but is NEVER exposed. */
+  hasPrivateRef: boolean;
+  actionMessage: string | null;
+}
+
+/** Real, backend-configured document requirements for an applicant type. */
+export interface ManagedVerificationDocumentPolicyItem {
+  documentType: string;
+  label: string;
+  required: boolean;
+  acceptedFormats: string[];
+  maxSizeMb: number;
+}
+
+export type ManagedVerificationHistoryKind =
+  | "submitted"
+  | "reviewed"
+  | "approved"
+  | "rejected"
+  | "status_change";
+
+/** One real, attributable verification event. No invented timeline. */
+export interface ManagedVerificationHistoryItem {
+  id: string;
+  kind: ManagedVerificationHistoryKind;
+  title: string;
+  meta: string;
+  at: string;
+}
+
+export interface ManagedVerificationApplicantSummary {
+  type: ManagedVerificationApplicantType;
+  title: string;
+  subtitle: string | null;
+  email: string | null;
+  phone: string | null;
+  /** Real account status held by the owning console. */
+  accountStatus: string | null;
+  established: string | null;
+  description: string | null;
+  adminHref: string;
+  publicHref: string | null;
+}
+
+export interface ManagedVerificationDecisionSupport {
+  /** True only where a real approval/rejection backend path exists. */
+  actionable: boolean;
+  canApprove: boolean;
+  canReject: boolean;
+  reasonNote: string;
+}
+
+export interface ManagedVerificationDetail {
+  verification: ManagedVerificationRow;
+  applicant: ManagedVerificationApplicantSummary;
+  documents: ManagedVerificationDocument[];
+  /** Real requirement template for the applicant type; null when the
+   *  owning application store carries no document policy. */
+  documentPolicy: ManagedVerificationDocumentPolicyItem[] | null;
+  history: ManagedVerificationHistoryItem[];
+  decisionSupport: ManagedVerificationDecisionSupport;
+}
+
+// ------------------------------------------------------------
 // DISPUTE MANAGEMENT (/admin/disputes)
 // ------------------------------------------------------------
 

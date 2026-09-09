@@ -1,5 +1,6 @@
 import { LucideIcon } from "lucide-react";
 import {
+  BadgeCheck,
   BarChart3,
   Bell,
   Building2,
@@ -58,6 +59,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { key: "vendors", href: "/admin/vendors", label: "Vendors", icon: Store },
         { key: "freelancers", href: "/admin/freelancers", label: "Freelancers", icon: Briefcase },
         { key: "employers", href: "/admin/employers", label: "Employers", icon: Handshake },
+        { key: "verifications", href: "/admin/verifications", label: "Verifications", icon: BadgeCheck },
         { key: "campuses", href: "/admin/campuses", label: "Campuses", icon: Building2 },
       ],
     },
@@ -144,7 +146,7 @@ export function breadcrumbLabel(segment: string, index: number): string {
 }
 
 export function isDetailSegment(segment: string): boolean {
-    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer|p\d+|opp_|r\d+|prv_)/i.test(segment);
+    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer|p\d+|opp_|r\d+|prv_|vrf-)/i.test(segment);
 }
 
 function titleCase(value: string): string {

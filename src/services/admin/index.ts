@@ -272,6 +272,15 @@ export const trustSafetyService: AdminTrustSafetyService =
 export type { TrustSafetySortField } from "./report-management.service";
 
 import {
+  AdminVerificationManagementService,
+  createVerificationManagementService,
+} from "./verification-management.service";
+
+/** /admin/verifications console (Admin Verification & KYC - unified view over real vendor/employer/freelancer verification state). */
+export const verificationManagementService: AdminVerificationManagementService =
+  createVerificationManagementService();
+
+import {
   AdminDisputeManagementService,
   createMockDisputeManagementService,
 } from "./dispute-management.service";

@@ -445,4 +445,35 @@ export const adminKeys = {
     detail: (id: string, scopeCampusId?: string | null) =>
       ["admin", "trust-safety", "detail", id, scopeCampusId ?? "platform"] as const,
   } as const,
+  /**
+   * Admin verification & KYC key factory (Module 43). Unified read view
+   * over the real vendor/employer/freelancer verification state. Keys are
+   * campus-scoped like the other admin resources. Vendor approve/reject
+   * mutations delegate to the vendor management service, so the mutation
+   * namespace invalidates BOTH the `verifications` tree AND the `vendors`
+   * tree — the verdict lands in the shared overlay both consoles read.
+   */
+  verifications: {
+    all: ["admin", "verifications"] as const,
+    list: (
+      query: {
+        search?: string;
+        status?: string;
+        applicantType?: string;
+        verificationType?: string;
+        campusId?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "verifications", "list", scopeCampusId ?? "platform", query] as const,
+    counts: (scopeCampusId?: string | null) =>
+      ["admin", "verifications", "counts", scopeCampusId ?? "platform"] as const,
+    types: (scopeCampusId?: string | null) =>
+      ["admin", "verifications", "types", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "verifications", "detail", id, scopeCampusId ?? "platform"] as const,
+  } as const,
 };
