@@ -274,6 +274,17 @@ export const freelancerManagementService: AdminFreelancerManagementService =
 export type { ManagedFreelancerSortField } from "./freelancer-management.service";
 
 import {
+  AdminEmployerManagementService,
+  createEmployerManagementService,
+} from "./employer-management.service";
+
+/** /admin/employers console (employer lifecycle + hiring activity). */
+export const employerManagementService: AdminEmployerManagementService =
+  createEmployerManagementService();
+
+export type { ManagedEmployerSortField } from "./employer-management.service";
+
+import {
   AdminAnalyticsService,
   createMockAnalyticsService,
 } from "./analytics.service";

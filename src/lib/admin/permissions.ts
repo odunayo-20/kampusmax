@@ -29,7 +29,8 @@ export type AdminNavItemKey =
   | "settings"
   | "permissions"
   | "auditLogs"
-  | "freelancers";
+  | "freelancers"
+  | "employers";
 
 /**
  * Which sections each role can see. CAMPUS_ADMIN is scoped to their
@@ -44,6 +45,7 @@ export const ROLE_NAV_ACCESS: Record<AdminRole, AdminNavItemKey[] | "*"> = {
     "users",
     "vendors",
     "freelancers",
+    "employers",
     "products",
     "orders",
     "reviews",

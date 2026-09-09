@@ -257,4 +257,33 @@ export const adminKeys = {
     activity: (id: string, scopeCampusId?: string | null) =>
       ["admin", "freelancers", "activity", id, scopeCampusId ?? "platform"] as const,
   } as const,
+  /**
+   * Employer management key factory (Module 37). Keys are scoped per
+   * admin session (via campusId) so campus-scoped operators never see
+   * employers outside their scope. Mutations invalidate the whole
+   * `employers` tree so list, counts, detail and activity stay consistent.
+   */
+  employers: {
+    all: ["admin", "employers"] as const,
+    list: (
+      query: {
+        search?: string;
+        status?: string;
+        verification?: string;
+        campusId?: string;
+        industry?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "employers", "list", scopeCampusId ?? "platform", query] as const,
+    counts: (scopeCampusId?: string | null) =>
+      ["admin", "employers", "counts", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "employers", "detail", id, scopeCampusId ?? "platform"] as const,
+    activity: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "employers", "activity", id, scopeCampusId ?? "platform"] as const,
+  } as const,
 };

@@ -5,6 +5,8 @@
 // ============================================================
 
 import type { MarketplaceProviderPortfolioItem, MarketplaceServiceReview } from "./service-marketplace";
+import type { ProfileReviewSummary } from "./platform-reviews";
+import type { EmployerApplicationStatus } from "./opportunity";
 
 // ------------------------------------------------------------
 // AUTH & ROLES
@@ -2548,6 +2550,173 @@ export interface ManagedFreelancersListQuery extends ListQuery {
   status?: FreelancerBucket;
   categoryId?: string;
   campusId?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+// ------------------------------------------------------------
+// EMPLOYER MANAGEMENT (/admin/employers console)
+// Admin console for discovering, inspecting, and managing
+// employer/clients and their hiring activity.
+// Data is sourced from existing platform data stores — no
+// fabricated records (spec §45). Contacts are private and only
+// surfaced here because this is an authorized admin scope.
+// Backend admin endpoints are documented as gaps where they
+// don't yet exist.
+// ------------------------------------------------------------
+
+/** Admin console status (derived from the employer's real backend state). */
+export type EmployerConsoleStatus =
+  | "active"
+  | "pending_review"
+  | "suspended"
+  | "rejected"
+  | "external"
+  | "incomplete";
+
+/** Derived hiring state (from real open jobs — not a stored backend field). */
+export type EmployerHiringStatus = "hiring" | "not_hiring";
+
+export interface ManagedEmployer {
+  id: string;
+  /** Platform user id when an onboarding profile exists; null for job-only posters. */
+  userId: string | null;
+  name: string;
+  organizationName: string | null;
+  slug: string | null;
+  descriptor: string;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  industry: string | null;
+  campusId: string | null;
+  campusName: string | null;
+  city: string | null;
+  state: string | null;
+  status: EmployerConsoleStatus;
+  /** Real EmployerOnboardingStatus; null for external (job-only) posters. */
+  onboardingStatus: string | null;
+  /** Real EmployerVerificationStatus; null when no onboarding verification exists. */
+  verificationStatus: string | null;
+  verified: boolean;
+  hasEmployerProfile: boolean;
+  /** 0–100 from the real onboarding completion computation. */
+  profileCompletion: number;
+  hiringStatus: EmployerHiringStatus;
+  activeJobs: number;
+  totalJobs: number;
+  /** Non-draft, non-withdrawn proposals across the employer's jobs. */
+  applicationsReceived: number;
+  /** Accepted proposals across the employer's jobs. */
+  hires: number;
+  contractsTotal: number;
+  contractsActive: number;
+  rating: number;
+  reviewsCount: number;
+  joinedAt: string;
+  lastActiveAt: string;
+}
+
+export interface EmployerProfileSummary {
+  displayName: string;
+  headline: string;
+  about: string;
+  industry: string;
+  website: string | null;
+  location: string;
+  workPreference: string | null;
+  remoteAvailable: boolean;
+  categories: string[];
+  experience: string | null;
+  workType: string | null;
+  projectDuration: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+}
+
+export interface EmployerOrganizationSummary {
+  name: string;
+  businessType: string;
+  industry: string;
+  description: string;
+  size: string;
+  website: string | null;
+}
+
+export interface EmployerJobSummary {
+  id: string;
+  title: string;
+  status: string;
+  postedAt: string;
+  deadline: string;
+  viewCount: number;
+  applications: number;
+}
+
+export interface EmployerHiringSummary {
+  jobCounts: Record<string, number> & { all: number };
+  applicationCounts: Record<EmployerApplicationStatus | "all", number>;
+  contractsTotal: number;
+  contractsActive: number;
+  contractsCompleted: number;
+  hires: number;
+}
+
+export type EmployerActivityKind =
+  | "profile"
+  | "verification"
+  | "jobs"
+  | "hiring"
+  | "reviews"
+  | "admin";
+
+export interface EmployerActivityEvent {
+  id: string;
+  kind: EmployerActivityKind;
+  message: string;
+  meta: string;
+  at: string;
+}
+
+export interface ManagedEmployerDetail {
+  employer: ManagedEmployer;
+  profile: EmployerProfileSummary | null;
+  organization: EmployerOrganizationSummary | null;
+  hiring: EmployerHiringSummary;
+  jobs: EmployerJobSummary[];
+  reviews: ProfileReviewSummary;
+  verification: { status: string; type: string | null; note: string | null } | null;
+  activity: EmployerActivityEvent[];
+}
+
+export type EmployerBucket =
+  | "all"
+  | "active"
+  | "pending_review"
+  | "suspended"
+  | "rejected"
+  | "external"
+  | "incomplete";
+
+export interface EmployerStatusCounts {
+  all: number;
+  active: number;
+  pending_review: number;
+  suspended: number;
+  rejected: number;
+  external: number;
+  incomplete: number;
+}
+
+export interface ManagedEmployerListQuery extends ListQuery {
+  search?: string;
+  status?: EmployerBucket;
+  verification?: string;
+  campusId?: string;
+  industry?: string;
   sortBy?: string;
   sortDir?: "asc" | "desc";
   page?: number;

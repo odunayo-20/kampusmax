@@ -20,6 +20,7 @@ import {
   Users,
   Wallet,
   Landmark,
+  Handshake,
 } from "lucide-react";
 import { AdminNavItemKey, canSeeSection } from "./permissions";
 import { AdminRole } from "@/types/admin";
@@ -53,6 +54,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { key: "users", href: "/admin/users", label: "Users", icon: Users },
         { key: "vendors", href: "/admin/vendors", label: "Vendors", icon: Store },
         { key: "freelancers", href: "/admin/freelancers", label: "Freelancers", icon: Briefcase },
+        { key: "employers", href: "/admin/employers", label: "Employers", icon: Handshake },
         { key: "campuses", href: "/admin/campuses", label: "Campuses", icon: Building2 },
       ],
     },
