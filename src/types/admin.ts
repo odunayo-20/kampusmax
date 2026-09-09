@@ -1808,75 +1808,156 @@ export interface CommunitySectionCounts<S extends string> {
 }
 
 // ------------------------------------------------------------
-// REVIEW MANAGEMENT (/admin/reviews)
+// REVIEW MANAGEMENT (/admin/reviews)  [Module 41]
 // ------------------------------------------------------------
+// Real-data overview of EVERY public review on the platform across four
+// target kinds:
+//   1. Storefront reviews (src/data/reviews.ts) — product / vendor targets.
+//      These records carry NO moderation state in the store; being present
+//      in the public store IS their publication, so status is DERIVED
+//      "published" and flagged statusSource: "derived".
+//   2. Profile reviews (src/data/profile-reviews.ts, Module 33) —
+//      freelancer / employer targets with a REAL backend-owned status field,
+//      surfaced 1:1 (statusSource: "store").
+// The legacy fabricated statuses "reported" / "under_review" are dropped —
+// no store records them.
 
-export type ManagedReviewStatus =
-  | "published"
-  | "reported"
-  | "hidden"
-  | "removed"
-  | "under_review";
+export const MANAGED_REVIEW_TARGET_TYPES = [
+  "product",
+  "vendor",
+  "freelancer",
+  "employer",
+] as const;
+export type ManagedReviewTargetType =
+  (typeof MANAGED_REVIEW_TARGET_TYPES)[number];
 
-export type ManagedReviewTargetType = "product" | "vendor";
+export const MANAGED_REVIEW_STATUSES = [
+  "published",
+  "pending",
+  "hidden",
+  "removed",
+] as const;
+export type ManagedReviewStatus = (typeof MANAGED_REVIEW_STATUSES)[number];
 
-export interface ManagedReview {
-  id: string;
-  reviewer: CommunityAuthor;
-  targetType: ManagedReviewTargetType;
-  /** Product title (or vendor store name when rating the store). */
-  targetTitle: string;
-  productId: string | null;
-  vendorId: string;
-  vendorName: string;
-  campusId: string;
-  rating: 1 | 2 | 3 | 4 | 5;
-  comment: string;
-  helpfulCount: number;
-  /** True when tied to a completed Kampmax order. */
-  verifiedPurchase: boolean;
-  orderRef: string | null;
-  reportsCount: number;
-  status: ManagedReviewStatus;
-  createdAt: string;
-}
+/** "store" == backend-owned moderation field; "derived" == public-by-presence in the store (no moderation field exists). */
+export type ManagedReviewStatusSource = "store" | "derived";
 
-export type ReviewReportReason =
-  | "fake_review"
-  | "offensive"
-  | "unfair"
+export type ManagedReviewSortField =
+  | "createdAt"
+  | "rating"
+  | "helpful"
+  | "reported";
+
+export type ManagedReviewReportReason =
   | "spam"
+  | "fake"
+  | "inappropriate"
+  | "offensive"
   | "irrelevant"
   | "other";
 
-export type ReviewReportStatus = "open" | "reviewing" | "actioned" | "dismissed";
-
-export interface ReviewReport {
+export interface ManagedReviewRow {
   id: string;
-  reviewId: string;
-  reason: ReviewReportReason;
-  detail: string;
+  targetType: ManagedReviewTargetType;
+  targetId: string;
+  targetName: string;
+  reviewerId: string | null;
+  reviewerName: string;
+  reviewerAvatar: string | null;
+  rating: 1 | 2 | 3 | 4 | 5;
+  helpfulCount: number;
+  title: string | null;
+  commentPreview: string;
+  status: ManagedReviewStatus;
+  statusSource: ManagedReviewStatusSource;
+  reportedCount: number;
+  verifiedPurchase: boolean;
+  withImages: boolean;
+  hasResponse: boolean;
+  orderId: string | null;
+  vendorId: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface ManagedReviewCounts {
+  all: number;
+  byStatus: Record<ManagedReviewStatus, number>;
+  byTargetType: Record<ManagedReviewTargetType, number>;
+  /** Reviews with at least one read report. */
+  reported: number;
+  /**
+   * Operational attention signal. No moderation transitions exist in any
+   * review store, so this is deliberately the sum of rows with open reports
+   * — zero today, and never fabricated.
+   */
+  needsAttention: number;
+  withImages: number;
+  withResponse: number;
+}
+
+export interface ManagedReviewFacetOption {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export interface ManagedReviewFacets {
+  targetTypes: ManagedReviewFacetOption[];
+  vendors: ManagedReviewFacetOption[];
+}
+
+/** Read-only projection of a review report (never fabricated). */
+export interface ManagedReviewReportView {
+  id: string;
+  reporterUserId: string | null;
   reporterName: string;
-  priority: "low" | "medium" | "high";
-  status: ReviewReportStatus;
+  reason: ManagedReviewReportReason;
+  details: string | null;
   createdAt: string;
 }
 
-export interface ManagedReviewDetail {
-  review: ManagedReview;
-  reports: ReviewReport[];
+export interface ManagedReviewEntity {
+  targetType: ManagedReviewTargetType;
+  id: string;
+  name: string;
+  verified: boolean;
+  /** Public page link; null when the store has no slug/route for the entity. */
+  href: string | null;
+  hrefLabel: string;
+  /** Admin console page for the entity (when one exists). */
+  adminHref: string | null;
 }
 
-export interface ReviewListQuery extends ListQuery {
+export interface ManagedReviewDetail {
+  review: ManagedReviewRow;
+  fullComment: string;
+  images: { id: string; url: string; alt: string | null }[];
+  vendorResponse: { text: string; createdAt: string } | null;
+  reviewer: {
+    id: string | null;
+    name: string;
+    avatar: string | null;
+    campusName: string | null;
+  };
+  entity: ManagedReviewEntity;
+  reports: ManagedReviewReportView[];
+  statusNote: string;
+}
+
+export interface ManagedReviewListQuery extends ListQuery {
   search?: string;
   status?: ManagedReviewStatus | "all";
   /** Exact star filter; "all" disables it. */
   rating?: 1 | 2 | 3 | 4 | 5 | "all";
+  targetType?: ManagedReviewTargetType | "all";
   vendorId?: string | "all";
-  campusId?: string | "all";
-  purchase?: "all" | "verified" | "unverified";
-  /** Only rows with at least one report, regardless of status. */
+  /** Presence of a vendor response on the review. */
+  response?: "all" | "answered" | "unanswered";
+  /** Only rows that carry at least one read report. */
   reportedOnly?: boolean;
+  sortBy?: ManagedReviewSortField;
+  sortDir?: SortDir;
 }
 
 // ------------------------------------------------------------

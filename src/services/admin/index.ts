@@ -254,9 +254,11 @@ import {
   createReviewManagementService,
 } from "./review-management.service";
 
-/** /admin/reviews console (review moderation + report triage). */
+/** /admin/reviews console (read-only, real-data review oversight). */
 export const reviewManagementService: AdminReviewManagementService =
   createReviewManagementService();
+
+export type { ManagedReviewSortField } from "./review-management.service";
 
 import {
   AdminDisputeManagementService,

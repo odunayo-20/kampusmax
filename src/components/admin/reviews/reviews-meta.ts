@@ -1,112 +1,169 @@
 import type { BadgeVariant } from "@/components/admin/StatusBadge";
 import type {
+  ManagedReviewReportReason,
+  ManagedReviewSortField,
   ManagedReviewStatus,
+  ManagedReviewStatusSource,
   ManagedReviewTargetType,
-  ReviewReportReason,
-  ReviewReportStatus,
 } from "@/types/admin";
 
 // ------------------------------------------------------------
 // REVIEW STATUS
 // ------------------------------------------------------------
+// The console surfaces four states. "published" is derived for storefront
+// reviews (their presence in the public store is their publication) or the
+// real backend-owned field for profile reviews. Nothing else is invented.
+
+export const REVIEW_STATUS_TABS: (ManagedReviewStatus | "all")[] = [
+  "all",
+  "published",
+  "pending",
+  "hidden",
+  "removed",
+];
 
 export const REVIEW_STATUS_LABELS: Record<ManagedReviewStatus, string> = {
   published: "Published",
-  reported: "Reported",
+  pending: "Pending",
   hidden: "Hidden",
   removed: "Removed",
-  under_review: "Under review",
 };
 
 export function reviewStatusLabel(status: ManagedReviewStatus): string {
   return REVIEW_STATUS_LABELS[status] ?? status;
 }
 
-export function reviewStatusVariant(
-  status: ManagedReviewStatus
-): BadgeVariant {
+export const REVIEW_STATUS_DOTS: Record<ManagedReviewStatus, string> = {
+  published: "bg-kampmax-success",
+  pending: "bg-kampmax-info",
+  hidden: "bg-kampmax-warning",
+  removed: "bg-kampmax-error",
+};
+
+export function reviewStatusVariant(status: ManagedReviewStatus): BadgeVariant {
   switch (status) {
     case "published":
       return "success";
-    case "reported":
-      return "error";
+    case "pending":
+      return "info";
     case "hidden":
       return "warning";
-    case "under_review":
-      return "info";
-    default:
-      return "neutral"; // removed
+    case "removed":
+      return "error";
   }
 }
 
-export const REVIEW_STATUS_FILTER_ORDER: ManagedReviewStatus[] = [
-  "published",
-  "reported",
-  "hidden",
-  "under_review",
-  "removed",
+// ------------------------------------------------------------
+// STATUS SOURCE ("store" vs "derived")
+// ------------------------------------------------------------
+
+export const REVIEW_SOURCE_LABELS: Record<ManagedReviewStatusSource, string> = {
+  store: "Backend status",
+  derived: "Derived",
+};
+
+export function reviewStatusSourceLabel(
+  source: ManagedReviewStatusSource
+): string {
+  return REVIEW_SOURCE_LABELS[source] ?? source;
+}
+
+export function reviewStatusSourceVariant(
+  source: ManagedReviewStatusSource
+): BadgeVariant {
+  return source === "store" ? "neutral" : "blue";
+}
+
+// ------------------------------------------------------------
+// TARGET TYPES
+// ------------------------------------------------------------
+
+export const REVIEW_TARGET_TYPE_OPTIONS: (ManagedReviewTargetType | "all")[] = [
+  "all",
+  "product",
+  "vendor",
+  "freelancer",
+  "employer",
 ];
 
-/** Which moderation transitions each status allows. */
-export function reviewActionsFor(r: {
-  status: ManagedReviewStatus;
-  reportsCount: number;
-}): {
-  hide?: boolean;
-  restore?: boolean;
-  remove?: boolean;
-  investigate?: boolean;
-} {
-  switch (r.status) {
-    case "published":
-      return { hide: true, remove: true, investigate: r.reportsCount > 0 };
-    case "reported":
-    case "under_review":
-      return { hide: true, remove: true, investigate: true };
-    case "hidden":
-      return { restore: true, remove: true, investigate: r.reportsCount > 0 };
-    case "removed":
-      return {};
+export const REVIEW_TARGET_TYPE_LABELS: Record<ManagedReviewTargetType, string> = {
+  product: "Product",
+  vendor: "Vendor",
+  freelancer: "Freelancer",
+  employer: "Employer",
+};
+
+export function reviewTargetTypeLabel(type: ManagedReviewTargetType): string {
+  return REVIEW_TARGET_TYPE_LABELS[type] ?? type;
+}
+
+export function reviewTargetTypeVariant(
+  type: ManagedReviewTargetType | "all"
+): BadgeVariant {
+  switch (type) {
+    case "product":
+      return "blue";
+    case "vendor":
+      return "gold";
+    case "freelancer":
+      return "info";
+    case "employer":
+    default:
+      return "neutral";
   }
 }
 
 // ------------------------------------------------------------
-// TARGETS / REPORTS
+// SORT
 // ------------------------------------------------------------
 
-export function reviewTargetTypeLabel(
-  type: ManagedReviewTargetType
-): string {
-  return type === "product" ? "Product" : "Vendor";
-}
+export const REVIEW_SORT_OPTIONS: {
+  value: ManagedReviewSortField;
+  label: string;
+}[] = [
+  { value: "createdAt", label: "Date" },
+  { value: "rating", label: "Rating" },
+  { value: "helpful", label: "Helpful" },
+  { value: "reported", label: "Reports" },
+];
 
-export const REVIEW_REPORT_REASON_LABELS: Record<ReviewReportReason, string> = {
-  fake_review: "Suspected fake review",
-  offensive: "Offensive language",
-  unfair: "Unfair / inaccurate",
+// ------------------------------------------------------------
+// VENDOR-RESPONSE FILTER
+// ------------------------------------------------------------
+
+export const REVIEW_RESPONSE_OPTIONS: ("all" | "answered" | "unanswered")[] = [
+  "all",
+  "answered",
+  "unanswered",
+];
+
+export const REVIEW_RESPONSE_LABELS: Record<
+  "all" | "answered" | "unanswered",
+  string
+> = {
+  all: "Any response",
+  answered: "Has vendor response",
+  unanswered: "No vendor response",
+};
+
+// ------------------------------------------------------------
+// REPORT REASONS (real vocab from the stores)
+// ------------------------------------------------------------
+
+export const REVIEW_REPORT_REASON_LABELS: Record<
+  ManagedReviewReportReason,
+  string
+> = {
   spam: "Spam or duplicate",
+  fake: "Suspected fake review",
+  inappropriate: "Inappropriate content",
+  offensive: "Offensive language",
   irrelevant: "Irrelevant content",
   other: "Other",
 };
 
-export const REVIEW_REPORT_STATUS_LABELS: Record<ReviewReportStatus, string> = {
-  open: "Open",
-  reviewing: "Reviewing",
-  actioned: "Actioned",
-  dismissed: "Dismissed",
-};
-
-export function reviewReportStatusVariant(
-  status: ReviewReportStatus
-): BadgeVariant {
-  switch (status) {
-    case "open":
-      return "error";
-    case "reviewing":
-      return "warning";
-    case "actioned":
-      return "success";
-    default:
-      return "neutral"; // dismissed
-  }
+export function reviewReportReasonLabel(
+  reason: ManagedReviewReportReason
+): string {
+  return REVIEW_REPORT_REASON_LABELS[reason] ?? reason;
 }

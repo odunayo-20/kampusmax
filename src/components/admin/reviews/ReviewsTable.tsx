@@ -1,360 +1,346 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   BadgeCheck,
-  Eye,
-  EyeOff,
   Flag,
-  RotateCcw,
-  SearchCheck,
-  ShieldOff,
-  UserRound,
+  Image as ImageIcon,
+  MessageSquare,
 } from "lucide-react";
-import { Pagination } from "@/components/admin/Pagination";
-import { StatusBadge } from "@/components/admin/StatusBadge";
-import { communityCampusName, previewText } from "@/components/admin/campus-community/campus-community-utils";
-import {
-  AuthorCell,
-  CommunitySectionShell,
-  RowMenu,
-} from "@/components/admin/campus-community/shared";
-import { cn, formatDateShort, timeAgo } from "@/lib/utils";
+import { cn, formatDate, timeAgo } from "@/lib/utils";
+import { EmptyState } from "@/components/admin/EmptyState";
+import { ErrorState } from "@/components/admin/ErrorState";
+import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
+import type { ManagedReviewRow, Paginated, SortDir } from "@/types/admin";
+import type { ManagedReviewSortField } from "@/services/admin";
 import { StarRating } from "./StarRating";
 import {
-  reviewActionsFor,
-  reviewStatusLabel,
-  reviewStatusVariant,
-  reviewTargetTypeLabel,
-} from "./reviews-meta";
-import type { ManagedReview } from "@/types/admin";
+  ReviewSourceBadge,
+  ReviewStatusBadge,
+  ReviewTargetTypeBadge,
+} from "./ReviewBadges";
 
-export interface ReviewsTableProps {
-  items: ManagedReview[];
+interface ReviewsTableProps {
+  page: Paginated<ManagedReviewRow> | null;
   loading: boolean;
   error: boolean;
-  hasActiveFilters: boolean;
+  sortBy: ManagedReviewSortField;
+  sortDir: SortDir;
+  onSort: (field: ManagedReviewSortField) => void;
   onRetry: () => void;
+  hasActiveFilters: boolean;
   onClearFilters: () => void;
-  onView: (r: ManagedReview) => void;
-  onHide: (r: ManagedReview) => void;
-  onRestore: (r: ManagedReview) => void;
-  onRemove: (r: ManagedReview) => void;
-  onInvestigate: (r: ManagedReview) => void;
 }
 
-export function reviewsActionsFor(r: ManagedReview) {
-  return reviewActionsFor(r);
-}
+export function ReviewsTable({
+  page,
+  loading,
+  error,
+  sortBy,
+  sortDir,
+  onSort,
+  onRetry,
+  hasActiveFilters,
+  onClearFilters,
+}: ReviewsTableProps) {
+  const router = useRouter();
 
-export function ReviewsTable(props: ReviewsTableProps) {
-  const {
-    items,
-    loading,
-    error,
-    hasActiveFilters,
-    onRetry,
-    onClearFilters,
-    onView,
-    onHide,
-    onRestore,
-    onRemove,
-    onInvestigate,
-  } = props;
+  if (loading && !page) {
+    return <LoadingSkeleton variant="table" rows={6} />;
+  }
 
-  function menuActions(r: ManagedReview) {
-    const a = reviewActionsFor(r);
-    return [
-      { key: "view", label: "View review", icon: Eye, onSelect: () => onView(r) },
-      ...(a.investigate
-        ? [
-            {
-              key: "investigate",
-              label: `Investigate report${r.reportsCount === 1 ? "" : "s"}`,
-              icon: SearchCheck,
-              onSelect: () => onInvestigate(r),
-            },
-          ]
-        : []),
-      ...(a.hide
-        ? [{ key: "hide", label: "Hide", icon: EyeOff, onSelect: () => onHide(r) }]
-        : []),
-      ...(a.restore
-        ? [
-            {
-              key: "restore",
-              label: "Restore",
-              icon: RotateCcw,
-              onSelect: () => onRestore(r),
-            },
-          ]
-        : []),
-      ...(a.remove
-        ? [
-            {
-              key: "remove",
-              label: "Remove",
-              icon: ShieldOff,
-              danger: true,
-              onSelect: () => onRemove(r),
-            },
-          ]
-        : []),
-      {
-        key: "reviewer",
-        label: "View reviewer",
-        icon: UserRound,
-        onSelect: () => onView(r),
-      },
-    ];
+  if (error && !page) {
+    return <ErrorState onRetry={onRetry} />;
+  }
+
+  if (!page || page.items.length === 0) {
+    return (
+      <div className="rounded-lg border border-kampmax-border bg-white p-4">
+        <EmptyState
+          title="No reviews found"
+          message={
+            hasActiveFilters
+              ? "No reviews match the current search and filters."
+              : "Reviews left on products, stores and profiles will appear here."
+          }
+          action={
+            hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="inline-flex h-9 items-center rounded-md border border-kampmax-border bg-white px-3 text-sm font-medium text-kampmax-text transition-colors hover:bg-kampmax-muted/60"
+              >
+                Clear filters
+              </button>
+            ) : undefined
+          }
+        />
+      </div>
+    );
   }
 
   return (
-    <CommunitySectionShell
-      loading={loading}
-      error={error}
-      isEmpty={items.length === 0}
-      hasActiveFilters={hasActiveFilters}
-      emptyTitle="No reviews found"
-      emptyMessage="Product and vendor reviews will appear here as students leave feedback."
-      onRetry={onRetry}
-      onClearFilters={onClearFilters}
-    >
-      {/* Desktop / tablet: full table */}
-      <div className="hidden overflow-hidden rounded-lg border border-kampmax-border bg-white md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-kampmax-border bg-kampmax-muted/40 text-[11px] uppercase tracking-wide text-kampmax-text-secondary">
-                <th scope="col" className="px-4 py-2.5 font-medium">Reviewer</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Product</th>
-                <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">Vendor</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Rating</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Review</th>
-                <th scope="col" className="hidden px-3 py-2.5 font-medium xl:table-cell">Campus</th>
-                <th scope="col" className="hidden px-3 py-2.5 font-medium xl:table-cell">Purchase</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Reports</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Status</th>
-                <th scope="col" className="hidden px-3 py-2.5 font-medium md:table-cell">Date</th>
-                <th scope="col" className="w-10 px-2 py-2.5"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-kampmax-border">
-              {items.map((r) => {
-                return (
-                  <tr
-                    key={r.id}
-                    className="cursor-pointer transition-colors hover:bg-kampmax-muted/40"
-                    onClick={() => onView(r)}
-                  >
-                    <td className="max-w-[150px] px-4 py-2.5">
-                      <AuthorCell name={r.reviewer.name} />
-                      <span className="mt-0.5 block font-mono text-[10px] uppercase text-kampmax-text-secondary/70">
-                        {r.id}
-                      </span>
-                    </td>
-
-                    <td className="max-w-[190px] px-3 py-2.5">
-                      <span
-                        className="block truncate font-medium text-kampmax-text"
-                        title={r.targetTitle}
-                      >
-                        {r.targetTitle}
-                      </span>
-                      <span className="text-[10px] font-medium uppercase tracking-wide text-kampmax-text-secondary">
-                        {reviewTargetTypeLabel(r.targetType)} review
-                      </span>
-                    </td>
-
-                    <td className="hidden max-w-[140px] truncate whitespace-nowrap px-3 py-2.5 text-kampmax-text-secondary lg:table-cell">
-                      {r.vendorName}
-                    </td>
-
-                    <td className="whitespace-nowrap px-3 py-2.5">
-                      <StarRating rating={r.rating} />
-                    </td>
-
-                    <td className="max-w-[260px] px-3 py-2.5">
-                      <p
-                        className="line-clamp-2 text-[13px] leading-snug text-kampmax-text"
-                        title={r.comment}
-                      >
-                        {previewText(r.comment, 110)}
-                      </p>
-                    </td>
-
-                    <td className="hidden whitespace-nowrap px-3 py-2.5 text-kampmax-text-secondary xl:table-cell">
-                      {communityCampusName(r.campusId)}
-                    </td>
-
-                    {/* Verified purchase */}
-                    <td className="hidden whitespace-nowrap px-3 py-2.5 xl:table-cell">
-                      {r.verifiedPurchase ? (
-                        <span
-                          className="inline-flex items-center gap-1 text-xs font-medium text-kampmax-success"
-                          title={`Order ${r.orderRef}`}
-                        >
-                          <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
-                          Verified
-                        </span>
-                      ) : (
-                        <span className="text-xs text-kampmax-text-secondary">
-                          Unverified
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="whitespace-nowrap px-3 py-2.5">
-                      {r.reportsCount > 0 ? (
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 font-medium tabular-nums",
-                            r.status === "reported" || r.status === "under_review"
-                              ? "text-kampmax-error"
-                              : "text-amber-600"
-                          )}
-                        >
-                          <Flag className="h-3 w-3" aria-hidden />
-                          {r.reportsCount}
-                        </span>
-                      ) : (
-                        <span className="text-kampmax-text-secondary">-</span>
-                      )}
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <StatusBadge
-                        variant={reviewStatusVariant(r.status)}
-                        label={reviewStatusLabel(r.status)}
-                      />
-                    </td>
-
-                    <td
-                      className="hidden whitespace-nowrap px-3 py-2.5 tabular-nums text-kampmax-text-secondary md:table-cell"
-                      title={new Date(r.createdAt).toISOString()}
-                    >
-                      {formatDateShort(r.createdAt)}
-                      <span className="ml-1.5 hidden text-[11px] 2xl:inline">
-                        {timeAgo(r.createdAt)}
-                      </span>
-                    </td>
-
-                    <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
-                      <RowMenu label={`review ${r.id}`} actions={menuActions(r)} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+    <div className="overflow-hidden rounded-lg border border-kampmax-border bg-white">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1360px] text-sm">
+          <thead>
+            <tr className="border-b border-kampmax-border bg-kampmax-muted/50 text-left text-xs uppercase tracking-wide text-kampmax-text-secondary">
+              <Th>Review</Th>
+              <Th>Target</Th>
+              <SortableTh
+                label="Rating"
+                active={sortBy === "rating"}
+                dir={sortDir}
+                onClick={() => onSort("rating")}
+              />
+              <SortableTh
+                label="Helpful"
+                active={sortBy === "helpful"}
+                dir={sortDir}
+                onClick={() => onSort("helpful")}
+                className="hidden xl:table-cell"
+              />
+              <Th>Status</Th>
+              <Th className="hidden xl:table-cell">Signals</Th>
+              <SortableTh
+                label="Reports"
+                active={sortBy === "reported"}
+                dir={sortDir}
+                onClick={() => onSort("reported")}
+              />
+              <SortableTh
+                label="Created"
+                active={sortBy === "createdAt"}
+                dir={sortDir}
+                onClick={() => onSort("createdAt")}
+              />
+              <Th className="text-right">Actions</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-kampmax-border/70">
+            {page.items.map((review) => (
+              <Row
+                key={review.id}
+                review={review}
+                onOpen={() => router.push(`/admin/reviews/${review.id}`)}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Mobile: stacked cards */}
-      <ul className="space-y-2.5 md:hidden">
-        {items.map((r) => (
-          <li
-            key={r.id}
-            onClick={() => onView(r)}
-            className="cursor-pointer rounded-lg border border-kampmax-border bg-white p-3 transition-colors active:bg-kampmax-muted/50"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <button
-                type="button"
-                onClick={(e) => e.stopPropagation()}
-                className="min-w-0 truncate text-left text-sm font-medium text-kampmax-blue"
-              >
-                {r.reviewer.name}
-              </button>
-              <StatusBadge
-                variant={reviewStatusVariant(r.status)}
-                label={reviewStatusLabel(r.status)}
-              />
-            </div>
-
-            <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-kampmax-text">
-              {previewText(r.comment, 130)}
-            </p>
-
-            <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-dashed border-kampmax-border pt-2 text-xs">
-              <MetaCell label="Product">
-                <span className="truncate">{r.targetTitle}</span>
-              </MetaCell>
-              <MetaCell label="Vendor">
-                <span className="truncate">{r.vendorName}</span>
-              </MetaCell>
-              <MetaCell label="Rating">
-                <StarRating rating={r.rating} showValue={false} size="xs" />
-              </MetaCell>
-              <MetaCell label="Campus">
-                {communityCampusName(r.campusId)}
-              </MetaCell>
-            </dl>
-
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-kampmax-border pt-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-kampmax-text-secondary">
-                {r.verifiedPurchase ? (
-                  <span className="inline-flex items-center gap-1 font-medium text-kampmax-success">
-                    <BadgeCheck className="h-3 w-3" aria-hidden />
-                    Verified · {r.orderRef}
-                  </span>
-                ) : (
-                  <span>Unverified purchase</span>
-                )}
-                {r.reportsCount > 0 && (
-                  <span className="inline-flex items-center gap-1 font-medium text-kampmax-error">
-                    <Flag className="h-3 w-3" aria-hidden />
-                    {r.reportsCount}
-                  </span>
-                )}
-                <span>{timeAgo(r.createdAt)}</span>
-              </div>
-              <div
-                className="flex shrink-0 items-center gap-1"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {reviewActionsFor(r).hide && (
-                  <button
-                    type="button"
-                    title="Hide review"
-                    onClick={() => onHide(r)}
-                    className="rounded-md p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
-                  >
-                    <EyeOff className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                {reviewActionsFor(r).restore && (
-                  <button
-                    type="button"
-                    title="Restore review"
-                    onClick={() => onRestore(r)}
-                    className="rounded-md p-1.5 text-kampmax-success transition-colors hover:bg-emerald-50"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                <RowMenu label={`review ${r.id}`} actions={menuActions(r)} />
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </CommunitySectionShell>
+      <p className="sr-only" aria-live="polite">
+        Showing {page.items.length} of {page.total} reviews, page {page.page} of{" "}
+        {page.totalPages}.
+      </p>
+    </div>
   );
 }
 
-function MetaCell({
-  label,
+// ------------------------------------------------------------
+// Header cells
+// ------------------------------------------------------------
+
+function Th({
   children,
+  className,
 }: {
-  label: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-[10px] font-medium uppercase tracking-wide text-kampmax-text-secondary">
-        {label}
-      </dt>
-      <dd className="flex items-center gap-1 truncate text-kampmax-text">{children}</dd>
-    </div>
+    <th
+      scope="col"
+      className={cn("whitespace-nowrap px-4 py-2.5 font-medium", className)}
+    >
+      {children}
+    </th>
   );
+}
+
+function SortableTh({
+  label,
+  active,
+  dir,
+  onClick,
+  className,
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+  className?: string;
+}) {
+  const Icon = !active ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className={cn("px-4 py-2.5 font-medium", className)}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "inline-flex items-center gap-1 whitespace-nowrap uppercase tracking-wide transition-colors hover:text-kampmax-text",
+          active && "text-kampmax-text"
+        )}
+      >
+        {label}
+        <Icon
+          className={cn("h-3 w-3", active ? "text-kampmax-blue" : "opacity-50")}
+        />
+      </button>
+    </th>
+  );
+}
+
+// ------------------------------------------------------------
+// Rows
+// ------------------------------------------------------------
+
+function Row({ review, onOpen }: { review: ManagedReviewRow; onOpen: () => void }) {
+  const initials = initialsOf(review.reviewerName);
+  return (
+    <tr className="group transition-colors hover:bg-kampmax-muted/40">
+      {/* Review */}
+      <td className="max-w-[280px] px-4 py-2.5">
+        <button
+          type="button"
+          onClick={onOpen}
+          title={`Open review by ${review.reviewerName}`}
+          className="flex w-full items-start gap-2.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-kampmax-blue"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-kampmax-muted text-xs font-semibold text-kampmax-text-secondary">
+            {initials}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13px] font-medium text-kampmax-text group-hover:text-kampmax-blue">
+              {review.reviewerName}
+            </span>
+            <span className="block font-mono text-[10px] uppercase text-kampmax-text-secondary/70">
+              {review.id}
+            </span>
+            <span className="mt-1 block line-clamp-2 text-xs leading-snug text-kampmax-text-secondary">
+              {review.commentPreview}
+            </span>
+          </span>
+        </button>
+      </td>
+
+      {/* Target */}
+      <td className="max-w-[190px] px-4 py-2.5">
+        <span className="flex items-center gap-1.5">
+          <ReviewTargetTypeBadge type={review.targetType} />
+        </span>
+        <span
+          className="mt-1 block truncate text-[13px] font-medium text-kampmax-text"
+          title={review.targetName}
+        >
+          {review.targetName}
+        </span>
+        <span className="block truncate font-mono text-[10px] text-kampmax-text-secondary/70">
+          {review.targetId}
+        </span>
+      </td>
+
+      {/* Rating */}
+      <td className="whitespace-nowrap px-4 py-2.5">
+        <StarRating rating={review.rating} />
+      </td>
+
+      {/* Helpful */}
+      <td className="hidden whitespace-nowrap px-4 py-2.5 tabular-nums text-kampmax-text-secondary xl:table-cell">
+        {review.helpfulCount.toLocaleString("en-NG")}
+      </td>
+
+      {/* Status */}
+      <td className="px-4 py-2.5">
+        <div className="flex flex-col items-start gap-1">
+          <ReviewStatusBadge status={review.status} />
+          <ReviewSourceBadge source={review.statusSource} />
+        </div>
+      </td>
+
+      {/* Signals */}
+      <td className="hidden px-4 py-2.5 xl:table-cell">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {review.verifiedPurchase ? (
+            <span
+              className="inline-flex items-center gap-1 text-xs font-medium text-kampmax-success"
+              title={review.orderId ? `Order ${review.orderId}` : "Verified"}
+            >
+              <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+              Verified
+            </span>
+          ) : (
+            <span className="text-xs text-kampmax-text-secondary">Unverified</span>
+          )}
+          {review.withImages && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-kampmax-muted px-2 py-0.5 text-[11px] font-medium text-kampmax-text-secondary"
+              title="Includes photos"
+            >
+              <ImageIcon className="h-3 w-3" aria-hidden />
+              Photos
+            </span>
+          )}
+          {review.hasResponse ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-kampmax-blue/10 px-2 py-0.5 text-[11px] font-medium text-kampmax-blue"
+              title="Vendor has responded"
+            >
+              <MessageSquare className="h-3 w-3" aria-hidden />
+              Responded
+            </span>
+          ) : review.targetType === "product" || review.targetType === "vendor" ? (
+            <span className="text-[11px] text-kampmax-text-secondary/70">No response</span>
+          ) : null}
+        </div>
+      </td>
+
+      {/* Reports */}
+      <td className="whitespace-nowrap px-4 py-2.5">
+        {review.reportedCount > 0 ? (
+          <span className="inline-flex items-center gap-1 font-medium tabular-nums text-kampmax-error">
+            <Flag className="h-3 w-3" aria-hidden />
+            {review.reportedCount}
+          </span>
+        ) : (
+          <span className="tabular-nums text-kampmax-text-secondary">-</span>
+        )}
+      </td>
+
+      {/* Created */}
+      <td
+        className="whitespace-nowrap px-4 py-2.5 tabular-nums text-kampmax-text-secondary"
+        title={new Date(review.createdAt).toISOString()}
+      >
+        {formatDate(review.createdAt)}
+        <span className="ml-1.5 hidden text-[11px] 2xl:inline">{timeAgo(review.createdAt)}</span>
+      </td>
+
+      {/* Actions */}
+      <td className="px-4 py-2.5 text-right">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="inline-flex h-8 items-center rounded-md border border-kampmax-border bg-white px-2.5 text-xs font-medium text-kampmax-text transition-colors hover:bg-kampmax-muted"
+        >
+          View
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return `${first}${last}`.toUpperCase();
 }

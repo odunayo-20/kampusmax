@@ -384,4 +384,35 @@ export const adminKeys = {
     activity: (id: string, scopeCampusId?: string | null) =>
       ["admin", "jobs", "activity", id, scopeCampusId ?? "platform"] as const,
   } as const,
+  /**
+   * Review management key factory (Module 41). Read-only oversight console
+   * built on the real review stores. Keys are campus-scoped like the other
+   * admin resources; there is no mutation namespace because no store
+   * exposes admin review moderation transitions.
+   */
+  reviews: {
+    all: ["admin", "reviews"] as const,
+    list: (
+      query: {
+        search?: string;
+        status?: string;
+        rating?: number | "all";
+        targetType?: string;
+        vendorId?: string;
+        response?: string;
+        reportedOnly?: boolean;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "reviews", "list", scopeCampusId ?? "platform", query] as const,
+    counts: (scopeCampusId?: string | null) =>
+      ["admin", "reviews", "counts", scopeCampusId ?? "platform"] as const,
+    facets: (scopeCampusId?: string | null) =>
+      ["admin", "reviews", "facets", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "reviews", "detail", id, scopeCampusId ?? "platform"] as const,
+  } as const,
 };

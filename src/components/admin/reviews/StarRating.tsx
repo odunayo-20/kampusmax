@@ -14,6 +14,7 @@ export function StarRating({
   size?: "xs" | "sm" | "md";
 }) {
   const px = { xs: "h-3 w-3", sm: "h-3.5 w-3.5", md: "h-4 w-4" }[size];
+  const value = Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap">
       <span className="inline-flex items-center" aria-hidden>
@@ -31,10 +32,10 @@ export function StarRating({
       </span>
       {showValue && (
         <span className="text-xs font-semibold tabular-nums text-kampmax-text">
-          {rating}.0
+          {value}
         </span>
       )}
-      <span className="sr-only">{rating} out of 5 stars</span>
+      <span className="sr-only">{value} out of 5 stars</span>
     </span>
   );
 }

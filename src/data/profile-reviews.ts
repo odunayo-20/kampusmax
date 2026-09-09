@@ -272,6 +272,24 @@ export function getProfileReviewByReviewerData(
   return rec ? { ...rec } : null;
 }
 
+// ── Admin read API (Module 41) ──────────────────────────────
+// Read-only accessors for the /admin/reviews console. They mirror the stores
+// exactly (clones, no derivation) so the console can surface moderatable
+// state honestly instead of fabricating it. There is deliberately no admin
+// mutation API here — the store exposes none.
+
+/** Every profile review row across all reviewees/kinds (any status). */
+export function getAllProfileReviewsData(): ProfileReview[] {
+  return Array.from(records.values()).map((r) => ({ ...r }));
+}
+
+/** Read reports recorded against a profile review (empty when none). */
+export function getProfileReviewReportsData(
+  reviewId: string
+): { userId: string; reason: ReviewReportReason; details?: string; createdAt: string }[] {
+  return (reports.get(reviewId) ?? []).map((r) => ({ ...r }));
+}
+
 // ── Rate limiting ───────────────────────────────────────────
 
 export function profileReviewMutationAllowed(userId: string): boolean {

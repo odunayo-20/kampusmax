@@ -1,192 +1,88 @@
-import {
-  CommunitySectionCounts,
-  ListQuery,
-  ManagedReview,
+// ============================================================
+// REVIEW MANAGEMENT SERVICE (Module 41)
+// ============================================================
+//
+// Read-only admin service over the real review stores. Per the Module 41
+// API-contract audit, neither store exposes admin moderation transitions:
+//   - Storefront reviews (src/data/reviews.ts) have NO status field and the
+//     report list is a read-only array with no triage API.
+//   - Profile reviews (src/data/profile-reviews.ts) allow the AUTHOR to
+//     create/update/delete/report, but ship no admin moderation surface.
+// So this console intentionally implements no mutations — every pipeline
+// the backend does not provide is surfaced as an honest gap.
+// ============================================================
+
+import type {
+  ManagedReviewCounts,
   ManagedReviewDetail,
-  ManagedReviewStatus,
-  ManagedReviewTargetType,
+  ManagedReviewFacets,
+  ManagedReviewListQuery,
+  ManagedReviewRow,
+  ManagedReviewSortField,
   Paginated,
-  ReviewListQuery,
-  ReviewReport,
-  ReviewReportStatus,
 } from "@/types/admin";
-import { apiDelay, applySearch, applySort, paginate } from "@/lib/admin/api";
-import { reviewManagementDataset } from "@/data/admin/review-management";
-
-// ------------------------------------------------------------
-// CONTRACT (future NestJS resource: /admin/reviews)
-// ------------------------------------------------------------
-
-export interface ReviewVendorOption {
-  id: string;
-  name: string;
-}
+import {
+  buildReviewDataset,
+  computeReviewCounts,
+  computeReviewFacets,
+  filterReviews,
+} from "@/data/admin/review-management";
 
 export interface AdminReviewManagementService {
-  list(query?: ReviewListQuery): Promise<Paginated<ManagedReview>>;
+  /** Backend-search / filter / sort / paginate over real reviews. */
+  list(query?: ManagedReviewListQuery): Promise<Paginated<ManagedReviewRow>>;
+  /** Detailed operational view of a single review (null when unknown). */
   getById(id: string): Promise<ManagedReviewDetail | null>;
-  setStatus(
-    id: string,
-    status: ManagedReviewStatus
-  ): Promise<ManagedReview>;
-  getCounts(): Promise<CommunitySectionCounts<ManagedReviewStatus>>;
-  getVendorOptions(): Promise<ReviewVendorOption[]>;
-  /** Triage flow for "investigate report". */
-  setReportStatus(
-    id: string,
-    status: Exclude<ReviewReportStatus, "open">
-  ): Promise<ReviewReport>;
+  /** Honest live metrics (reported/needsAttention are 0 — no report store). */
+  getCounts(): Promise<ManagedReviewCounts>;
+  /** Facet counts derived from real rows. */
+  getFacets(): Promise<ManagedReviewFacets>;
+  /**
+   * Vendors with storefront-received reviews, for the vendor filter.
+   * Derives vendor names from the real vendor store.
+   */
+  getVendorOptions(): Promise<{ id: string; name: string }[]>;
+  /**
+   * Moderation mutations are intentionally absent. The stores expose no
+   * admin transitions; previewing a hidden action would be fabrication.
+   */
 }
 
-// ------------------------------------------------------------
-// MOCK IMPLEMENTATION
-// ------------------------------------------------------------
-
-const REVIEW_STATUSES: ManagedReviewStatus[] = [
-  "published",
-  "reported",
-  "hidden",
-  "removed",
-  "under_review",
-];
-
 export function createReviewManagementService(): AdminReviewManagementService {
-  const reviews = reviewManagementDataset.reviews.map((r) => ({ ...r }));
-  const reports = reviewManagementDataset.reports.map((r) => ({ ...r }));
-
-  function requireRow<T extends { id: string }>(
-    rows: T[],
-    id: string,
-    label: string
-  ): T {
-    const row = rows.find((r) => r.id === id);
-    if (!row) throw new Error(`${label} ${id} not found`);
-    return row;
-  }
-
-  /** Keep the derived counter in sync with triage decisions. */
-  function syncReportsCount(reviewId: string): void {
-    const review = reviews.find((r) => r.id === reviewId);
-    if (!review) return;
-    review.reportsCount = reports.filter((x) => x.reviewId === reviewId).length;
-  }
-
   return {
     async list(query = {}) {
-      await apiDelay();
-      const {
-        search,
-        status = "all",
-        rating = "all",
-        vendorId = "all",
-        campusId = "all",
-        purchase = "all",
-        reportedOnly = false,
-        ...rest
-      } = query;
-
-      let rows = reviews.filter(
-        (r) =>
-          (status === "all" || r.status === status) &&
-          (rating === "all" || r.rating === rating) &&
-          (vendorId === "all" || r.vendorId === vendorId) &&
-          (campusId === "all" || r.campusId === campusId) &&
-          (purchase === "all" ||
-            (purchase === "verified"
-              ? r.verifiedPurchase
-              : !r.verifiedPurchase)) &&
-          (!reportedOnly || r.reportsCount > 0)
-      );
-
-      rows = applySearch(rows, search, (r) => [
-        r.comment,
-        r.reviewer.name,
-        r.targetTitle,
-        r.vendorName,
-        r.orderRef,
-        r.id,
-      ]);
-
-      rows = applySort(
-        rows,
-        rest.sortBy,
-        rest.sortDir ?? "desc",
-        {
-          createdAt: (r) => new Date(r.createdAt).getTime(),
-          rating: (r) => r.rating,
-          helpful: (r) => r.helpfulCount,
-          reports: (r) => r.reportsCount,
-        },
-        "createdAt"
-      );
-
-      return paginate(rows, rest as ListQuery);
-    },
-
-    async getById(id) {
-      await apiDelay(160);
-      const review = reviews.find((r) => r.id === id);
-      if (!review) return null;
+      const dataset = buildReviewDataset();
+      const result = filterReviews(dataset, query);
       return {
-        review: { ...review },
-        reports: reports
-          .filter((x) => x.reviewId === id)
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-          .map((x) => ({ ...x })),
+        items: result.items,
+        total: result.total,
+        page: result.page,
+        pageSize: Math.max(1, query.pageSize ?? 10),
+        totalPages: result.totalPages,
       };
     },
 
-    async setStatus(id, status) {
-      await apiDelay();
-      const row = requireRow(reviews, id, "Review");
-      row.status = status;
-      syncReportsCount(id);
-      return { ...row };
+    async getById(id) {
+      const { details } = buildReviewDataset();
+      return details.get(id) ?? null;
     },
 
     async getCounts() {
-      await apiDelay(80);
-      const byStatus = Object.fromEntries(
-        REVIEW_STATUSES.map((s) => [
-          s,
-          reviews.filter((r) => r.status === s).length,
-        ])
-      ) as Record<ManagedReviewStatus, number>;
-      return { all: reviews.length, byStatus };
+      const { rows } = buildReviewDataset();
+      return computeReviewCounts(rows);
+    },
+
+    async getFacets() {
+      const { rows } = buildReviewDataset();
+      return computeReviewFacets(rows);
     },
 
     async getVendorOptions() {
-      await apiDelay(60);
-      const seen = new Map<string, ReviewVendorOption>();
-      reviews.forEach((r) => {
-        if (!seen.has(r.vendorId))
-          seen.set(r.vendorId, { id: r.vendorId, name: r.vendorName });
-      });
-      return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-    },
-
-    async setReportStatus(id, status) {
-      await apiDelay();
-      const row = requireRow(reports, id, "Report");
-      row.status = status;
-      syncReportsCount(row.reviewId);
-      // Triaging every report of a "reported" review clears its flag.
-      if (
-        status !== "reviewing" &&
-        reviews.some((r) => r.id === row.reviewId && r.status === "reported") &&
-        !reports.some(
-          (x) =>
-            x.reviewId === row.reviewId &&
-            (x.status === "open" || x.status === "reviewing")
-        )
-      ) {
-        const review = reviews.find((r) => r.id === row.reviewId)!;
-        review.status = "published";
-      }
-      return { ...row };
+      const { rows } = buildReviewDataset();
+      const { vendors } = computeReviewFacets(rows);
+      return vendors.map((v) => ({ id: v.id, name: v.name }));
     },
   };
 }
+
+export type { ManagedReviewSortField };
