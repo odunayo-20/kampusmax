@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   Building2,
+  Briefcase,
   CreditCard,
   GraduationCap,
   LayoutDashboard,
@@ -45,15 +46,16 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "reports", href: "/admin/reports", label: "Analytics", icon: BarChart3 },
     ],
   },
-  {
-    id: "people",
-    label: "People",
-    items: [
-      { key: "users", href: "/admin/users", label: "Users", icon: Users },
-      { key: "vendors", href: "/admin/vendors", label: "Vendors", icon: Store },
-      { key: "campuses", href: "/admin/campuses", label: "Campuses", icon: Building2 },
-    ],
-  },
+{
+      id: "people",
+      label: "People",
+      items: [
+        { key: "users", href: "/admin/users", label: "Users", icon: Users },
+        { key: "vendors", href: "/admin/vendors", label: "Vendors", icon: Store },
+        { key: "freelancers", href: "/admin/freelancers", label: "Freelancers", icon: Briefcase },
+        { key: "campuses", href: "/admin/campuses", label: "Campuses", icon: Building2 },
+      ],
+    },
   {
     id: "catalog",
     label: "Catalog",
@@ -128,7 +130,7 @@ export function breadcrumbLabel(segment: string, index: number): string {
 }
 
 export function isDetailSegment(segment: string): boolean {
-    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-)/i.test(segment);
+    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer)/i.test(segment);
 }
 
 function titleCase(value: string): string {

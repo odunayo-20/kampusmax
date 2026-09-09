@@ -4,6 +4,8 @@
 // Mirrors the future NestJS API resource shapes 1:1.
 // ============================================================
 
+import type { MarketplaceProviderPortfolioItem, MarketplaceServiceReview } from "./service-marketplace";
+
 // ------------------------------------------------------------
 // AUTH & ROLES
 // ------------------------------------------------------------
@@ -2428,4 +2430,126 @@ export interface AuditLogListQuery extends ListQuery {
   result?: AuditResult | "all";
   dateFrom?: string;
   dateTo?: string;
+}
+
+// ------------------------------------------------------------
+// FREELANCER MANAGEMENT (/admin/freelancers console)
+// Admin console for discovering, inspecting, and managing
+// freelancer profiles and their marketplace services.
+// Data is sourced from existing platform data stores — no
+// fabricated records (spec §41). Backend admin endpoints are
+// documented as gaps where they don't yet exist.
+// ------------------------------------------------------------
+
+/** Freelancer onboarding status mapped to admin console status. */
+export type FreelancerConsoleStatus = "approved" | "pending_review" | "suspended" | "rejected";
+
+/** The platform role that identifies a freelancer account. */
+export type FreelancerPlatformRole = "freelancer";
+
+export interface FreelancerProfileSummary {
+  id: string;
+  slug: string;
+  displayName: string;
+  headline: string;
+  bio: string;
+  city: string;
+  categories: string[];
+  skills: string[];
+  status: FreelancerConsoleStatus;
+  rating: number;
+  totalBookings: number;
+  joinedAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedFreelancer {
+  id: string;
+  slug: string;
+  displayName: string;
+  headline: string;
+  email: string;
+  phone: string;
+  city: string;
+  categories: string[];
+  skills: string[];
+  status: FreelancerConsoleStatus;
+  verified: boolean;
+  /** Derived from the freelancer's marketplace services having featured listings. */
+  featured: boolean;
+  rating: number;
+  reviewsCount: number;
+  totalBookings: number;
+  servicesCount: number;
+  joinedAt: string;
+  updatedAt: string;
+  lastActiveAt: string;
+}
+
+export interface FreelancerServiceSummary {
+  id: string;
+  title: string;
+  categoryId: string;
+  pricingModel: string;
+  price: number;
+  priceMax?: number;
+  durationMinutes: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  viewCount: number;
+  createdAt: string;
+}
+
+export interface ManagedFreelancerDetail {
+  freelancer: ManagedFreelancer;
+  profile: FreelancerProfileSummary;
+  services: FreelancerServiceSummary[];
+  portfolio: MarketplaceProviderPortfolioItem[];
+  reviews: MarketplaceServiceReview[];
+  availability: {
+    status: string;
+    workingDays: string[];
+    workingHoursStart: string;
+    workingHoursEnd: string;
+    timezone: string;
+  };
+  activity: FreelancerActivityEvent[];
+}
+
+export type FreelancerActivityKind =
+  | "service"
+  | "booking"
+  | "review"
+  | "verification"
+  | "profile"
+  | "admin"
+  | "auth";
+
+export interface FreelancerActivityEvent {
+  id: string;
+  kind: FreelancerActivityKind;
+  message: string;
+  meta: string;
+  at: string;
+}
+
+export type FreelancerBucket = "all" | "approved" | "pending_review" | "suspended" | "rejected";
+
+export interface FreelancerStatusCounts {
+  all: number;
+  approved: number;
+  pending_review: number;
+  suspended: number;
+  rejected: number;
+}
+
+export interface ManagedFreelancersListQuery extends ListQuery {
+  search?: string;
+  status?: FreelancerBucket;
+  categoryId?: string;
+  campusId?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
 }

@@ -201,6 +201,11 @@ import {
   createPromotionManagementService,
 } from "./promotion-management.service";
 
+import {
+  AdminFreelancerManagementService,
+  createFreelancerManagementService,
+} from "./freelancer-management.service";
+
 /** /admin/promotions console (campaigns, codes, featured placements). */
 export const promotionManagementService: AdminPromotionManagementService =
   createPromotionManagementService();
@@ -261,6 +266,12 @@ import {
 /** /admin/disputes console (case resolution + refund placeholders). */
 export const disputeManagementService: AdminDisputeManagementService =
   createMockDisputeManagementService();
+
+/** /admin/freelancers console (freelancer lifecycle + marketplace services). */
+export const freelancerManagementService: AdminFreelancerManagementService =
+  createFreelancerManagementService();
+
+export type { ManagedFreelancerSortField } from "./freelancer-management.service";
 
 import {
   AdminAnalyticsService,
