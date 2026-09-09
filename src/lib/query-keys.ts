@@ -476,4 +476,28 @@ export const adminKeys = {
     detail: (id: string, scopeCampusId?: string | null) =>
       ["admin", "verifications", "detail", id, scopeCampusId ?? "platform"] as const,
   } as const,
+  /**
+   * Admin transactions & payments key factory (Module 44). ONE financial
+   * ledger derived from real order + wallet records. Keys are NOT
+   * campus-scoped: financial records are restricted to full operators
+   * (ADMIN/SUPER_ADMIN) via nav permissions, so no campus shard exists.
+   * Read-only namespace — the backend exposes no transaction-level actions
+   * (refunds are order/wallet-level only).
+   */
+  transactions: {
+    all: ["admin", "transactions"] as const,
+    list: (query: {
+      search?: string;
+      status?: string;
+      type?: string;
+      method?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      page?: number;
+      pageSize?: number;
+    }) => ["admin", "transactions", "list", query] as const,
+    counts: () => ["admin", "transactions", "counts"] as const,
+    facets: () => ["admin", "transactions", "facets"] as const,
+    detail: (id: string) => ["admin", "transactions", "detail", id] as const,
+  } as const,
 };

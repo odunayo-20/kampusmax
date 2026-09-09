@@ -281,6 +281,15 @@ export const verificationManagementService: AdminVerificationManagementService =
   createVerificationManagementService();
 
 import {
+  AdminTransactionManagementService,
+  createTransactionManagementService,
+} from "./transaction-management.service";
+
+/** /admin/transactions console (Admin Transactions & Payments - single real-data financial ledger; replaces the fabricated /admin/payments console). */
+export const transactionManagementService: AdminTransactionManagementService =
+  createTransactionManagementService();
+
+import {
   AdminDisputeManagementService,
   createMockDisputeManagementService,
 } from "./dispute-management.service";

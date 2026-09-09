@@ -2261,6 +2261,152 @@ export interface ManagedVerificationDetail {
 }
 
 // ------------------------------------------------------------
+// ADMIN TRANSACTIONS & PAYMENTS (/admin/transactions)  [Module 44]
+// ------------------------------------------------------------
+// A single financial ledger derived ONLY from real records. Two Kampmax
+// stores own money movements: orders (an order's `paymentStatus`) and the
+// customer wallet ledger (`walletTransactions`). Every row below is a
+// label on top of a real record — no fabricated rows, no invented gateway
+// references, no settlement states. Refunded orders surface via their
+// `paymentStatus`; explicit refunds surface via real `refund` wallet
+// records. Payouts (Module 45) and reconciliation (Module 46) are separate
+// consoles and are deliberately absent here. There is no campus scope:
+// financial records are restricted to full operators (ADMIN/SUPER_ADMIN).
+
+export const MANAGED_TRANSACTION_STATUSES = [
+  "successful",
+  "pending",
+  "processing",
+  "failed",
+  "refunded",
+  "cancelled",
+] as const;
+export type ManagedTransactionStatus =
+  (typeof MANAGED_TRANSACTION_STATUSES)[number];
+
+export const MANAGED_TRANSACTION_TYPES = [
+  "order_payment",
+  "wallet_funding",
+  "refund",
+] as const;
+export type ManagedTransactionType = (typeof MANAGED_TRANSACTION_TYPES)[number];
+
+export const MANAGED_TRANSACTION_METHODS = [
+  "paystack",
+  "wallet",
+  "cod",
+  "bank_transfer",
+] as const;
+export type ManagedTransactionMethod =
+  (typeof MANAGED_TRANSACTION_METHODS)[number];
+
+export type ManagedTransactionSortField = "createdAt" | "amount";
+
+/** One ledger row derived from a real order or wallet transaction record. */
+export interface ManagedTransaction {
+  id: string;
+  type: ManagedTransactionType;
+  /** Console vocabulary — a label derived from `sourceStatus`. */
+  status: ManagedTransactionStatus;
+  /** Raw backend-owned status value from the owning store. */
+  sourceStatus: string;
+  /** Human explanation of how `status` was derived (never invented data). */
+  statusNote: string;
+  direction: "credit" | "debit";
+  customerId: string;
+  customerName: string;
+  vendorId: string | null;
+  vendorName: string | null;
+  orderId: string | null;
+  amount: number;
+  platformFee: number;
+  method: ManagedTransactionMethod;
+  /** Channel detail carried by the owning record (e.g. bank/card label). */
+  channelLabel: string | null;
+  /** Internal reference where the owning store records one. */
+  reference: string | null;
+  /** Provider-side reference. The prototype backend tracks none. */
+  gatewayRef: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedTransactionOrderSummary {
+  id: string;
+  status: string;
+  itemCount: number;
+  subtotal: number;
+  platformFee: number;
+  deliveryFee: number;
+  discountAmount: number;
+  total: number;
+  paymentMethod: string;
+  createdAt: string;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+}
+
+export type ManagedTransactionActivityKind =
+  | "initiated"
+  | "completed"
+  | "cancelled"
+  | "refunded"
+  | "note";
+
+export interface ManagedTransactionActivity {
+  id: string;
+  kind: ManagedTransactionActivityKind;
+  title: string;
+  meta: string;
+  at: string;
+}
+
+export interface ManagedTransactionGatewayStatus {
+  /** Provider verification isn't wired into the prototype backend. */
+  tracked: boolean;
+  note: string;
+}
+
+export interface ManagedTransactionActionSupport {
+  /** Refund execution isn't wired into the prototype backend. */
+  refundable: boolean;
+  note: string;
+}
+
+export interface ManagedTransactionDetail {
+  transaction: ManagedTransaction;
+  order: ManagedTransactionOrderSummary | null;
+  activity: ManagedTransactionActivity[];
+  gateway: ManagedTransactionGatewayStatus;
+  actions: ManagedTransactionActionSupport;
+}
+
+export interface ManagedTransactionStatusCounts {
+  all: number;
+  byStatus: Record<ManagedTransactionStatus, number>;
+  byType: Record<ManagedTransactionType, number>;
+  /** Sum of all ledger amounts (naira, minor-unit-safe integers). */
+  totalVolume: number;
+  successfulVolume: number;
+  pendingVolume: number;
+  refundedVolume: number;
+}
+
+export interface ManagedTransactionFacets {
+  methods: { id: ManagedTransactionMethod; name: string }[];
+  types: { id: ManagedTransactionType; name: string }[];
+}
+
+export interface ManagedTransactionListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedTransactionStatus | "all";
+  type?: ManagedTransactionType | "all";
+  method?: ManagedTransactionMethod | "all";
+  sortBy?: ManagedTransactionSortField;
+  sortDir?: SortDir;
+}
+
+// ------------------------------------------------------------
 // DISPUTE MANAGEMENT (/admin/disputes)
 // ------------------------------------------------------------
 

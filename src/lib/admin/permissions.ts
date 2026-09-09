@@ -18,7 +18,7 @@ export type AdminNavItemKey =
   | "marketplace"
   | "categories"
   | "orders"
-  | "payments"
+  | "transactions"
   | "wallet"
   | "withdrawals"
   | "promotions"
