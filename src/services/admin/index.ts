@@ -285,6 +285,17 @@ export const employerManagementService: AdminEmployerManagementService =
 export type { ManagedEmployerSortField } from "./employer-management.service";
 
 import {
+  AdminMarketplaceManagementService,
+  createMarketplaceManagementService,
+} from "./marketplace-management.service";
+
+/** /admin/marketplace console (listing lifecycle oversight - derived from the real product store, read-only). */
+export const marketplaceManagementService: AdminMarketplaceManagementService =
+  createMarketplaceManagementService();
+
+export type { MarketplaceSortField } from "./marketplace-management.service";
+
+import {
   AdminAnalyticsService,
   createMockAnalyticsService,
 } from "./analytics.service";

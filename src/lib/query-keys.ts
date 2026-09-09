@@ -316,4 +316,39 @@ export const adminKeys = {
     activity: (id: string, scopeCampusId?: string | null) =>
       ["admin", "vendors", "activity", id, scopeCampusId ?? "platform"] as const,
   } as const,
+  /**
+   * Marketplace management key factory (Module 39). Read-only
+   * listing-oversight console built on the real product store.
+   * Keys are campus-scoped like the other admin resources; there
+   * is no mutation namespace because the console exposes no
+   * moderation actions until the backend-adds them.
+   */
+  marketplace: {
+    all: ["admin", "marketplace"] as const,
+    list: (
+      query: {
+        search?: string;
+        status?: string;
+        visibility?: string;
+        publication?: string;
+        categoryId?: string;
+        campusId?: string;
+        vendorId?: string;
+        stock?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "marketplace", "list", scopeCampusId ?? "platform", query] as const,
+    counts: (scopeCampusId?: string | null) =>
+      ["admin", "marketplace", "counts", scopeCampusId ?? "platform"] as const,
+    facets: (scopeCampusId?: string | null) =>
+      ["admin", "marketplace", "facets", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "marketplace", "detail", id, scopeCampusId ?? "platform"] as const,
+    activity: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "marketplace", "activity", id, scopeCampusId ?? "platform"] as const,
+  } as const,
 };

@@ -2727,3 +2727,161 @@ export interface ManagedEmployerListQuery extends ListQuery {
   page?: number;
   pageSize?: number;
 }
+
+// ------------------------------------------------------------
+// MARKETPLACE MANAGEMENT (/admin/marketplace console - Module 39)
+//
+// Operational oversight of marketplace listings. Every field is
+// derived from the REAL product, vendor, storefront, category and
+// campus stores - no fabricated moderation, reports or metrics.
+//
+// Three real status concepts are kept distinct:
+//   - status:             ProductStatus (available | sold | removed)
+//   - publishedStatus:    ProductPublishStatus when the product store
+//                         records one (draft | pending_review |
+//                         active | inactive | rejected | archived)
+//   - visibility:         derived from status + publishedStatus +
+//                         the vendor's STOREFRONT availability state.
+//
+// This console is READ-ONLY: no publish/unpublish/hide/restrict/
+// feature endpoints exist in the prototype backend. The back-end
+// gap report (MODULE-39-REPORT.md) documents what the NestJS API
+// must add before any moderation actions can surface here.
+// ------------------------------------------------------------
+
+export type MarketplaceVisibility =
+  | "live"
+  | "paused_storefront"
+  | "storefront_missing"
+  | "unpublished"
+  | "sold"
+  | "removed";
+
+export interface MarketplaceListingRow {
+  id: string;
+  title: string;
+  description: string;
+  images: string[];
+  condition: "New" | "Used" | "Fair";
+  categoryId: string;
+  categoryName: string;
+  campusId: string;
+  campusName: string;
+  campusAbbr: string;
+  vendorId: string;
+  vendorName: string;
+  vendorVerified: boolean;
+  vendorVerification: "verified" | "pending" | "unverified" | "restricted" | "unknown";
+  storefrontAvailability: "active" | "temporarily_unavailable" | "suspended" | "closed" | null;
+  price: number;
+  originalPrice: number | null;
+  status: "available" | "sold" | "removed";
+  publishedStatus: "draft" | "pending_review" | "active" | "inactive" | "rejected" | "archived" | null;
+  visibility: MarketplaceVisibility;
+  stock: number | null;
+  viewCount: number | null;
+  saveCount: number | null;
+  rating: number | null;
+  ratingCount: number | null;
+  sku: string | null;
+  location: string | null;
+  tags: string[];
+  hasVariants: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+  archivedAt: string | null;
+}
+
+export type MarketplaceActivityKind =
+  | "listing"
+  | "publication"
+  | "admin";
+
+export interface MarketplaceActivityEvent {
+  id: string;
+  kind: MarketplaceActivityKind;
+  message: string;
+  meta: string;
+  at: string;
+}
+
+/** Deliberately slim vendor projection - no private vendor data. */
+export interface MarketplaceListingVendor {
+  id: string;
+  storeName: string;
+  description: string;
+  campusId: string;
+  rating: number;
+  productsCount: number;
+  verified: boolean;
+  verification: MarketplaceListingRow["vendorVerification"];
+  storefrontAvailability: MarketplaceListingRow["storefrontAvailability"];
+  lastActiveAt: string;
+}
+
+export interface MarketplaceListingDetail {
+  listing: MarketplaceListingRow;
+  vendor: MarketplaceListingVendor | null;
+  activity: MarketplaceActivityEvent[];
+}
+
+export type MarketplacePublicationFilter =
+  | "all"
+  | "draft"
+  | "pending_review"
+  | "active"
+  | "inactive"
+  | "rejected"
+  | "archived"
+  | "unset";
+
+export type MarketplaceStockFilter = "all" | "in_stock" | "out_of_stock" | "not_tracked";
+
+export interface MarketplaceListQuery extends ListQuery {
+  search?: string;
+  status?: ProductStatusCompat | "all";
+  visibility?: MarketplaceVisibility | "all";
+  publication?: MarketplacePublicationFilter;
+  categoryId?: string | "all";
+  campusId?: string | "all";
+  vendorId?: string | "all";
+  stock?: MarketplaceStockFilter;
+  sortBy?: MarketplaceSortField;
+  sortDir?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MarketplaceStatusCounts {
+  all: number;
+  available: number;
+  sold: number;
+  removed: number;
+  live: number;
+  paused_storefront: number;
+  storefront_missing: number;
+  unpublished: number;
+}
+
+export type ProductStatusCompat = "available" | "sold" | "removed";
+
+export interface MarketplaceFacetOption {
+  id: string;
+  name: string;
+  /** Number of listings matched (computed from real data). */
+  count: number;
+}
+
+export interface MarketplaceFacets {
+  categories: MarketplaceFacetOption[];
+  campuses: MarketplaceFacetOption[];
+  vendors: MarketplaceFacetOption[];
+}
+
+export type MarketplaceSortField =
+  | "createdAt"
+  | "updatedAt"
+  | "price"
+  | "rating"
+  | "viewCount"
+  | "name";

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     template: "%s · Kampmax Admin",
   },
   description: "Kampmax platform operations console",
+  robots: { index: false, follow: false },
 };
 
 export default function AdminLayout({

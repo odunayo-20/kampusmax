@@ -21,6 +21,7 @@ import {
   Wallet,
   Landmark,
   Handshake,
+  Boxes,
 } from "lucide-react";
 import { AdminNavItemKey, canSeeSection } from "./permissions";
 import { AdminRole } from "@/types/admin";
@@ -63,6 +64,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Catalog",
     items: [
       { key: "products", href: "/admin/products", label: "Products", icon: Package },
+      { key: "marketplace", href: "/admin/marketplace", label: "Marketplace", icon: Boxes },
       { key: "categories", href: "/admin/categories", label: "Categories", icon: Tags },
     ],
   },
@@ -132,7 +134,7 @@ export function breadcrumbLabel(segment: string, index: number): string {
 }
 
 export function isDetailSegment(segment: string): boolean {
-    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer)/i.test(segment);
+    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer|p\d+)/i.test(segment);
 }
 
 function titleCase(value: string): string {
