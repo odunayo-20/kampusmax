@@ -286,4 +286,34 @@ export const adminKeys = {
     activity: (id: string, scopeCampusId?: string | null) =>
       ["admin", "employers", "activity", id, scopeCampusId ?? "platform"] as const,
   } as const,
+  /**
+   * Vendor management key factory (Module 38). Keys are scoped per
+   * admin session (via campusId) so campus-scoped operators never see
+   * vendors outside their scope. Mutations invalidate the whole
+   * `vendors` tree so list, counts, detail and activity stay consistent.
+   */
+  vendors: {
+    all: ["admin", "vendors"] as const,
+    list: (
+      query: {
+        search?: string;
+        queue?: string;
+        campusId?: string;
+        category?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "vendors", "list", scopeCampusId ?? "platform", query] as const,
+    counts: (scopeCampusId?: string | null) =>
+      ["admin", "vendors", "counts", scopeCampusId ?? "platform"] as const,
+    categories: (scopeCampusId?: string | null) =>
+      ["admin", "vendors", "categories", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "vendors", "detail", id, scopeCampusId ?? "platform"] as const,
+    activity: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "vendors", "activity", id, scopeCampusId ?? "platform"] as const,
+  } as const,
 };

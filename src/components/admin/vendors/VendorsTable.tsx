@@ -310,7 +310,7 @@ function Row({
 
       {/* Sales */}
       <td className="hidden whitespace-nowrap px-4 py-2.5 font-medium tabular-nums text-kampmax-text xl:table-cell">
-        {formatNairaCompact(vendor.totalSales)}
+        {vendor.totalSales === null ? "—" : formatNairaCompact(vendor.totalSales)}
       </td>
 
       {/* Rating */}
@@ -327,7 +327,7 @@ function Row({
       {/* Registered */}
       <td className="hidden whitespace-nowrap px-4 py-2.5 xl:table-cell">
         <span className="tabular-nums text-kampmax-text-secondary">
-          {formatDate(vendor.registeredAt)}
+          {vendor.registeredAt ? formatDate(vendor.registeredAt) : "—"}
         </span>
       </td>
 

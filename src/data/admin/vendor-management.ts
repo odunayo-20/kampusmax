@@ -2,74 +2,42 @@ import {
   ManagedVendor,
   ManagedVendorDetail,
   VendorActivityEvent,
+  VendorActivityKind,
   VendorBucket,
   VendorComplaintRow,
   VendorEarningsSummary,
-  VendorDocState,
   VendorOrderRow,
   VendorProductRow,
   VendorReviewRow,
-  VendorVerificationDocument,
-  VendorVerificationDocKind,
   VendorVerificationRecord,
   VendorVerificationStatus,
   VendorStoreLifecycle,
-  DisputeCategory,
 } from "@/types/admin";
-import { mockVendors } from "./people";
+import type { Vendor as PlatformVendor } from "@/types";
+import { users, vendors as platformVendors } from "@/data/users";
+import { storefrontMeta } from "@/data/storefront";
+import { products } from "@/data/products";
+import { reviews } from "@/data/reviews";
+import { mockOrders } from "@/data/orders";
+import { vendorOrderSlices } from "@/data/vendor-orders";
+import { INITIAL_PAYOUTS } from "@/data/vendor-financials";
+import {
+  vendorOrders as techHubOrders,
+  vendorEarningsSummary as techHubLedger,
+  storeProfile as techHubStoreProfile,
+} from "@/data/vendor";
 import { mockCampuses } from "./campuses";
-import { USER_NAME_POOL } from "./people";
-import { daysAgoIso, intBetween, pick, seededRandom } from "@/lib/admin/api";
 
 // ------------------------------------------------------------
-// MOCK DATASET FOR THE /admin/vendors MODULE
+// ADMIN VENDOR CONSOLE — derived from the REAL vendor stores.
 //
-// Derives managed vendors from the canonical `mockVendors` seed
-// so every vendor id across the platform keeps resolving.
-// Deterministic (seeded PRNG) - identical output every reload.
+// Every row below is recomputed from the platform's canonical
+// seeds (users, storefronts, products, reviews, orders, payouts).
+// Nothing is fabricated with PRNGs: vendors without a real ledger
+// surface explicit nulls instead of invented numbers. Admin
+// actions only persist as an in-memory overlay plus write-through
+// cascades to the storefront/vendor records they affect.
 // ------------------------------------------------------------
-
-const { FIRST_NAMES, LAST_NAMES } = USER_NAME_POOL;
-
-const PLATFORM_REVIEWERS = [
-  "Adebayo Ogundimu",
-  "Chiamaka Eze",
-  "Tunde Bakare",
-] as const;
-
-const STORE_DESCRIPTIONS = [
-  "Student-first store run from campus with same-day hostel delivery.",
-  "Curated essentials for undergraduates - quality checked before listing.",
-  "Family business serving the campus community since 2021.",
-  "Fast-moving gadgets and accessories with warranty on every item.",
-  "Printing, binding and academic materials for deadlines of every kind.",
-] as const;
-
-const PRODUCT_TITLES = [
-  "HP Laptop Charger 65W", "Organic Chemistry 9th Edition", "Ankara Two-Piece Set",
-  "Weekend Groceries Box", "Shea Butter Skincare Kit", "Memory Foam Pillow",
-  "Bluetooth Speaker Mini", "Graph Ruled Notebook Pack", "Phone Ring Holder",
-  "Extension Board 4-Way", "Laundry Basket Large", "Water Bottle 1L Steel",
-  "Bed Sheet Set Plain", "Instant Noodles Carton", "USB-C Cable 2m",
-] as const;
-
-const ORDER_ITEMS_POOL = [
-  "Textbook pack", "Power bank 20000mAh", "Hoodie", "Weekend groceries box",
-  "Wireless earbuds", "Foam mattress 4x6", "Skincare kit", "Photocopy bundle",
-  "Sneakers", "Bedding set",
-] as const;
-
-const REJECT_REASONS = [
-  "Government ID details could not be matched against the provided BVN record.",
-  "Campus permit expired - reapply with a current letter from student affairs.",
-] as const;
-
-const COMPLAINT_SUBJECTS: { subject: string; category: DisputeCategory }[] = [
-  { subject: "Delivery promised in 24hrs, now day 3", category: "late_delivery" },
-  { subject: "One item missing from sealed package", category: "item_not_received" },
-  { subject: "Refund approved but not received", category: "refund_issue" },
-  { subject: "Item differs from listed photos", category: "item_not_as_described" },
-];
 
 export function bucketOf(
   verificationStatus: VendorVerificationStatus,
@@ -85,102 +53,600 @@ export function bucketOf(
       : "deactivated";
 }
 
-function buildDocuments(
-  rand: () => number,
-  status: VendorVerificationStatus
-): VendorVerificationDocument[] {
-  const plan: { kind: VendorVerificationDocKind; label: string }[] = [
-    { kind: "cac_certificate", label: "CAC certificate" },
-    { kind: "government_id", label: "Government-issued ID" },
-    { kind: "address_proof", label: "Proof of address" },
-    { kind: "bank_details", label: "Bank account details" },
-    { kind: "campus_permit", label: "Campus trade permit" },
-  ];
+// ------------------------------------------------------------
+// IN-SESSION ADMIN OVERLAY (mutations ride on top of real data)
+// ------------------------------------------------------------
 
-  function rollState(i: number): VendorDocState {
-    if (status === "verified") {
-      // Verified stores may still have one freshly re-submitted doc.
-      return i === 4 && rand() > 0.7 ? "submitted" : "approved";
-    }
-    if (status === "rejected") {
-      return i <= 1 ? "approved" : i === 2 ? "rejected" : i === 3 ? "missing" : "submitted";
-    }
-    // Pending: mixed completeness for the queue UI.
-    const r = rand();
-    if (r > 0.75) return "missing";
-    if (r > 0.55) return "approved";
-    return "submitted";
+interface VendorAdminOverlay {
+  verificationStatus?: VendorVerificationStatus;
+  storeStatus?: VendorStoreLifecycle;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string | null;
+}
+
+const overlays: Record<string, VendorAdminOverlay> = {};
+const adminLog: Record<string, VendorActivityEvent[]> = {};
+let adminEventSeq = 0;
+
+// Snapshot pristine source state so tests can restore a baseline.
+const pristineStorefront: Record<
+  string,
+  { verificationStatus: string; availabilityStatus: string }
+> = {};
+for (const [vendorId, meta] of Object.entries(storefrontMeta)) {
+  pristineStorefront[vendorId] = {
+    verificationStatus: meta.verificationStatus,
+    availabilityStatus: meta.availabilityStatus,
+  };
+}
+const pristineVendorVerified = new Map<string, boolean>(
+  platformVendors.map((v) => [v.id, v.verified])
+);
+
+function pushAdminEvent(
+  vendorId: string,
+  message: string,
+  meta: string,
+  at: string
+): void {
+  adminLog[vendorId] = adminLog[vendorId] ?? [];
+  adminLog[vendorId].unshift({
+    id: `vact-${vendorId}-admin-${++adminEventSeq}`,
+    kind: "admin",
+    message,
+    meta,
+    at,
+  });
+}
+
+export function applyVerificationVerdict(
+  vendorId: string,
+  status: VendorVerificationStatus,
+  reviewer: string,
+  reason?: string
+): void {
+  const now = new Date().toISOString();
+  const overlay: VendorAdminOverlay = {
+    ...overlays[vendorId],
+    verificationStatus: status,
+    reviewedAt: now,
+    reviewedBy: reviewer,
+    rejectionReason: status === "rejected" ? (reason ?? null) : null,
+  };
+  if (status === "rejected") overlay.storeStatus = "deactivated";
+  overlays[vendorId] = overlay;
+
+  const accepted = status === "verified";
+  const storefront = storefrontMeta[vendorId];
+  if (storefront) storefront.verificationStatus = accepted ? "verified" : "unverified";
+  const platformVendor = platformVendors.find((v) => v.id === vendorId);
+  if (platformVendor) platformVendor.verified = accepted;
+
+  pushAdminEvent(
+    vendorId,
+    accepted
+      ? `Verification approved by ${reviewer} · storefront is live`
+      : `Verification rejected by ${reviewer}${reason ? ` · ${reason}` : ""}`,
+    "Verification",
+    now
+  );
+}
+
+export function applyStoreVerdict(
+  vendorId: string,
+  lifecycle: VendorStoreLifecycle
+): void {
+  const now = new Date().toISOString();
+  overlays[vendorId] = { ...overlays[vendorId], storeStatus: lifecycle };
+
+  const storefront = storefrontMeta[vendorId];
+  if (storefront) {
+    storefront.availabilityStatus =
+      lifecycle === "active"
+        ? "active"
+        : lifecycle === "suspended"
+          ? "suspended"
+          : "closed";
   }
 
-  return plan.map((p, i) => ({
-    id: `doc-${p.kind}`,
-    kind: p.kind,
-    label: p.label,
-    reference: `${p.kind.slice(0, 3).toUpperCase()}-${intBetween(rand, 10000, 99999)}`,
-    state: rollState(i),
-    note:
-      status === "rejected" && i === 2
-        ? pick(rand, REJECT_REASONS)
-        : undefined,
+  const message =
+    lifecycle === "suspended"
+      ? "Store suspended · listings hidden from buyers"
+      : lifecycle === "active"
+        ? "Store re-activated · trading resumed"
+        : "Store deactivated by platform admin";
+  pushAdminEvent(vendorId, message, "Admin console", now);
+}
+
+export function resetVendorAdminState(): void {
+  for (const overlay of Object.values(overlays)) {
+    for (const key of Object.keys(overlay)) delete (overlay as Record<string, unknown>)[key];
+  }
+  for (const vendorId of Object.keys(adminLog)) delete adminLog[vendorId];
+  adminEventSeq = 0;
+  for (const [vendorId, meta] of Object.entries(pristineStorefront)) {
+    const storefront = storefrontMeta[vendorId];
+    if (storefront) {
+      storefront.verificationStatus = meta.verificationStatus as never;
+      storefront.availabilityStatus = meta.availabilityStatus as never;
+    }
+  }
+  for (const [vendorId, verified] of pristineVendorVerified) {
+    const platformVendor = platformVendors.find((v) => v.id === vendorId);
+    if (platformVendor) platformVendor.verified = verified;
+  }
+}
+
+// ------------------------------------------------------------
+// STATE MAPPERS
+// ------------------------------------------------------------
+
+function verificationStatusOf(vendorId: string): VendorVerificationStatus {
+  const overlayStatus = overlays[vendorId]?.verificationStatus;
+  if (overlayStatus) return overlayStatus;
+  const storefront = storefrontMeta[vendorId];
+  if (storefront) {
+    if (storefront.verificationStatus === "verified") return "verified";
+    if (storefront.verificationStatus === "restricted") return "rejected";
+    return "pending_verification";
+  }
+  return platformVendors.find((v) => v.id === vendorId)?.verified
+    ? "verified"
+    : "pending_verification";
+}
+
+function storeStatusOf(vendorId: string): VendorStoreLifecycle {
+  const overlayStatus = overlays[vendorId]?.storeStatus;
+  if (overlayStatus) return overlayStatus;
+  const storefront = storefrontMeta[vendorId];
+  if (!storefront) return "active";
+  if (storefront.availabilityStatus === "suspended") return "suspended";
+  if (storefront.availabilityStatus === "active") return "active";
+  return "deactivated";
+}
+
+// ------------------------------------------------------------
+// STATUS MAPPINGS (source -> admin console vocabulary)
+// ------------------------------------------------------------
+
+function toAdminOrderStatus(status: string): VendorOrderRow["status"] {
+  switch (status) {
+    case "pending":
+      return "placed";
+    case "accepted":
+    case "confirmed":
+      return "confirmed";
+    case "processing":
+    case "preparing":
+      return "preparing";
+    case "ready":
+    case "ready_for_pickup":
+    case "shipped":
+    case "out_for_delivery":
+      return "out_for_delivery";
+    case "delivered":
+    case "completed":
+      return "delivered";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "placed";
+  }
+}
+
+function toPaymentStatus(status: string): VendorOrderRow["paymentStatus"] {
+  switch (status) {
+    case "paid":
+      return "paid";
+    case "failed":
+      return "failed";
+    case "refunded":
+      return "refunded";
+    default:
+      return "pending";
+  }
+}
+
+const DELIVERED_KINDS = new Set(["delivered", "completed"]);
+
+// ------------------------------------------------------------
+// KANPONIC LOOKUPS
+// ------------------------------------------------------------
+
+function userName(userId: string): string {
+  return users.find((u) => u.id === userId)?.name ?? "Student customer";
+}
+
+function productTitle(productId: string): string {
+  return products.find((p) => p.id === productId)?.title ?? productId;
+}
+
+// ------------------------------------------------------------
+// ORDER BANK (per vendor, from real order records)
+// ------------------------------------------------------------
+
+function techHubRows(): VendorOrderRow[] {
+  return techHubOrders.map((row) => ({
+    id: row.id,
+    customerName: row.buyerName,
+    itemsSummary: row.items
+      .map((i) => `${i.quantity}\u00d7 ${i.productTitle}`)
+      .join(", "),
+    itemsCount: row.items.reduce((sum, i) => sum + i.quantity, 0),
+    total: row.subtotal,
+    status: toAdminOrderStatus(row.status),
+    paymentStatus: toPaymentStatus(row.paymentStatus),
+    createdAt: row.createdAt,
   }));
 }
 
-function buildVerification(
-  rand: () => number,
-  status: VendorVerificationStatus,
-  registeredDaysAgo: number
-): VendorVerificationRecord {
-  if (status === "pending_verification") {
+function sliceRows(vendorId: string): VendorOrderRow[] {
+  return vendorOrderSlices
+    .filter((slice) => slice.vendorId === vendorId)
+    .map((slice) => ({
+      id: slice.id,
+      customerName: slice.customer.displayName,
+      itemsSummary: slice.items
+        .map((i) => `${i.quantity}\u00d7 ${i.title}`)
+        .join(", "),
+      itemsCount: slice.items.reduce((sum, i) => sum + i.quantity, 0),
+      total: slice.totals.customerTotal,
+      status: toAdminOrderStatus(slice.fulfillmentStatus),
+      paymentStatus: toPaymentStatus(slice.paymentStatus),
+      createdAt: slice.createdAt,
+    }));
+}
+
+function marketplaceRows(vendorId: string): VendorOrderRow[] {
+  return mockOrders
+    .filter((order) => order.vendorId === vendorId)
+    .map((order) => ({
+      id: order.id,
+      customerName: userName(order.buyerId),
+      itemsSummary: order.items
+        .map((i) => `${i.quantity}\u00d7 ${i.product.title}`)
+        .join(", "),
+      itemsCount: order.items.reduce((sum, i) => sum + i.quantity, 0),
+      total: order.total,
+      status: toAdminOrderStatus(order.status),
+      paymentStatus: toPaymentStatus(order.paymentStatus),
+      createdAt: order.createdAt,
+    }));
+}
+
+function orderRowsFor(vendorId: string): VendorOrderRow[] {
+  if (vendorId === "v1") return techHubRows();
+  if (vendorId === "v2" || vendorId === "v8") return sliceRows(vendorId);
+  if (vendorId === "v3") return marketplaceRows(vendorId);
+  return [];
+}
+
+/** Share of rows fulfilled (delivered/completed), rounded to whole percent. */
+function fulfilmentShareOf(rows: VendorOrderRow[]): number | null {
+  if (rows.length === 0) return null;
+  const delivered = rows.filter((r) => r.status === "delivered").length;
+  return Math.round((delivered / rows.length) * 100);
+}
+
+// ------------------------------------------------------------
+// EARNINGS (per vendor, from real ledgers)
+// ------------------------------------------------------------
+
+function sliceLedger(vendorId: string): {
+  gross: number;
+  fees: number;
+  net: number;
+} {
+  const slices = vendorOrderSlices.filter((s) => s.vendorId === vendorId);
+  return slices.reduce(
+    (acc, s) => ({
+      gross: acc.gross + s.totals.itemsSubtotal,
+      fees: acc.fees + s.totals.platformFee,
+      net: acc.net + s.totals.vendorSubtotal,
+    }),
+    { gross: 0, fees: 0, net: 0 }
+  );
+}
+
+function marketplaceLedger(vendorId: string): {
+  gross: number;
+  fees: number;
+  net: number;
+} {
+  const rows = mockOrders.filter((o) => o.vendorId === vendorId);
+  return rows.reduce(
+    (acc, o) => ({
+      gross: acc.gross + o.subtotal,
+      fees: acc.fees + o.platformFee,
+      net: acc.net + o.subtotal - o.platformFee,
+    }),
+    { gross: 0, fees: 0, net: 0 }
+  );
+}
+
+function earningsFor(vendorId: string): VendorEarningsSummary {
+  if (vendorId === "v1") {
+    const { totalRevenue, totalEarning, platformFees, pendingPayout } = techHubLedger;
     return {
-      emailVerified: true,
-      phoneVerified: rand() > 0.3,
-      bvnVerified: false,
-      documents: buildDocuments(rand, status),
-      submittedAt: daysAgoIso(rand, intBetween(rand, 1, Math.min(registeredDaysAgo, 21))),
-      reviewedAt: null,
-      reviewedBy: null,
-      rejectionReason: null,
+      grossSales: totalRevenue,
+      commissionRate:
+        totalRevenue > 0 ? Math.round((platformFees / totalRevenue) * 10000) / 10000 : 0,
+      commissionPaid: platformFees,
+      netEarnings: totalEarning,
+      pendingPayout,
+      lastPayoutAt: null,
     };
   }
-  if (status === "rejected") {
-    const reason = pick(rand, REJECT_REASONS);
+
+  if (vendorId === "v2" || vendorId === "v8") {
+    const { gross, fees, net } = sliceLedger(vendorId);
+    const payout = vendorId === "v8" ? INITIAL_PAYOUTS : [];
+    const pendingPayout = payout
+      .filter((p) => p.status === "processing")
+      .reduce((sum, p) => sum + p.amount, 0);
+    const lastPayoutAt =
+      payout
+        .filter((p) => p.status === "successful" && p.processedAt)
+        .map((p) => p.processedAt as string)
+        .sort()
+        .at(-1) ?? null;
     return {
-      emailVerified: true,
-      phoneVerified: true,
-      bvnVerified: false,
-      documents: buildDocuments(rand, status),
-      submittedAt: daysAgoIso(rand, intBetween(rand, registeredDaysAgo, registeredDaysAgo)),
-      reviewedAt: daysAgoIso(rand, intBetween(rand, 1, Math.max(registeredDaysAgo - 1, 1))),
-      reviewedBy: pick(rand, PLATFORM_REVIEWERS),
-      rejectionReason: reason,
+      grossSales: gross > 0 ? gross : null,
+      commissionRate: gross > 0 ? Math.round((fees / gross) * 10000) / 10000 : 0,
+      commissionPaid: gross > 0 ? fees : null,
+      netEarnings: gross > 0 ? net : null,
+      pendingPayout: gross > 0 ? pendingPayout : null,
+      lastPayoutAt,
     };
   }
+
+  if (vendorId === "v3") {
+    const { gross, fees, net } = marketplaceLedger(vendorId);
+    return {
+      grossSales: gross > 0 ? gross : null,
+      commissionRate: gross > 0 ? Math.round((fees / gross) * 10000) / 10000 : 0,
+      commissionPaid: gross > 0 ? fees : null,
+      netEarnings: gross > 0 ? net : null,
+      pendingPayout: gross > 0 ? 0 : null,
+      lastPayoutAt: null,
+    };
+  }
+
   return {
-    emailVerified: true,
-    phoneVerified: true,
-    bvnVerified: true,
-    documents: buildDocuments(rand, status),
-    submittedAt: daysAgoIso(rand, registeredDaysAgo),
-    reviewedAt: daysAgoIso(rand, intBetween(rand, 1, Math.max(registeredDaysAgo - 1, 1))),
-    reviewedBy: pick(rand, PLATFORM_REVIEWERS),
-    rejectionReason: null,
+    grossSales: null,
+    commissionRate: 0,
+    commissionPaid: null,
+    netEarnings: null,
+    pendingPayout: null,
+    lastPayoutAt: null,
   };
 }
 
-/** Deterministic lifecycle assignment with forced coverage rows. */
-function rollLifecycle(
-  seedStatus: string,
-  i: number
-): { verification: VendorVerificationStatus; store: VendorStoreLifecycle } {
-  if (seedStatus === "pending") {
-    return { verification: "pending_verification", store: "deactivated" };
+function gmvFor(vendorId: string, earnings: VendorEarningsSummary): number | null {
+  if (vendorId === "v1") return techHubLedger.totalRevenue;
+  return earnings.grossSales;
+}
+
+// ------------------------------------------------------------
+// PER-VENDOR DETAIL BUILDERS
+// ------------------------------------------------------------
+
+function reviewRowsFor(seed: PlatformVendor): VendorReviewRow[] {
+  return reviews
+    .filter((r) => r.vendorId === seed.id)
+    .map((r) => ({
+      id: r.id,
+      customerName: userName(r.userId),
+      targetName: r.target === "vendor" ? seed.storeName : productTitle(r.productId ?? r.targetId),
+      rating: r.rating,
+      comment: r.comment,
+      status: "published" as const,
+      createdAt: r.createdAt,
+    }))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+function productRowsFor(vendorId: string): VendorProductRow[] {
+  return products
+    .filter((p) => p.vendorId === vendorId)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      stock: p.stock ?? null,
+      status: p.status,
+      soldCount: p.soldCount ?? null,
+      createdAt: p.createdAt,
+    }))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+function buildActivity(
+  seed: PlatformVendor,
+  timelineRows: Array<{ at: string; kind: VendorActivityKind; message: string; meta: string }>
+): VendorActivityEvent[] {
+  const events: VendorActivityEvent[] = [];
+  let seq = 0;
+  const push = (
+    at: string,
+    kind: VendorActivityKind,
+    message: string,
+    meta: string
+  ) => {
+    events.push({
+      id: `vact-${seed.id}-${++seq}`,
+      kind,
+      message,
+      meta,
+      at,
+    });
+  };
+
+  const overlay = overlays[seed.id];
+  if (overlay?.reviewedAt) {
+    push(
+      overlay.reviewedAt,
+      "admin",
+      overlay.verificationStatus === "verified"
+        ? `Verification approved by ${overlay.reviewedBy ?? "Platform Admin"}`
+        : `Verification rejected by ${overlay.reviewedBy ?? "Platform Admin"}${overlay.rejectionReason ? ` · ${overlay.rejectionReason}` : ""}`,
+      "Verification"
+    );
   }
-  if (i === 6) return { verification: "rejected", store: "deactivated" };
-  if (seedStatus === "suspended") {
-    return { verification: "verified", store: "suspended" };
+
+  for (const row of timelineRows) push(row.at, row.kind, row.message, row.meta);
+  for (const log of adminLog[seed.id] ?? []) push(log.at, log.kind, log.message, log.meta);
+
+  return events.sort(
+    (a, b) => b.at.localeCompare(a.at) || a.id.localeCompare(b.id)
+  );
+}
+
+function buildDetail(seed: PlatformVendor): ManagedVendorDetail {
+  const owner = users.find((u) => u.id === seed.userId);
+  const campus = mockCampuses.find((c) => c.id === seed.campusId) ?? null;
+
+  const orderRows = orderRowsFor(seed.id);
+  const reviewRows = reviewRowsFor(seed);
+  const catalogRows = productRowsFor(seed.id);
+  const earnings = earningsFor(seed.id);
+  const verificationStatus = verificationStatusOf(seed.id);
+  const storeStatus = storeStatusOf(seed.id);
+  const overlay = overlays[seed.id];
+
+  const buyerOrders = mockOrders.filter((o) => o.buyerId === seed.userId);
+  const ownerOrders: ManagedVendor["owner"]["ordersCount"] = buyerOrders.length;
+  const ownerSpent = buyerOrders.reduce((sum, o) => sum + o.total, 0);
+
+  const registeredAt =
+    seed.joinDate ??
+    (seed.id === "v1" ? techHubStoreProfile?.createdAt : undefined) ??
+    owner?.joinedDate ??
+    "";
+
+  const activityRows: Array<{
+    at: string;
+    kind: VendorActivityKind;
+    message: string;
+    meta: string;
+  }> = [];
+
+  orderRows.forEach((row) => {
+    activityRows.push({
+      at: row.createdAt,
+      kind: "order",
+      message: `Order ${row.id} ${row.status} · ${row.itemsCount} item(s)`,
+      meta: row.status === "delivered" ? "Fulfilment" : "Commerce",
+    });
+  });
+  catalogRows.forEach((row) => {
+    activityRows.push({
+      at: row.createdAt,
+      kind: "product",
+      message: `Listed “${row.title}”`,
+      meta: "Catalog",
+    });
+  });
+  reviewRows.forEach((row) => {
+    activityRows.push({
+      at: row.createdAt,
+      kind: "order",
+      message: `Rated ${row.rating}/5 on ${row.targetName}`,
+      meta: "Reviews",
+    });
+  });
+  if (seed.id === "v8") {
+    INITIAL_PAYOUTS.forEach((payout) => {
+      activityRows.push({
+        at: payout.processedAt ?? payout.requestedAt,
+        kind: "wallet",
+        message: `Payout ${payout.id} ${payout.status} · ₦${payout.amount}`,
+        meta: "Finance",
+      });
+    });
   }
-  if (i === 11) return { verification: "verified", store: "deactivated" };
-  return { verification: "verified", store: "active" };
+  if (registeredAt) {
+    activityRows.push({
+      at: registeredAt,
+      kind: "auth",
+      message: `Store “${seed.storeName}” registered`,
+      meta: "Onboarding",
+    });
+  }
+
+  const activity = buildActivity(seed, activityRows);
+
+  const lastActiveCandidate = activityRows
+    .map((row) => row.at)
+    .concat(overlay?.reviewedAt ? [overlay.reviewedAt] : [])
+    .concat(registeredAt ? [registeredAt] : [])
+    .sort()
+    .at(-1);
+  const lastActiveAt =
+    lastActiveCandidate ?? owner?.joinedDate ?? seed.joinDate ?? "";
+
+  const vendor: ManagedVendor = {
+    id: seed.id,
+    storeName: seed.storeName,
+    ownerId: seed.userId,
+    owner: {
+      id: seed.userId,
+      name: owner?.name ?? "Vendor owner",
+      email: owner?.email ?? "",
+      phone: owner?.phone ?? "",
+      isIdVerified: owner?.isVerified === true,
+      joinedAt: owner?.joinedDate ?? seed.joinDate ?? "",
+      ordersCount: ownerOrders,
+      totalSpent: ownerSpent,
+    },
+    campusId: seed.campusId,
+    category: seed.specialties[0] ?? "General",
+    description: seed.description,
+    verificationStatus,
+    storeStatus,
+    verification: buildVerificationRecord(seed, verificationStatus, overlay),
+    productsCount: catalogRows.length,
+    ordersCount: orderRows.length,
+    totalSales: gmvFor(seed.id, earnings),
+    earnings: earnings.netEarnings ?? 0,
+    walletBalance: 0,
+    fulfillmentRate: fulfilmentShareOf(orderRows),
+    rating: seed.rating,
+    reviewsCount: reviewRows.length,
+    complaintsCount: 0,
+    registeredAt,
+    lastActiveAt,
+  };
+
+  return {
+    vendor,
+    campus,
+    earnings,
+    products: catalogRows,
+    orders: orderRows,
+    reviews: reviewRows,
+    complaints: [] as VendorComplaintRow[],
+    activity,
+  };
+}
+
+function buildVerificationRecord(
+  seed: PlatformVendor,
+  status: VendorVerificationStatus,
+  overlay?: VendorAdminOverlay
+): VendorVerificationRecord {
+  const verified = status === "verified";
+  return {
+    emailVerified: verified,
+    phoneVerified: verified,
+    bvnVerified: false,
+    documents: [],
+    submittedAt: null,
+    reviewedAt: overlay?.reviewedAt ?? null,
+    reviewedBy: overlay?.reviewedBy ?? null,
+    rejectionReason: overlay?.rejectionReason ?? null,
+  };
 }
 
 export interface ManagedVendorDataset {
@@ -189,276 +655,12 @@ export interface ManagedVendorDataset {
 }
 
 export function buildManagedVendorDataset(): ManagedVendorDataset {
-  const rand = seededRandom(4242);
-  const activeCampuses = mockCampuses.filter((c) => c.status === "active");
   const vendors: ManagedVendor[] = [];
   const details = new Map<string, ManagedVendorDetail>();
-
-  mockVendors.forEach((seed, i) => {
-    const lifecycle = rollLifecycle(seed.status, i);
-    const registeredDaysAgo = intBetween(rand, 30, 400);
-    const ownerName = seed.ownerName;
-    const ordersCount =
-      lifecycle.verification === "verified" ? intBetween(rand, 12, 320) : 0;
-    const totalSales = ordersCount * intBetween(rand, 30, 160) * 50;
-    const complaintsCount =
-      lifecycle.store === "deactivated" && lifecycle.verification !== "verified"
-        ? 0
-        : rand() > 0.62 ? intBetween(rand, 1, 5) : 0;
-
-    const vendor: ManagedVendor = {
-      id: seed.id,
-      storeName: seed.storeName,
-      ownerId: seed.ownerId,
-      owner: {
-        id: seed.ownerId,
-        name: ownerName,
-        email: `${ownerName.toLowerCase().replace(/\s+/g, ".")}@student.edu.ng`,
-        phone: seed.phone,
-        isIdVerified: lifecycle.verification === "verified" ? true : rand() > 0.5,
-        joinedAt: daysAgoIso(rand, registeredDaysAgo + intBetween(rand, 10, 200)),
-        ordersCount:
-          lifecycle.verification === "verified" ? intBetween(rand, 1, 20) : 0,
-        totalSpent: intBetween(rand, 4, 90) * 250,
-      },
-      campusId: pick(rand, activeCampuses).id,
-      category: seed.category,
-      description: pick(rand, STORE_DESCRIPTIONS),
-      verificationStatus: lifecycle.verification,
-      storeStatus: lifecycle.store,
-      verification: buildVerification(rand, lifecycle.verification, registeredDaysAgo),
-      productsCount:
-        lifecycle.store === "active" ? seed.productsCount : intBetween(rand, 0, 24),
-      ordersCount,
-      totalSales,
-      earnings: Math.round(totalSales * 0.92),
-      walletBalance: seed.walletBalance,
-      fulfillmentRate: seed.fulfillmentRate,
-      rating: seed.rating,
-      reviewsCount:
-        lifecycle.store === "active" ? seed.reviewsCount : intBetween(rand, 0, 40),
-      complaintsCount,
-      registeredAt: seed.joinedAt,
-      lastActiveAt: daysAgoIso(
-        rand,
-        lifecycle.store === "active" ? intBetween(rand, 0, 7) : intBetween(rand, 8, 60)
-      ),
-    };
-    vendors.push(vendor);
-    details.set(vendor.id, buildVendorDetail(vendor, rand));
+  platformVendors.forEach((seed) => {
+    const detail = buildDetail(seed);
+    vendors.push(detail.vendor);
+    details.set(seed.id, detail);
   });
-
   return { vendors, details };
-}
-
-// ------------------------------------------------------------
-// PER-VENDOR DETAIL GENERATORS
-// ------------------------------------------------------------
-
-function buildVendorDetail(
-  vendor: ManagedVendor,
-  rand: () => number
-): ManagedVendorDetail {
-  return {
-    vendor,
-    campus: mockCampuses.find((c) => c.id === vendor.campusId) ?? null,
-    earnings: buildEarnings(vendor, rand),
-    products: buildProducts(vendor, rand),
-    orders: buildOrders(vendor, rand),
-    reviews: buildReviews(vendor, rand),
-    complaints: buildComplaints(vendor, rand),
-    activity: buildActivity(vendor, rand),
-  };
-}
-
-function buildEarnings(
-  vendor: ManagedVendor,
-  rand: () => number
-): VendorEarningsSummary {
-  const commissionRate = 0.08;
-  const commissionPaid = Math.round(vendor.totalSales * commissionRate);
-  return {
-    grossSales: vendor.totalSales,
-    commissionRate,
-    commissionPaid,
-    netEarnings: vendor.totalSales - commissionPaid,
-    pendingPayout: vendor.walletBalance,
-    lastPayoutAt:
-      vendor.totalSales > 0
-        ? daysAgoIso(rand, intBetween(rand, 2, 30))
-        : null,
-  };
-}
-
-function buildProducts(
-  vendor: ManagedVendor,
-  rand: () => number
-): VendorProductRow[] {
-  if (vendor.productsCount === 0) return [];
-  const count = Math.min(Math.max(Math.round(vendor.productsCount / 8), 3), 6);
-  return Array.from({ length: count }).map((_, i) => ({
-    id: `prd-${vendor.id}-${i + 1}`,
-    title: PRODUCT_TITLES[intBetween(rand, 0, PRODUCT_TITLES.length - 1)],
-    price: intBetween(rand, 12, 480) * 250,
-    stock: rand() > 0.85 ? 0 : intBetween(rand, 1, 60),
-    status: pick(rand, [
-      "available", "available", "available", "sold", "pending_review", "flagged",
-    ] as const),
-    soldCount: intBetween(rand, 0, 140),
-    createdAt: daysAgoIso(rand, intBetween(rand, 5, 300)),
-  })).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-function buildOrders(
-  vendor: ManagedVendor,
-  rand: () => number
-): VendorOrderRow[] {
-  if (vendor.ordersCount === 0) return [];
-  const count = Math.min(Math.max(Math.round(vendor.ordersCount / 14), 3), 8);
-  return Array.from({ length: count }).map((_, i) => {
-    const itemsCount = intBetween(rand, 1, 4);
-    return {
-      id: `KMP-${4200 + Number(vendor.id.split("-")[1]) * 11 + i}`,
-      customerName: `${pick(rand, FIRST_NAMES)} ${pick(rand, LAST_NAMES)}`,
-      itemsSummary: `${itemsCount}\u00d7 ${pick(rand, ORDER_ITEMS_POOL)}`,
-      itemsCount,
-      total: intBetween(rand, 10, 260) * 250,
-      status: pick(rand, [
-        "delivered", "delivered", "delivered", "out_for_delivery",
-        "confirmed", "placed", "cancelled",
-      ] as const),
-      paymentStatus: rand() > 0.88 ? ("pending" as const) : ("paid" as const),
-      createdAt: daysAgoIso(rand, intBetween(rand, 0, 45)),
-    };
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-function buildReviews(
-  vendor: ManagedVendor,
-  rand: () => number
-): VendorReviewRow[] {
-  if (vendor.reviewsCount === 0) return [];
-  const count = Math.min(Math.max(Math.round(vendor.reviewsCount / 18), 2), 6);
-  const COMMENTS = [
-    "Item matched the description exactly - delivered to my hostel same evening.",
-    "Good quality but pickup took almost two days to get ready.",
-    "Excellent communication, will definitely buy again.",
-    "Packaging was poor though the product survived.",
-    "Vendor went out of their way to swap a size for me. Great service.",
-  ] as const;
-  return Array.from({ length: count }).map((_, i) => {
-    const ratingRoll = rand();
-    return {
-      id: `rev-${vendor.id}-${i + 1}`,
-      customerName: `${pick(rand, FIRST_NAMES)} ${pick(rand, LAST_NAMES)}`,
-      targetName: PRODUCT_TITLES[intBetween(rand, 0, PRODUCT_TITLES.length - 1)],
-      rating: ratingRoll > 0.55 ? intBetween(rand, 4, 5) : ratingRoll > 0.3 ? 3 : intBetween(rand, 1, 2),
-      comment: pick(rand, COMMENTS),
-      status: rand() > 0.85 ? ("flagged" as const) : ("published" as const),
-      createdAt: daysAgoIso(rand, intBetween(rand, 0, 40)),
-    };
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-function buildComplaints(
-  vendor: ManagedVendor,
-  rand: () => number
-): VendorComplaintRow[] {
-  return Array.from({ length: vendor.complaintsCount }).map((_, i) => {
-    const template = pick(rand, COMPLAINT_SUBJECTS);
-    const statusRoll = rand();
-    return {
-      id: `cmp-${vendor.id}-${i + 1}`,
-      orderId: `KMP-${intBetween(rand, 4000, 4999)}`,
-      customerName: `${pick(rand, FIRST_NAMES)} ${pick(rand, LAST_NAMES)}`,
-      subject: template.subject,
-      category: template.category,
-      priority: template.category === "item_not_received" && rand() > 0.5
-        ? ("urgent" as const)
-        : pick(rand, ["low", "medium", "high"] as const),
-      amountInDispute: intBetween(rand, 20, 400) * 250,
-      status:
-        statusRoll > 0.68 ? ("open" as const)
-        : statusRoll > 0.45 ? ("under_review" as const)
-        : statusRoll > 0.25 ? ("resolved" as const)
-        : ("closed" as const),
-      openedAt: daysAgoIso(rand, intBetween(rand, 1, 35)),
-    };
-  }).sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
-}
-
-type ActivityTemplate = () => { message: string; meta: string };
-
-const ACTIVITY_MESSAGES: Record<
-  Exclude<VendorActivityEvent["kind"], never>,
-  ActivityTemplate[]
-> = {
-  order: [
-    () => ({ message: "New order received and confirmed", meta: "Commerce" }),
-    () => ({ message: "Order marked delivered by campus courier", meta: "Fulfilment" }),
-    () => ({ message: "Order cancelled by customer before preparation", meta: "Commerce" }),
-  ],
-  product: [
-    () => ({ message: "New listing published to the storefront", meta: "Catalog" }),
-    () => ({ message: "Prices updated across seasonal listings", meta: "Catalog" }),
-    () => ({ message: "Listing flagged for review by automated checks", meta: "Trust & Safety" }),
-  ],
-  wallet: [
-    () => ({ message: "Payout request submitted", meta: "Finance" }),
-    () => ({ message: "Wallet credited after completed order", meta: "Finance" }),
-  ],
-  moderation: [
-    () => ({ message: "Customer complaint escalated to support", meta: "Support" }),
-    () => ({ message: "Dispute resolved in the vendor's favour", meta: "Support" }),
-  ],
-  admin: [
-    () => ({ message: "Store settings updated by platform admin", meta: "Admin console" }),
-    () => ({ message: "Verification documents reviewed", meta: "Verification" }),
-  ],
-  auth: [
-    () => ({ message: "Owner signed in from a new device", meta: "Android · Chrome" }),
-    () => ({ message: "Password changed successfully", meta: "Security" }),
-  ],
-};
-
-function buildActivity(
-  vendor: ManagedVendor,
-  rand: () => number
-): VendorActivityEvent[] {
-  const events: VendorActivityEvent[] = [];
-  let seq = 0;
-
-  // Verification history is always pinned at the top when present.
-  if (vendor.verification.reviewedBy) {
-    events.push({
-      id: `vact-${vendor.id}-v${++seq}`,
-      kind: "admin",
-      message:
-        vendor.verificationStatus === "verified"
-          ? `Verification approved by ${vendor.verification.reviewedBy}`
-          : `Verification rejected by ${vendor.verification.reviewedBy}`,
-      meta: "Verification",
-      at: vendor.verification.reviewedAt ?? daysAgoIso(rand, 10),
-    });
-  }
-
-  const kinds = Object.keys(ACTIVITY_MESSAGES) as VendorActivityEvent["kind"][];
-  for (let i = 0; i < 10; i++) {
-    const kind = pick(rand, kinds);
-    const templates = ACTIVITY_MESSAGES[kind];
-    const tpl = templates[intBetween(rand, 0, templates.length - 1)]();
-    events.push({
-      id: `vact-${vendor.id}-${seq + 1}`,
-      kind,
-      message: tpl.message,
-      meta: tpl.meta,
-      at: daysAgoIso(rand, intBetween(rand, 0, 25)),
-    });
-    seq++;
-  }
-  return events.sort(
-    (a, b) =>
-      new Date(b.at).getTime() - new Date(a.at).getTime() ||
-      a.id.localeCompare(b.id)
-  );
 }

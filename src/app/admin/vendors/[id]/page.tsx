@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -51,7 +51,14 @@ import {
 import { VerificationReviewDialog } from "@/components/admin/vendors/VerificationReviewDialog";
 import { VendorActivityTimeline } from "@/components/admin/vendors/VendorActivityTimeline";
 import { getVendorActionAvailability } from "@/components/admin/vendors/vendors-meta";
-import { vendorManagementService } from "@/services/admin";
+import {
+  useAdminVendor,
+  useAdminVendorActivateMutation,
+  useAdminVendorApproveMutation,
+  useAdminVendorDeactivateMutation,
+  useAdminVendorRejectMutation,
+  useAdminVendorSuspendMutation,
+} from "@/hooks/admin/use-admin-vendors";
 import type { ManagedVendorDetail } from "@/types/admin";
 
 interface ToastMessage {
@@ -59,11 +66,6 @@ interface ToastMessage {
   tone: "success" | "error";
   text: string;
 }
-
-type DetailState =
-  | { status: "loading" }
-  | { status: "error"; notFound?: boolean }
-  | { status: "ready"; data: ManagedVendorDetail };
 
 type DetailTab =
   | "overview"
@@ -87,7 +89,6 @@ export default function AdminVendorDetailPage() {
   const router = useRouter();
   const vendorId = typeof params.id === "string" ? params.id : "";
 
-  const [detail, setDetail] = useState<DetailState>({ status: "loading" });
   const [tab, setTab] = useState<DetailTab>("overview");
 
   // ----- overlays -----
@@ -98,49 +99,37 @@ export default function AdminVendorDetailPage() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
 
+  // ----- data hooks (always called at top level) -----
+  const { data: detail, isPending, isError, refetch } = useAdminVendor(vendorId);
+  const approveMut = useAdminVendorApproveMutation();
+  const rejectMut = useAdminVendorRejectMutation();
+  const activateMut = useAdminVendorActivateMutation();
+  const suspendMut = useAdminVendorSuspendMutation();
+  const deactivateMut = useAdminVendorDeactivateMutation();
+
   const pushToast = useCallback((tone: ToastMessage["tone"], text: string) => {
     const id = ++toastId.current;
     setToasts((t) => [...t.slice(-2), { id, tone, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800);
   }, []);
 
-  const loadDetail = useCallback(async () => {
-    setDetail((prev) => (prev.status === "ready" ? prev : { status: "loading" }));
-    try {
-      const data = await vendorManagementService.getById(vendorId);
-      if (!data) {
-        setDetail({ status: "error", notFound: true });
-        return;
-      }
-      setDetail({ status: "ready", data });
-    } catch {
-      setDetail({ status: "error" });
-    }
-  }, [vendorId]);
-
-  useEffect(() => {
-    if (vendorId) void loadDetail();
-  }, [vendorId, loadDetail]);
-
   function refresh(message?: string) {
-    void loadDetail();
+    void refetch();
     if (message) pushToast("success", message);
   }
 
   async function approve() {
-    if (detail.status !== "ready") return;
     try {
-      await vendorManagementService.approve(detail.data.vendor.id);
-      refresh(`${detail.data.vendor.storeName} verified - storefront is live.`);
+      await approveMut.mutateAsync(vendorId);
+      refresh(`${detail?.vendor.storeName} verified - storefront is live.`);
     } catch {
       pushToast("error", "Couldn't approve the vendor. Try again.");
     }
   }
 
   async function reject(reason: string) {
-    if (detail.status !== "ready") return;
     try {
-      await vendorManagementService.reject(detail.data.vendor.id, reason);
+      await rejectMut.mutateAsync({ id: vendorId, reason });
       refresh("Application rejected - the owner has been notified.");
     } catch {
       pushToast("error", "Couldn't reject the application. Try again.");
@@ -148,21 +137,19 @@ export default function AdminVendorDetailPage() {
   }
 
   async function activate() {
-    if (detail.status !== "ready") return;
     try {
-      await vendorManagementService.activate(detail.data.vendor.id);
-      refresh(`${detail.data.vendor.storeName} is trading again.`);
+      await activateMut.mutateAsync(vendorId);
+      refresh(`${detail?.vendor.storeName} is trading again.`);
     } catch {
       pushToast("error", "Couldn't activate the store. Try again.");
     }
   }
 
   async function runSuspend() {
-    if (detail.status !== "ready") return;
     setConfirmWorking(true);
     try {
-      await vendorManagementService.suspend(detail.data.vendor.id);
-      refresh(`${detail.data.vendor.storeName} was suspended.`);
+      await suspendMut.mutateAsync(vendorId);
+      refresh(`${detail?.vendor.storeName} was suspended.`);
     } catch {
       pushToast("error", "The action failed. Try again.");
     } finally {
@@ -172,11 +159,10 @@ export default function AdminVendorDetailPage() {
   }
 
   async function runDeactivate() {
-    if (detail.status !== "ready") return;
     setConfirmWorking(true);
     try {
-      await vendorManagementService.deactivate(detail.data.vendor.id);
-      refresh(`${detail.data.vendor.storeName} was deactivated.`);
+      await deactivateMut.mutateAsync(vendorId);
+      refresh(`${detail?.vendor.storeName} was deactivated.`);
     } catch {
       pushToast("error", "The action failed. Try again.");
     } finally {
@@ -187,27 +173,11 @@ export default function AdminVendorDetailPage() {
 
   // ----- render guards -----
 
-  if (!vendorId || (detail.status === "error" && detail.notFound)) {
-    return (
-      <div className="rounded-lg border border-kampmax-border bg-white p-4">
-        <ErrorState
-          title="Vendor not found"
-          message="This store may have been removed or the link is incorrect."
-        />
-        <div className="mt-3 text-center">
-          <Link
-            href="/admin/vendors"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-kampmax-blue hover:underline"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to vendors
-          </Link>
-        </div>
-      </div>
-    );
+  if (!vendorId) {
+    return <VendorNotFound />;
   }
 
-  if (detail.status === "loading") {
+  if (isPending) {
     return (
       <div className="space-y-4">
         <div className="h-10 w-72 animate-pulse rounded bg-kampmax-muted" />
@@ -217,20 +187,24 @@ export default function AdminVendorDetailPage() {
     );
   }
 
-  if (detail.status === "error") {
-    return <ErrorState onRetry={() => void loadDetail()} />;
+  if (isError) {
+    return <ErrorState onRetry={() => void refetch()} />;
   }
 
-  const { vendor, campus, earnings } = detail.data;
+  if (!detail) {
+    return <VendorNotFound />;
+  }
+
+  const { vendor, campus, earnings } = detail;
   const availability = getVendorActionAvailability(vendor);
 
   const counts: Record<DetailTab, number> = {
     overview: 0,
-    products: detail.data.products.length,
-    orders: detail.data.orders.length,
-    reviews: detail.data.reviews.length,
-    complaints: detail.data.complaints.length,
-    activity: detail.data.activity.length,
+    products: detail.products.length,
+    orders: detail.orders.length,
+    reviews: detail.reviews.length,
+    complaints: detail.complaints.length,
+    activity: detail.activity.length,
   };
 
   return (
@@ -246,7 +220,7 @@ export default function AdminVendorDetailPage() {
 
       <AdminPageHeader
         title={vendor.storeName}
-        description={`${vendor.category} · ${campus?.shortName ?? vendor.campusId} · joined ${formatDate(vendor.registeredAt)}`}
+        description={`${vendor.category} · ${campus?.shortName ?? vendor.campusId} · joined ${vendor.registeredAt ? formatDate(vendor.registeredAt) : "—"}`}
         actions={
           <>
             <VerificationBadge status={vendor.verificationStatus} />
@@ -308,9 +282,9 @@ export default function AdminVendorDetailPage() {
       {/* ---------- Overview stats ---------- */}
       <section aria-label="Vendor metrics" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <StatCard label="Products" value={vendor.productsCount.toLocaleString("en-NG")} icon={Package} tone="blue" hint="Live listings" />
-        <StatCard label="Orders" value={vendor.ordersCount.toLocaleString("en-NG")} icon={ShoppingBag} tone="blue" hint={`${Math.round(vendor.fulfillmentRate)}% fulfilment`} />
-        <StatCard label="Sales (lifetime)" value={formatNairaCompact(vendor.totalSales)} icon={Wallet} tone="gold" hint={`GMV through ${campus?.shortName ?? vendor.campusId}`} />
-        <StatCard label="Net earnings" value={formatNairaCompact(earnings.netEarnings)} icon={Wallet} tone="success" hint={`${Math.round((1 - earnings.commissionRate) * 100)}% after commission`} />
+        <StatCard label="Orders" value={vendor.ordersCount.toLocaleString("en-NG")} icon={ShoppingBag} tone="blue" hint={vendor.fulfillmentRate === null ? "—" : `${Math.round(vendor.fulfillmentRate)}% fulfilment`} />
+        <StatCard label="Sales (lifetime)" value={vendor.totalSales === null ? "—" : formatNairaCompact(vendor.totalSales)} icon={Wallet} tone="gold" hint={`GMV through ${campus?.shortName ?? vendor.campusId}`} />
+        <StatCard label="Net earnings" value={earnings.netEarnings === null ? "—" : formatNairaCompact(earnings.netEarnings)} icon={Wallet} tone="success" hint={`${Math.round((1 - earnings.commissionRate) * 100)}% after commission`} />
         <StatCard label="Rating" value={`${vendor.rating.toFixed(1)} / 5`} icon={Star} tone="gold" hint={`${vendor.reviewsCount.toLocaleString("en-NG")} reviews`} />
         <StatCard label="Complaints" value={vendor.complaintsCount.toLocaleString("en-NG")} icon={FileWarning} tone={vendor.complaintsCount > 3 ? "error" : "default"} hint="Lifetime disputes opened" />
       </section>
@@ -348,20 +322,20 @@ export default function AdminVendorDetailPage() {
       <div className="mt-4" role="tabpanel">
         {tab === "overview" && (
           <OverviewTab
-            detail={detail.data}
+            detail={detail}
             campusName={campus?.name ?? null}
             onOpenCampus={() =>
               campus && router.push(`/admin/campuses/${campus.id}`)
             }
           />
         )}
-        {tab === "products" && <ProductsTab detail={detail.data} />}
-        {tab === "orders" && <OrdersTab detail={detail.data} />}
-        {tab === "reviews" && <ReviewsTab detail={detail.data} />}
-        {tab === "complaints" && <ComplaintsTab detail={detail.data} />}
+        {tab === "products" && <ProductsTab detail={detail} />}
+        {tab === "orders" && <OrdersTab detail={detail} />}
+        {tab === "reviews" && <ReviewsTab detail={detail} />}
+        {tab === "complaints" && <ComplaintsTab detail={detail} />}
         {tab === "activity" && (
           <section aria-label="Vendor activity" className="rounded-lg border border-kampmax-border bg-white px-4 py-4">
-            <VendorActivityTimeline events={detail.data.activity} />
+            <VendorActivityTimeline events={detail.activity} />
           </section>
         )}
       </div>
@@ -464,9 +438,9 @@ function OverviewTab({
                 value={campusName ?? vendor.campusId}
                 onClick={onOpenCampus}
               />
-              <InfoRow label="Registered" value={`${timeAgo(vendor.registeredAt)} · ${formatDate(vendor.registeredAt)}`} />
+              <InfoRow label="Registered" value={vendor.registeredAt ? `${timeAgo(vendor.registeredAt)} · ${formatDate(vendor.registeredAt)}` : "—"} />
               <InfoRow label="Last active" value={timeAgo(vendor.lastActiveAt)} />
-              <InfoRow label="Fulfilment rate" value={`${Math.round(vendor.fulfillmentRate)}% of orders delivered`} />
+              <InfoRow label="Fulfilment rate" value={vendor.fulfillmentRate === null ? "—" : `${Math.round(vendor.fulfillmentRate)}% of orders delivered`} />
               <InfoRow label="Store ID" value={vendor.id} mono />
             </dl>
           </div>
@@ -500,16 +474,16 @@ function OverviewTab({
             <InfoRow
               icon={Mail}
               label="Email"
-              value={vendor.owner.email}
-              href={`mailto:${vendor.owner.email}`}
+              value={vendor.owner.email || "—"}
+              href={vendor.owner.email ? `mailto:${vendor.owner.email}` : undefined}
             />
             <InfoRow
               icon={Phone}
               label="Phone"
-              value={vendor.owner.phone}
-              href={`tel:${vendor.owner.phone.replace(/\s+/g, "")}`}
+              value={vendor.owner.phone || "—"}
+              href={vendor.owner.phone ? `tel:${vendor.owner.phone.replace(/\s+/g, "")}` : undefined}
             />
-            <InfoRow label="Joined Kampmax" value={formatDate(vendor.owner.joinedAt)} />
+            <InfoRow label="Joined Kampmax" value={vendor.owner.joinedAt ? formatDate(vendor.owner.joinedAt) : "—"} />
             <InfoRow
               label="As a buyer"
               value={`${vendor.owner.ordersCount.toLocaleString("en-NG")} orders · ${formatNaira(vendor.owner.totalSpent)}`}
@@ -569,14 +543,14 @@ function OverviewTab({
             <h2 className="text-sm font-semibold text-kampmax-text">Sales & earnings</h2>
           </div>
           <dl className="divide-y divide-kampmax-border/70 px-4 py-1">
-            <MoneyRow label="Gross sales (GMV)" value={formatNaira(earnings.grossSales)} />
+            <MoneyRow label="Gross sales (GMV)" value={earnings.grossSales === null ? "—" : formatNaira(earnings.grossSales)} />
             <MoneyRow
               label={`Commission (${Math.round(earnings.commissionRate * 100)}%)`}
-              value={`− ${formatNaira(earnings.commissionPaid)}`}
+              value={earnings.commissionPaid === null ? "—" : `− ${formatNaira(earnings.commissionPaid)}`}
               muted
             />
-            <MoneyRow label="Net earnings" value={formatNaira(earnings.netEarnings)} strong />
-            <MoneyRow label="Pending payout (wallet)" value={formatNaira(earnings.pendingPayout)} />
+            <MoneyRow label="Net earnings" value={earnings.netEarnings === null ? "—" : formatNaira(earnings.netEarnings)} strong />
+            <MoneyRow label="Pending payout (wallet)" value={earnings.pendingPayout === null ? "—" : formatNaira(earnings.pendingPayout)} />
             <div className="flex items-center justify-between gap-4 py-2.5 text-sm">
               <dt className="text-kampmax-text-secondary">Last payout</dt>
               <dd className="font-medium text-kampmax-text">
@@ -671,11 +645,11 @@ function ProductsTab({ detail }: { detail: ManagedVendorDetail }) {
                       p.stock === 0 ? "text-kampmax-error" : "text-kampmax-text-secondary"
                     )}
                   >
-                    {p.stock === 0 ? "Out of stock" : p.stock.toLocaleString("en-NG")}
+                    {p.stock === null ? "—" : p.stock === 0 ? "Out of stock" : p.stock.toLocaleString("en-NG")}
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-kampmax-text-secondary">
-                  {p.soldCount.toLocaleString("en-NG")}
+                  {p.soldCount === null ? "—" : p.soldCount.toLocaleString("en-NG")}
                 </td>
                 <td className="px-4 py-2.5">
                   <Pill variant={productStatusVariant(p.status)} label={p.status.replace(/_/g, " ")} />
@@ -928,6 +902,26 @@ function TabEmpty({ label }: { label: string }) {
       <p className="mt-0.5 text-xs text-kampmax-text-secondary">
         This section fills up as the store trades on the marketplace.
       </p>
+    </div>
+  );
+}
+
+function VendorNotFound() {
+  return (
+    <div className="rounded-lg border border-kampmax-border bg-white p-4">
+      <ErrorState
+        title="Vendor not found"
+        message="This store may have been removed or the link is incorrect."
+      />
+      <div className="mt-3 text-center">
+        <Link
+          href="/admin/vendors"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-kampmax-blue hover:underline"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to vendors
+        </Link>
+      </div>
     </div>
   );
 }

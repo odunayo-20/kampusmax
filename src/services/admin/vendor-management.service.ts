@@ -6,14 +6,13 @@ import {
   VendorActivityEvent,
   VendorBucket,
   VendorStatusCounts,
-  VendorVerificationDocument,
-  VendorVerificationStatus,
 } from "@/types/admin";
 import { apiDelay, applySearch, applySort, paginate } from "@/lib/admin/api";
 import {
+  applyStoreVerdict,
+  applyVerificationVerdict,
   bucketOf,
   buildManagedVendorDataset,
-  type ManagedVendorDataset,
 } from "@/data/admin/vendor-management";
 
 // ------------------------------------------------------------
@@ -51,99 +50,23 @@ export interface AdminVendorManagementService {
 
 // ------------------------------------------------------------
 // MOCK IMPLEMENTATION
+//
+// Reads a fresh dataset derived from the real vendor stores on
+// every call (8 vendors — cheap). Mutations are applied through
+// the data module's overlay and cascade through to the storefront
+// and platform-vendor records they semantically affect, so the
+// admin console stays consistent with the rest of the prototype.
 // ------------------------------------------------------------
 
-export function createVendorManagementService(
-  seed?: ManagedVendorDataset
-): AdminVendorManagementService {
-  const dataset = seed ?? buildManagedVendorDataset();
-  const vendors = dataset.vendors.map((v) => ({ ...v }));
-  const details = new Map<string, ManagedVendorDetail>();
-  // Deep-copy details so module-level mock data stays pristine.
-  dataset.details.forEach((detail, id) =>
-    details.set(id, structuredCopy(detail))
-  );
+export function createVendorManagementService(): AdminVendorManagementService {
+  function fresh() {
+    return buildManagedVendorDataset();
+  }
 
-  function findOrThrow(id: string): ManagedVendor {
-    const vendor = vendors.find((v) => v.id === id);
+  function findVendor(id: string): ManagedVendor {
+    const vendor = fresh().vendors.find((v) => v.id === id);
     if (!vendor) throw new Error(`Vendor ${id} not found`);
     return vendor;
-  }
-
-  function replace(updated: ManagedVendor): void {
-    const idx = vendors.findIndex((v) => v.id === updated.id);
-    if (idx === -1) throw new Error(`Vendor ${updated.id} not found`);
-    vendors[idx] = updated;
-    syncDetail(updated.id);
-  }
-
-  function syncDetail(id: string): void {
-    const detail = details.get(id);
-    const vendor = vendors.find((v) => v.id === id);
-    if (detail && vendor) detail.vendor = structuredCopy(vendor);
-  }
-
-  function logActivity(vendorId: string, message: string, meta = "Admin console"): void {
-    const detail = details.get(vendorId);
-    if (!detail) return;
-    detail.activity.unshift({
-      id: `vact-${vendorId}-admin-${detail.activity.length + 1}`,
-      kind: "admin",
-      message,
-      meta,
-      at: new Date().toISOString(),
-    });
-  }
-
-  function setVerification(
-    id: string,
-    status: VendorVerificationStatus,
-    reviewer: string,
-    reason?: string
-  ): ManagedVendor {
-    const vendor = findOrThrow(id);
-    const documents: VendorVerificationDocument[] =
-      status === "verified"
-        ? vendor.verification.documents.map((d) => ({
-            ...d,
-            state:
-              d.state === "missing" || d.state === "rejected"
-                ? "approved"
-                : d.state,
-          }))
-        : vendor.verification.documents;
-
-    const updated: ManagedVendor = {
-      ...vendor,
-      verificationStatus: status,
-      storeStatus:
-        status === "verified"
-          ? "active"
-          : status === "rejected"
-            ? "deactivated"
-            : vendor.storeStatus,
-      verification: {
-        ...vendor.verification,
-        bvnVerified: status === "verified",
-        documents,
-        reviewedAt: new Date().toISOString(),
-        reviewedBy: reviewer,
-        rejectionReason: status === "rejected" ? reason ?? null : null,
-      },
-      ordersCount:
-        status === "verified" && vendor.ordersCount === 0
-          ? 12
-          : vendor.ordersCount,
-    };
-    replace(updated);
-    logActivity(
-      id,
-      status === "verified"
-        ? `Verification approved by ${reviewer} · storefront is live`
-        : `Verification rejected by ${reviewer}${reason ? ` · ${reason}` : ""}`,
-      "Verification"
-    );
-    return updated;
   }
 
   return {
@@ -160,7 +83,7 @@ export function createVendorManagementService(
         category = "all",
       } = query;
 
-      let rows = vendors.filter(
+      let rows = fresh().vendors.filter(
         (v) =>
           (queue === "all" || bucketOf(v.verificationStatus, v.storeStatus) === queue) &&
           (campusId === "all" || v.campusId === campusId) &&
@@ -181,10 +104,13 @@ export function createVendorManagementService(
         sortDir,
         {
           storeName: (v) => v.storeName.toLowerCase(),
-          registeredAt: (v) => new Date(v.registeredAt).getTime(),
+          registeredAt: (v) => {
+            const t = new Date(v.registeredAt).getTime();
+            return Number.isFinite(t) ? t : 0;
+          },
           productsCount: (v) => v.productsCount,
           ordersCount: (v) => v.ordersCount,
-          totalSales: (v) => v.totalSales,
+          totalSales: (v) => v.totalSales ?? 0,
           rating: (v) => v.rating,
         },
         "registeredAt"
@@ -195,11 +121,12 @@ export function createVendorManagementService(
 
     async getById(id) {
       await apiDelay(160);
-      return details.get(id) ?? null;
+      return fresh().details.get(id) ?? null;
     },
 
     async getCounts() {
       await apiDelay(80);
+      const vendors = fresh().vendors;
       const by = (bucket: VendorBucket) =>
         vendors.filter(
           (v) => bucketOf(v.verificationStatus, v.storeStatus) === bucket
@@ -216,73 +143,72 @@ export function createVendorManagementService(
 
     async getCategories() {
       await apiDelay(60);
-      return [...new Set(vendors.map((v) => v.category))].sort();
+      return [...new Set(fresh().vendors.map((v) => v.category))].sort();
     },
 
     async approve(id) {
       await apiDelay();
-      return setVerification(id, "verified", "Platform Admin");
+      const vendor = findVendor(id);
+      if (vendor.verificationStatus !== "pending_verification") {
+        throw new Error("Only pending stores can be approved.");
+      }
+      applyVerificationVerdict(id, "verified", "Platform Admin");
+      return findVendor(id);
     },
 
     async reject(id, reason) {
       await apiDelay();
+      const vendor = findVendor(id);
       if (!reason.trim()) throw new Error("A rejection reason is required.");
-      return setVerification(id, "rejected", "Platform Admin", reason.trim());
+      if (vendor.verificationStatus !== "pending_verification") {
+        throw new Error("Only pending stores can be rejected.");
+      }
+      applyVerificationVerdict(id, "rejected", "Platform Admin", reason.trim());
+      return findVendor(id);
     },
 
     async suspend(id) {
       await apiDelay();
-      const vendor = findOrThrow(id);
+      const vendor = findVendor(id);
       if (vendor.verificationStatus !== "verified") {
         throw new Error("Only verified stores can be suspended.");
       }
       if (vendor.storeStatus !== "active") {
         throw new Error(`Store is already ${vendor.storeStatus}.`);
       }
-      const updated: ManagedVendor = { ...vendor, storeStatus: "suspended" };
-      replace(updated);
-      logActivity(id, "Store suspended · listings hidden from buyers");
-      return updated;
+      applyStoreVerdict(id, "suspended");
+      return findVendor(id);
     },
 
     async activate(id) {
       await apiDelay();
-      const vendor = findOrThrow(id);
+      const vendor = findVendor(id);
       if (vendor.verificationStatus !== "verified") {
         throw new Error("Verify the vendor before activating the store.");
       }
       if (vendor.storeStatus === "active") {
         throw new Error("Store is already active.");
       }
-      const updated: ManagedVendor = { ...vendor, storeStatus: "active" };
-      replace(updated);
-      logActivity(id, "Store re-activated · trading resumed");
-      return updated;
+      applyStoreVerdict(id, "active");
+      return findVendor(id);
     },
 
     async deactivate(id) {
       await apiDelay();
-      const vendor = findOrThrow(id);
+      const vendor = findVendor(id);
       if (vendor.verificationStatus !== "verified") {
         throw new Error("Unverified vendors are managed through the verification queue.");
       }
       if (vendor.storeStatus === "deactivated") {
         throw new Error("Store is already deactivated.");
       }
-      const updated: ManagedVendor = { ...vendor, storeStatus: "deactivated" };
-      replace(updated);
-      logActivity(id, "Store deactivated by platform admin");
-      return updated;
+      applyStoreVerdict(id, "deactivated");
+      return findVendor(id);
     },
 
     async getActivity(id) {
       await apiDelay(120);
-      return details.get(id)?.activity ?? [];
+      return fresh().details.get(id)?.activity ?? [];
     },
   };
-}
-
-/** Structured clone with Date-free plain objects only. */
-function structuredCopy<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
 }

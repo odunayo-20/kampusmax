@@ -50,7 +50,7 @@ export function ViewStoreDialog({
     { label: "Orders fulfilled", value: vendor.ordersCount.toLocaleString("en-NG") },
     {
       label: "Lifetime sales",
-      value: formatNairaCompact(vendor.totalSales),
+      value: vendor.totalSales === null ? "—" : formatNairaCompact(vendor.totalSales),
     },
     { label: "Rating", value: `${vendor.rating.toFixed(1)} / 5`, icon: Star },
   ];

@@ -443,12 +443,13 @@ export interface ManagedVendor {
   verification: VendorVerificationRecord;
   productsCount: number;
   ordersCount: number;
-  /** Lifetime GMV through the store. */
-  totalSales: number;
+  /** Lifetime GMV through the store. Null when the backend has no ledger rows. */
+  totalSales: number | null;
   /** Net after platform commission. */
   earnings: number;
   walletBalance: number;
-  fulfillmentRate: number;
+  /** Share of orders fulfilled on time. Null when the store has no order records. */
+  fulfillmentRate: number | null;
   rating: number;
   reviewsCount: number;
   complaintsCount: number;
@@ -476,9 +477,11 @@ export interface VendorProductRow {
   id: string;
   title: string;
   price: number;
-  stock: number;
+  /** Null when the catalog row carries no inventory count. */
+  stock: number | null;
   status: AdminProduct["status"];
-  soldCount: number;
+  /** Null when the backend records no per-listing sales figures. */
+  soldCount: number | null;
   createdAt: string;
 }
 
@@ -516,11 +519,13 @@ export interface VendorComplaintRow {
 }
 
 export interface VendorEarningsSummary {
-  grossSales: number;
+  /** Gross sales; null when no ledger exists for the store. */
+  grossSales: number | null;
   commissionRate: number;
-  commissionPaid: number;
-  netEarnings: number;
-  pendingPayout: number;
+  /** Null when there is no ledger to compute against. */
+  commissionPaid: number | null;
+  netEarnings: number | null;
+  pendingPayout: number | null;
   lastPayoutAt: string | null;
 }
 

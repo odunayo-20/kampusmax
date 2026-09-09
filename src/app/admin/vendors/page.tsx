@@ -1,42 +1,35 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  Suspense,
-} from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BadgeCheck, CheckCircle2, Inbox, XCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Pagination } from "@/components/admin/Pagination";
 import {
   VendorsFilters,
   type VendorsFilterState,
-  type VendorsCounts,
 } from "@/components/admin/vendors/VendorsFilters";
 import { VendorsTable } from "@/components/admin/vendors/VendorsTable";
 import { VerificationReviewDialog } from "@/components/admin/vendors/VerificationReviewDialog";
 import { ViewOwnerDialog } from "@/components/admin/vendors/ViewOwnerDialog";
 import { ViewStoreDialog } from "@/components/admin/vendors/ViewStoreDialog";
 import { useDebounce } from "@/hooks/use-debounce";
-import { campusService, vendorManagementService } from "@/services/admin";
+import { campusService } from "@/services/admin";
 import { VENDOR_QUEUE_LABELS } from "@/components/admin/vendors/vendors-meta";
-import type {
-  ManagedVendor,
-  Paginated,
-  SortDir,
-  VendorBucket,
-} from "@/types/admin";
+import {
+  useAdminVendorActivateMutation,
+  useAdminVendorApproveMutation,
+  useAdminVendorCategories,
+  useAdminVendorCounts,
+  useAdminVendorDeactivateMutation,
+  useAdminVendorRejectMutation,
+  useAdminVendors,
+  useAdminVendorSuspendMutation,
+} from "@/hooks/admin/use-admin-vendors";
+import type { ManagedVendor, SortDir, VendorBucket } from "@/types/admin";
 import type { ManagedVendorSortField } from "@/services/admin";
-
-type ListState =
-  | { status: "loading" }
-  | { status: "error" }
-  | { status: "ready"; data: Paginated<ManagedVendor> };
 
 interface ToastMessage {
   id: number;
@@ -44,14 +37,13 @@ interface ToastMessage {
   text: string;
 }
 
-function parseInitialFilters(
-  params: URLSearchParams
-): VendorsFilterState {
+function parseInitialFilters(params: URLSearchParams): VendorsFilterState {
   const rawQueue = params.get("queue");
   const validQueues = Object.keys(VENDOR_QUEUE_LABELS) as (
     | VendorBucket
     | "all"
   )[];
+  const rawPage = Number.parseInt(params.get("page") ?? "", 10);
   return {
     search: params.get("q") ?? "",
     queue:
@@ -61,6 +53,11 @@ function parseInitialFilters(
     campusId: params.get("campus") ?? "all",
     category: params.get("category") ?? "all",
   };
+}
+
+function parseInitialPage(params: URLSearchParams): number {
+  const rawPage = Number.parseInt(params.get("page") ?? "", 10);
+  return Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
 }
 
 export default function AdminVendorsPage() {
@@ -74,6 +71,7 @@ export default function AdminVendorsPage() {
 function AdminVendorsPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
 
   // ----- filters / query state -----
   const [filters, setFilters] = useState<VendorsFilterState>(() =>
@@ -81,15 +79,10 @@ function AdminVendorsPageInner() {
   );
   const [sortBy, setSortBy] = useState<ManagedVendorSortField>("registeredAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() =>
+    parseInitialPage(new URLSearchParams(searchParams.toString()))
+  );
   const [pageSize, setPageSize] = useState(10);
-
-  // ----- data state -----
-  const [list, setList] = useState<ListState>({ status: "loading" });
-  const [counts, setCounts] = useState<VendorsCounts | null>(null);
-  const [campuses, setCampuses] = useState<{ id: string; name: string }[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [reloadKey, setReloadKey] = useState(0);
 
   // ----- overlays -----
   const [storeTarget, setStoreTarget] = useState<ManagedVendor | null>(null);
@@ -102,61 +95,69 @@ function AdminVendorsPageInner() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
 
-  // Debounced search mirrors the campuses/users consoles.
-  const debouncedFilters = useDebounce(filters.search.trim(), 350);
-  const effectiveSearch = useMemo(
-    () => ({ ...filters, search: debouncedFilters }),
-    [filters, debouncedFilters]
-  );
-
   const pushToast = useCallback((tone: ToastMessage["tone"], text: string) => {
     const id = ++toastId.current;
     setToasts((t) => [...t.slice(-2), { id, tone, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800);
   }, []);
 
-  const loadList = useCallback(async () => {
-    setList((prev) => (prev.status === "ready" ? prev : { status: "loading" }));
-    try {
-      const data = await vendorManagementService.list({
-        search: effectiveSearch.search,
-        queue: effectiveSearch.queue,
-        campusId: effectiveSearch.campusId,
-        category: effectiveSearch.category,
-        sortBy,
-        sortDir,
-        page,
-        pageSize,
-      });
-      setList({ status: "ready", data });
-      setPage(data.page);
-    } catch {
-      setList({ status: "error" });
-    }
-  }, [effectiveSearch, sortBy, sortDir, page, pageSize]);
+  // ----- data hooks (always called at top level) -----
+  const debouncedSearch = useDebounce(filters.search.trim(), 350);
+  const query = useMemo(
+    () => ({
+      search: debouncedSearch,
+      queue: filters.queue === "all" ? undefined : filters.queue,
+      campusId: filters.campusId === "all" ? undefined : filters.campusId,
+      category: filters.category === "all" ? undefined : filters.category,
+      sortBy,
+      sortDir,
+      page,
+      pageSize,
+    }),
+    [debouncedSearch, filters.queue, filters.campusId, filters.category, sortBy, sortDir, page, pageSize]
+  );
 
-  const loadMeta = useCallback(async () => {
-    try {
-      const [nextCounts, allCampuses, nextCategories] = await Promise.all([
-        vendorManagementService.getCounts(),
-        campusService.list(),
-        vendorManagementService.getCategories(),
-      ]);
-      setCounts(nextCounts);
-      setCampuses(allCampuses.map((c) => ({ id: c.id, name: c.shortName })));
-      setCategories(nextCategories);
-    } catch {
-      /* non-critical metadata */
-    }
-  }, []);
+  const { data, error, isLoading, refetch } = useAdminVendors(query);
+  const counts = useAdminVendorCounts();
+  const categoriesQuery = useAdminVendorCategories();
+  const campusesQuery = useQuery({
+    queryKey: ["admin", "campuses"],
+    queryFn: () => campusService.list(),
+  });
+  const approveMut = useAdminVendorApproveMutation();
+  const rejectMut = useAdminVendorRejectMutation();
+  const suspendMut = useAdminVendorSuspendMutation();
+  const activateMut = useAdminVendorActivateMutation();
+  const deactivateMut = useAdminVendorDeactivateMutation();
 
+  const campuses = useMemo(
+    () =>
+      (campusesQuery.data ?? []).map((c) => ({ id: c.id, name: c.shortName })),
+    [campusesQuery.data]
+  );
+  const campusNames = useMemo(
+    () => Object.fromEntries(campuses.map((c) => [c.id, c.name])),
+    [campuses]
+  );
+
+  // Non-sensitive filters persist to the URL so views are shareable and
+  // survive reloads (queue, campus, category and page only — never the raw
+  // search term; that is written debounced to avoid churn per keystroke).
+  const urlParams = searchParams.toString();
   useEffect(() => {
-    void loadList();
-  }, [loadList, reloadKey]);
-
-  useEffect(() => {
-    void loadMeta();
-  }, [loadMeta, reloadKey]);
+    const timer = setTimeout(() => {
+      const sp = new URLSearchParams();
+      const trimmed = filters.search.trim();
+      if (trimmed) sp.set("q", trimmed);
+      if (filters.queue !== "all") sp.set("queue", filters.queue);
+      if (filters.campusId !== "all") sp.set("campus", filters.campusId);
+      if (filters.category !== "all") sp.set("category", filters.category);
+      if (page > 1) sp.set("page", String(page));
+      const next = sp.toString();
+      if (next !== urlParams) router.replace(`${pathname}?${next}`, { scroll: false });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [filters, page, urlParams, router, pathname]);
 
   // ----- handlers -----
 
@@ -178,15 +179,14 @@ function AdminVendorsPageInner() {
     [sortBy]
   );
 
-  const refresh = useCallback(() => {
-    setReloadKey((k) => k + 1);
-  }, []);
+  const onRetry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   async function approveVendor(vendor: ManagedVendor) {
     try {
-      await vendorManagementService.approve(vendor.id);
+      await approveMut.mutateAsync(vendor.id);
       pushToast("success", `${vendor.storeName} verified - storefront is live.`);
-      refresh();
     } catch {
       pushToast("error", `Couldn't approve ${vendor.storeName}. Try again.`);
     }
@@ -194,9 +194,8 @@ function AdminVendorsPageInner() {
 
   async function rejectVendor(vendor: ManagedVendor, reason: string) {
     try {
-      await vendorManagementService.reject(vendor.id, reason);
+      await rejectMut.mutateAsync({ id: vendor.id, reason });
       pushToast("success", `${vendor.storeName}'s application was rejected.`);
-      refresh();
     } catch {
       pushToast("error", `Couldn't reject ${vendor.storeName}. Try again.`);
     }
@@ -204,9 +203,8 @@ function AdminVendorsPageInner() {
 
   async function activateVendor(vendor: ManagedVendor) {
     try {
-      await vendorManagementService.activate(vendor.id);
+      await activateMut.mutateAsync(vendor.id);
       pushToast("success", `${vendor.storeName} is trading again.`);
-      refresh();
     } catch {
       pushToast("error", `Couldn't activate ${vendor.storeName}. Try again.`);
     }
@@ -216,9 +214,8 @@ function AdminVendorsPageInner() {
     if (!suspendTarget) return;
     setConfirmWorking(true);
     try {
-      await vendorManagementService.suspend(suspendTarget.id);
+      await suspendMut.mutateAsync(suspendTarget.id);
       pushToast("success", `${suspendTarget.storeName} was suspended.`);
-      refresh();
     } catch {
       pushToast("error", "The action failed. Try again.");
     } finally {
@@ -231,9 +228,8 @@ function AdminVendorsPageInner() {
     if (!deactivateTarget) return;
     setConfirmWorking(true);
     try {
-      await vendorManagementService.deactivate(deactivateTarget.id);
+      await deactivateMut.mutateAsync(deactivateTarget.id);
       pushToast("success", `${deactivateTarget.storeName} was deactivated.`);
-      refresh();
     } catch {
       pushToast("error", "The action failed. Try again.");
     } finally {
@@ -242,17 +238,16 @@ function AdminVendorsPageInner() {
     }
   }
 
+  const countsData = counts.data ?? null;
   const hasActiveFilters =
     filters.search.trim() !== "" ||
     filters.queue !== "all" ||
     filters.campusId !== "all" ||
     filters.category !== "all";
 
-  const readyData = list.status === "ready" ? list.data : null;
-  const campusNames = useMemo(
-    () => Object.fromEntries(campuses.map((c) => [c.id, c.name])),
-    [campuses]
-  );
+  const clearFilters = useCallback(() => {
+    patchFilters({ search: "", queue: "all", campusId: "all", category: "all" });
+  }, [patchFilters]);
 
   return (
     <>
@@ -263,20 +258,18 @@ function AdminVendorsPageInner() {
           <>
             <span className="inline-flex items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-3 py-1.5 text-xs font-medium text-kampmax-text-secondary">
               <BadgeCheck className="h-3.5 w-3.5" />
-              {counts ? `${counts.all} stores` : "…"}
+              {countsData ? `${countsData.all} stores` : "…"}
             </span>
             <button
               type="button"
-              onClick={() =>
-                patchFilters({ queue: "pending_verification" })
-              }
+              onClick={() => router.push("/admin/vendors?queue=pending_verification")}
               className="inline-flex h-9 items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-3.5 text-sm font-medium text-kampmax-text transition-colors hover:bg-kampmax-muted"
             >
               <Inbox className="h-4 w-4" />
               Verification queue
-              {(counts?.pending_verification ?? 0) > 0 && (
+              {(countsData?.pending_verification ?? 0) > 0 && (
                 <span className="rounded-full bg-kampmax-warning/15 px-1.5 py-px text-[10px] font-semibold tabular-nums text-amber-700">
-                  {counts!.pending_verification}
+                  {countsData!.pending_verification}
                 </span>
               )}
             </button>
@@ -285,17 +278,17 @@ function AdminVendorsPageInner() {
       />
 
       {/* Pending queue banner */}
-      {!hasActiveFilters && (counts?.pending_verification ?? 0) > 0 && (
+      {!hasActiveFilters && (countsData?.pending_verification ?? 0) > 0 && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-kampmax-warning/40 bg-kampmax-warning/10 px-4 py-3">
           <p className="text-sm text-kampmax-text">
             <span className="font-semibold">
-              {counts!.pending_verification} vendor
-              {counts!.pending_verification === 1 ? "" : "s"}
+              {countsData!.pending_verification} vendor
+              {countsData!.pending_verification === 1 ? "" : "s"}
             </span>{" "}
             awaiting document verification.
           </p>
           <a
-            href="/admin/vendors/queue"
+            href="/admin/vendors?queue=pending_verification"
             className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-kampmax-navy px-3 text-xs font-medium text-white transition-colors hover:bg-kampmax-navy/90"
           >
             Open queue
@@ -307,30 +300,23 @@ function AdminVendorsPageInner() {
         <VendorsFilters
           filters={filters}
           campuses={campuses}
-          categories={categories}
-          counts={counts}
+          categories={categoriesQuery.data ?? []}
+          counts={countsData}
           onChange={patchFilters}
         />
       </div>
 
       <VendorsTable
         campusNames={campusNames}
-        page={readyData}
-        loading={list.status === "loading"}
-        error={list.status === "error"}
+        page={data ?? null}
+        loading={isLoading}
+        error={!!error}
         sortBy={sortBy}
         sortDir={sortDir}
         onSort={toggleSort}
-        onRetry={() => setReloadKey((k) => k + 1)}
+        onRetry={onRetry}
         hasActiveFilters={hasActiveFilters}
-        onClearFilters={() =>
-          patchFilters({
-            search: "",
-            queue: "all",
-            campusId: "all",
-            category: "all",
-          })
-        }
+        onClearFilters={clearFilters}
         onViewStore={(v) => setStoreTarget(v)}
         onViewOwner={(v) => setOwnerTarget(v)}
         onReviewVerification={(v) => setVerificationTarget(v)}
@@ -341,12 +327,12 @@ function AdminVendorsPageInner() {
         onDeactivate={(v) => setDeactivateTarget(v)}
       />
 
-      {readyData && readyData.total > 0 && (
+      {data && data.total > 0 && (
         <Pagination
-          page={readyData.page}
+          page={data.page}
           pageSize={pageSize}
-          total={readyData.total}
-          totalPages={readyData.totalPages}
+          total={data.total}
+          totalPages={data.totalPages}
           onPageChange={setPage}
           onPageSizeChange={(n) => {
             setPageSize(n);

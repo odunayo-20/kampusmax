@@ -52,17 +52,20 @@ export function ViewOwnerDialog({
   const rows = [
     {
       label: "Email",
-      value: owner.email,
+      value: owner.email || "—",
       icon: Mail,
-      href: `mailto:${owner.email}`,
+      href: owner.email ? `mailto:${owner.email}` : undefined,
     },
     {
       label: "Phone",
-      value: owner.phone,
+      value: owner.phone || "—",
       icon: Phone,
-      href: `tel:${owner.phone.replace(/\s+/g, "")}`,
+      href: owner.phone ? `tel:${owner.phone.replace(/\s+/g, "")}` : undefined,
     },
-    { label: "Joined Kampmax", value: formatDate(owner.joinedAt) },
+    {
+      label: "Joined Kampmax",
+      value: owner.joinedAt ? formatDate(owner.joinedAt) : "—",
+    },
     {
       label: "Purchases as a buyer",
       value: `${owner.ordersCount.toLocaleString("en-NG")} orders · ${formatNaira(owner.totalSpent)}`,
