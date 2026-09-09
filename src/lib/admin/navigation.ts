@@ -13,6 +13,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  ShieldAlert,
   ShoppingBag,
   Star,
   Store,
@@ -99,6 +100,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { key: "campusFeed", href: "/admin/campus", label: "Campus Feed", icon: GraduationCap },
       { key: "reviews", href: "/admin/reviews", label: "Reviews", icon: Star },
+      { key: "safety", href: "/admin/safety", label: "Trust & Safety", icon: ShieldAlert },
       { key: "disputes", href: "/admin/disputes", label: "Disputes", icon: Scale },
     ],
   },

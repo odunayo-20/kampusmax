@@ -1961,6 +1961,138 @@ export interface ManagedReviewListQuery extends ListQuery {
 }
 
 // ------------------------------------------------------------
+// TRUST & SAFETY (/admin/safety)  [Module 42]
+// ------------------------------------------------------------
+// Real report surfaces only. No Kampmax store carries report-level
+// severity, assignment, notes, history or escalation today, so none of
+// those fields exist here — the console surfaces what the stores actually
+// hold (reason, details, reporter, created) plus honest statuses derived
+// from the reported target's OWN real moderation state (where one exists).
+
+export const TRUST_SAFETY_SOURCES = [
+  "storefront_review",
+  "profile_review",
+  "campus_post",
+] as const;
+export type TrustSafetySource = (typeof TRUST_SAFETY_SOURCES)[number];
+
+export const TRUST_SAFETY_STATUSES = [
+  "open",
+  "reviewing",
+  "resolved",
+  "dismissed",
+] as const;
+export type TrustSafetyReportStatus = (typeof TRUST_SAFETY_STATUSES)[number];
+
+export type TrustSafetyTargetType =
+  | "product"
+  | "vendor"
+  | "freelancer"
+  | "employer"
+  | "post";
+
+export type TrustSafetySortField = "createdAt" | "entityReportCount";
+
+/** One normalized row over a real report record from any store. */
+export interface TrustSafetyReportRow {
+  id: string;
+  source: TrustSafetySource;
+  status: TrustSafetyReportStatus;
+  /** Explains why `status` holds its value — never a fabricated backend field. */
+  statusNote: string;
+  /** Raw backend-owned reason value from the originating store. */
+  reason: string;
+  details: string | null;
+  targetType: TrustSafetyTargetType;
+  targetId: string;
+  targetName: string;
+  /** Short excerpt of the reported content (list-safe). */
+  targetPreview: string;
+  /** Real moderation state of the TARGET (null when the store has none). */
+  targetStatus: string | null;
+  /** Public page for the reported entity, when one exists. */
+  targetHref: string | null;
+  /** Existing admin console for the target (Modules 35-41), when one exists. */
+  adminHref: string | null;
+  campusId: string | null;
+  reporterUserId: string | null;
+  reporterName: string;
+  /** Reports recorded against the same target (derived from real rows). */
+  entityReportCount: number;
+  createdAt: string;
+}
+
+export interface TrustSafetyReportCounts {
+  all: number;
+  byStatus: Record<TrustSafetyReportStatus, number>;
+  bySource: Record<TrustSafetySource, number>;
+  byReason: { reason: string; count: number }[];
+  byTargetType: Record<TrustSafetyTargetType, number>;
+  uniqueReporters: number;
+  /** Distinct reported targets across all sources. */
+  uniqueTargets: number;
+  /** Open reports. (True "needs attention" queues await a backend triage API.) */
+  open: number;
+}
+
+export interface TrustSafetyReportFacets {
+  sources: { source: TrustSafetySource; count: number }[];
+  statuses: { status: TrustSafetyReportStatus; count: number }[];
+  reasons: { reason: string; count: number }[];
+  targetTypes: { targetType: TrustSafetyTargetType; count: number }[];
+  topTargets: {
+    targetId: string;
+    targetName: string;
+    targetType: TrustSafetyTargetType;
+    count: number;
+    adminHref: string | null;
+  }[];
+}
+
+export interface TrustSafetyEntity {
+  targetType: TrustSafetyTargetType;
+  id: string;
+  name: string;
+  verified: boolean;
+  href: string | null;
+  hrefLabel: string;
+  adminHref: string | null;
+}
+
+export interface TrustSafetyReportDetail extends TrustSafetyReportRow {
+  /** Full reported content (detail-only; never in list/search responses). */
+  fullText: string | null;
+  /** Images attached to the reported content (detail-only). */
+  images: { id: string; url: string; alt: string | null }[];
+  reporter: {
+    id: string | null;
+    name: string;
+    campusName: string | null;
+  };
+  entity: TrustSafetyEntity | null;
+  /** Other reports recorded against the same target (real rows only). */
+  relatedReports: {
+    id: string;
+    source: TrustSafetySource;
+    reason: string;
+    createdAt: string;
+    reporterName: string;
+  }[];
+}
+
+export interface TrustSafetyReportListQuery extends ListQuery {
+  search?: string;
+  status?: TrustSafetyReportStatus | "all";
+  source?: TrustSafetySource | "all";
+  /** Exact reason value; "all" disables it. */
+  reason?: string | "all";
+  targetType?: TrustSafetyTargetType | "all";
+  campusId?: string | "all";
+  sortBy?: TrustSafetySortField;
+  sortDir?: SortDir;
+}
+
+// ------------------------------------------------------------
 // DISPUTE MANAGEMENT (/admin/disputes)
 // ------------------------------------------------------------
 

@@ -415,4 +415,34 @@ export const adminKeys = {
     detail: (id: string, scopeCampusId?: string | null) =>
       ["admin", "reviews", "detail", id, scopeCampusId ?? "platform"] as const,
   } as const,
+  /**
+   * Trust & Safety key factory (Module 42). Read-only oversight console
+   * over the real report stores. Keys are campus-scoped like the other
+   * admin resources; there is no mutation namespace because no store
+   * exposes report-level triage transitions.
+   */
+  trustSafety: {
+    all: ["admin", "trust-safety"] as const,
+    list: (
+      query: {
+        search?: string;
+        status?: string;
+        source?: string;
+        reason?: string;
+        targetType?: string;
+        campusId?: string;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "trust-safety", "list", scopeCampusId ?? "platform", query] as const,
+    counts: (scopeCampusId?: string | null) =>
+      ["admin", "trust-safety", "counts", scopeCampusId ?? "platform"] as const,
+    facets: (scopeCampusId?: string | null) =>
+      ["admin", "trust-safety", "facets", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "trust-safety", "detail", id, scopeCampusId ?? "platform"] as const,
+  } as const,
 };

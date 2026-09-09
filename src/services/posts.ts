@@ -1,7 +1,8 @@
-import { CampusPost, Comment, SavedPost, ReportedPost, ReportReason, PollOption } from "@/types";
+import { CampusPost, Comment, SavedPost, ReportReason, PollOption } from "@/types";
 import {
   campusPosts as mockPosts,
   comments as mockComments,
+  reportedPosts as mockReportedPosts,
   getCampusPosts as _getCampusPosts,
   getCampusPostById as _getCampusPostById,
   getCommentsByPost as _getCommentsByPost,
@@ -10,7 +11,6 @@ import {
 } from "@/data/posts";
 
 const savedPosts: SavedPost[] = [];
-const reportedPosts: ReportedPost[] = [];
 
 export function getCampusPosts(campusId: string): CampusPost[] {
   return _getCampusPosts(campusId);
@@ -120,8 +120,8 @@ export function reportPost(
   reason: ReportReason,
   details?: string
 ): void {
-  reportedPosts.push({
-    id: `rp${reportedPosts.length + 1}`,
+  mockReportedPosts.push({
+    id: `rp${mockReportedPosts.length + 1}`,
     userId,
     postId,
     reason,

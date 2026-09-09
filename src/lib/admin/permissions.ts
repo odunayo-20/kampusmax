@@ -25,6 +25,7 @@ export type AdminNavItemKey =
   | "campusFeed"
   | "reports"
   | "reviews"
+  | "safety"
   | "disputes"
   | "notifications"
   | "settings"
@@ -53,6 +54,7 @@ export const ROLE_NAV_ACCESS: Record<AdminRole, AdminNavItemKey[] | "*"> = {
     "products",
     "orders",
     "reviews",
+    "safety",
     "disputes",
     "reports",
     "campusFeed",

@@ -261,6 +261,17 @@ export const reviewManagementService: AdminReviewManagementService =
 export type { ManagedReviewSortField } from "./review-management.service";
 
 import {
+  AdminTrustSafetyService,
+  createTrustSafetyService,
+} from "./report-management.service";
+
+/** /admin/safety console (Trust & Safety - read-only, real report data). */
+export const trustSafetyService: AdminTrustSafetyService =
+  createTrustSafetyService();
+
+export type { TrustSafetySortField } from "./report-management.service";
+
+import {
   AdminDisputeManagementService,
   createMockDisputeManagementService,
 } from "./dispute-management.service";

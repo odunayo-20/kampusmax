@@ -1,4 +1,4 @@
-import { CampusPost, Comment } from "@/types";
+import { CampusPost, Comment, ReportedPost } from "@/types";
 
 export const comments: Comment[] = [
   // cp1 - marketplace
@@ -508,4 +508,17 @@ export function getPostsByType(
   type: CampusPost["type"]
 ): CampusPost[] {
   return getCampusPosts(campusId).filter((p) => p.type === type);
+}
+
+// ── Post reports (Module 42) ──────────────────────────────
+// The member-facing reportPost flow records into this store (the array is
+// mutable via the service layer, mirroring reviewReports in data/reviews.ts).
+// {/admin/safety} reads it through the clone accessor below — never through
+// a reference that could be mutated by the console.
+
+export const reportedPosts: ReportedPost[] = [];
+
+/** Clone accessor for the admin console (never hands out the live array). */
+export function getReportedPosts(): ReportedPost[] {
+  return reportedPosts.map((r) => ({ ...r }));
 }
