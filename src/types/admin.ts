@@ -7,6 +7,10 @@
 import type { MarketplaceProviderPortfolioItem, MarketplaceServiceReview } from "./service-marketplace";
 import type { ProfileReviewSummary } from "./platform-reviews";
 import type { EmployerApplicationStatus } from "./opportunity";
+import type {
+  OpportunityStatus,
+  OpportunityWorkArrangement,
+} from "./opportunity";
 
 // ------------------------------------------------------------
 // AUTH & ROLES
@@ -2885,3 +2889,195 @@ export type MarketplaceSortField =
   | "rating"
   | "viewCount"
   | "name";
+
+// ============================================================
+// ADMIN JOBS & HIRING (Module 40)
+// ============================================================
+//
+// Read-only oversight of the jobs marketplace. Every row is derived from
+// the real opportunity store (src/data/opportunity.ts), its proposals
+// (proposals ARE the applications — no duplicate model), the employer
+// store (src/data/employer.ts) and contracts (src/data/contracts.ts).
+// Statuses use the REAL OpportunityStatus vocabulary — nothing invented.
+
+export type ManagedJobStatus = OpportunityStatus;
+
+/** Derived publication concept from the single real status field. */
+export type ManagedJobPublication = "published" | "unpublished" | "ended";
+
+/**
+ * Derived moderation concept. The real store has NO job-approval pipeline:
+ * `pending_review` is the only moderation-ish state; the rest are honest
+ * "not applicable" rather than invented "cleared/rejected".
+ */
+export type ManagedJobModeration =
+  | "pending_review"
+  | "not_submitted"
+  | "not_applicable";
+
+export interface ManagedJobRow {
+  id: string;
+  title: string;
+  summary: string;
+  status: ManagedJobStatus;
+  publication: ManagedJobPublication;
+  moderation: ManagedJobModeration;
+  categoryId: string;
+  categoryName: string;
+  skills: string[];
+  workArrangement: OpportunityWorkArrangement;
+  experienceLevel: string;
+  duration: string;
+  locationCity: string | null;
+  locationState: string | null;
+  campusId: string | null;
+  campusName: string | null;
+  budgetType: string;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  employerId: string;
+  employerName: string;
+  organizationName: string | null;
+  employerVerified: boolean;
+  postedAt: string;
+  deadline: string;
+  viewCount: number;
+  /** Visible applications (non-draft, non-withdrawn proposals). */
+  applications: number;
+  /** Latest of postedAt and any proposal activity on the job. */
+  lastActivityAt: string;
+}
+
+export interface ManagedJobListQuery extends ListQuery {
+  status?: ManagedJobStatus | "all";
+  publication?: ManagedJobPublication | "all";
+  categoryId?: string | "all";
+  campusId?: string | "all";
+  employerId?: string | "all";
+  arrangement?: OpportunityWorkArrangement | "all";
+  sortBy?: ManagedJobSortField;
+  sortDir?: SortDir;
+  page?: number;
+  pageSize?: number;
+}
+
+export type ManagedJobSortField =
+  | "postedAt"
+  | "lastActivity"
+  | "deadline"
+  | "viewCount"
+  | "applications"
+  | "budget"
+  | "title";
+
+export interface ManagedJobStatusCounts {
+  all: number;
+  open: number;
+  draft: number;
+  pending_review: number;
+  closed: number;
+  expired: number;
+  cancelled: number;
+  /** Jobs with at least one visible application. */
+  withApplications: number;
+  /** OPEN jobs whose deadline is within 7 days. */
+  expiringSoon: number;
+  /** Honest zero — the platform has no job-reports store. */
+  reported: number;
+}
+
+export interface ManagedJobFacetOption {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export interface ManagedJobFacets {
+  categories: ManagedJobFacetOption[];
+  campuses: ManagedJobFacetOption[];
+  employers: ManagedJobFacetOption[];
+}
+
+export type ManagedJobApplicationStatus =
+  | "submitted"
+  | "under_review"
+  | "shortlisted"
+  | "accepted"
+  | "rejected"
+  | "withdrawn";
+
+export interface ManagedJobApplicationsSummary {
+  total: number;
+  visible: number;
+  byStatus: Record<ManagedJobApplicationStatus | "all", number>;
+  latestAt: string | null;
+}
+
+export interface ManagedJobEmployer {
+  id: string;
+  name: string;
+  organizationName: string | null;
+  descriptor: string;
+  verified: boolean;
+  accountStatus: "active" | "pending_review" | "suspended" | "rejected" | "external";
+  campusId: string | null;
+  campusName: string | null;
+  location: string | null;
+  slug: string | null;
+  jobsTotal: number;
+}
+
+export interface ManagedJobContractInfo {
+  count: number;
+  note: string;
+}
+
+export interface ManagedJobDetailListing {
+  id: string;
+  title: string;
+  summary: string;
+  description: string;
+  requirements: string;
+  skills: string[];
+  categoryId: string;
+  categoryName: string;
+  status: ManagedJobStatus;
+  publication: ManagedJobPublication;
+  moderation: ManagedJobModeration;
+  workArrangement: OpportunityWorkArrangement;
+  experienceLevel: string;
+  duration: string;
+  budgetType: string;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  currency: "NGN";
+  location: {
+    city?: string;
+    state?: string;
+    campusId?: string;
+    campusName?: string;
+    remote?: boolean;
+  };
+  postedAt: string;
+  deadline: string;
+  viewCount: number;
+  employersReported: number;
+}
+
+export type ManagedJobActivityKind = "job" | "application" | "hiring" | "deadline";
+
+export interface ManagedJobActivityEvent {
+  id: string;
+  kind: ManagedJobActivityKind;
+  message: string;
+  meta?: string;
+  at: string;
+}
+
+export interface ManagedJobDetail {
+  listing: ManagedJobDetailListing;
+  employer: ManagedJobEmployer;
+  applications: ManagedJobApplicationsSummary;
+  contracts: ManagedJobContractInfo;
+  activity: ManagedJobActivityEvent[];
+}

@@ -296,6 +296,17 @@ export const marketplaceManagementService: AdminMarketplaceManagementService =
 export type { MarketplaceSortField } from "./marketplace-management.service";
 
 import {
+  AdminJobManagementService,
+  createJobManagementService,
+} from "./job-management.service";
+
+/** /admin/jobs console (jobs & hiring oversight - derived from the real opportunity store, read-only). */
+export const jobManagementService: AdminJobManagementService =
+  createJobManagementService();
+
+export type { ManagedJobSortField } from "./job-management.service";
+
+import {
   AdminAnalyticsService,
   createMockAnalyticsService,
 } from "./analytics.service";

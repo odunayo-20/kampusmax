@@ -28,6 +28,7 @@ const SEGMENT_TO_KEY: Record<string, AdminNavItemKey> = {
   campuses: "campuses",
   vendors: "vendors",
   marketplace: "marketplace",
+  jobs: "jobs",
   freelancers: "freelancers",
   employers: "employers",
   products: "products",

@@ -22,6 +22,7 @@ import {
   Landmark,
   Handshake,
   Boxes,
+  ClipboardList,
 } from "lucide-react";
 import { AdminNavItemKey, canSeeSection } from "./permissions";
 import { AdminRole } from "@/types/admin";
@@ -59,6 +60,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         { key: "campuses", href: "/admin/campuses", label: "Campuses", icon: Building2 },
       ],
     },
+  {
+    id: "hiring",
+    label: "Hiring",
+    items: [
+      { key: "jobs", href: "/admin/jobs", label: "Jobs", icon: ClipboardList },
+    ],
+  },
   {
     id: "catalog",
     label: "Catalog",
@@ -134,7 +142,7 @@ export function breadcrumbLabel(segment: string, index: number): string {
 }
 
 export function isDetailSegment(segment: string): boolean {
-    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer|p\d+)/i.test(segment);
+    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer|p\d+|opp_)/i.test(segment);
 }
 
 function titleCase(value: string): string {
