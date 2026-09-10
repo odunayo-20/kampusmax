@@ -34,11 +34,14 @@ function SectionForm({
   onSubmit,
   saving,
   errorCount,
+  disabled,
 }: {
   children: React.ReactNode;
   onSubmit: () => void;
   saving: boolean;
   errorCount: number;
+  /** Read-only mode for operators lacking the permission for this section. */
+  disabled?: boolean;
 }) {
   return (
     <form
@@ -46,10 +49,22 @@ function SectionForm({
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit();
+        if (!disabled) onSubmit();
       }}
     >
-      {children}
+      {disabled && (
+        <p
+          role="note"
+          className="rounded-lg border border-kampmax-border bg-kampmax-muted/40 px-3 py-2 text-[11px] leading-snug text-kampmax-text-secondary"
+        >
+          Read-only for your role - this section stays visible but changes
+          require a higher permission tier.
+        </p>
+      )}
+
+      <fieldset disabled={disabled} className="space-y-5">
+        {children}
+      </fieldset>
 
       {errorCount > 0 && (
         <p
@@ -67,7 +82,7 @@ function SectionForm({
         </p>
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || disabled}
           className="inline-flex h-9 items-center gap-1.5 self-end rounded-md bg-kampmax-blue px-3.5 text-sm font-medium text-white transition-colors hover:bg-kampmax-blue/90 disabled:opacity-60 sm:self-auto"
         >
           {saving ? (
@@ -82,18 +97,39 @@ function SectionForm({
   );
 }
 
-function ResetButton({ onReset }: { onReset: () => void }) {
+function ResetButton({
+  onReset,
+  disabled,
+}: {
+  onReset: () => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onReset}
+      disabled={disabled}
       title="Reset this section to defaults"
-      className="inline-flex h-8 items-center gap-1 rounded-md border border-kampmax-border bg-white px-2.5 text-xs font-medium text-kampmax-text-secondary transition-colors hover:bg-kampmax-muted/60"
+      className="inline-flex h-8 items-center gap-1 rounded-md border border-kampmax-border bg-white px-2.5 text-xs font-medium text-kampmax-text-secondary transition-colors hover:bg-kampmax-muted/60 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <RotateCcw className="h-3 w-3" aria-hidden />
       Reset defaults
     </button>
   );
+}
+
+/** Reports when the local draft diverges from the committed value. */
+function useSectionDirty(
+  committed: unknown,
+  draft: unknown,
+  onDirtyChange: ((dirty: boolean) => void) | undefined,
+  disabled?: boolean
+) {
+  useEffect(() => {
+    if (disabled) return;
+    const dirty = JSON.stringify(committed) !== JSON.stringify(draft);
+    onDirtyChange?.(dirty);
+  }, [committed, draft, onDirtyChange, disabled]);
 }
 
 function num(v: unknown, fallback = 0): number {
@@ -121,14 +157,20 @@ export function GeneralSectionForm({
   value,
   onSave,
   onReset,
+  disabled,
+  onDirtyChange,
 }: {
   value: GeneralSettings;
   onSave: (v: GeneralSettings) => Promise<boolean>;
   onReset: () => void;
+  disabled?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [form, setForm] = useState(value);
   const [errors, setErrors] = useState<Errors<GeneralSettings>>({});
   const [saving, setSaving] = useState(false);
+
+  useSectionDirty(value, form, onDirtyChange, disabled);
 
   useEffect(() => setForm(value), [value]);
 
@@ -158,10 +200,10 @@ export function GeneralSectionForm({
   }
 
   return (
-    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length}>
+    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length} disabled={disabled}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-kampmax-text">General</h2>
-        <ResetButton onReset={onReset} />
+        <ResetButton onReset={onReset} disabled={disabled} />
       </div>
 
       <FieldGrid>
@@ -239,14 +281,20 @@ export function MarketplaceSectionForm({
   value,
   onSave,
   onReset,
+  disabled,
+  onDirtyChange,
 }: {
   value: MarketplaceSettings;
   onSave: (v: MarketplaceSettings) => Promise<boolean>;
   onReset: () => void;
+  disabled?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [form, setForm] = useState(value);
   const [errors, setErrors] = useState<Errors<MarketplaceSettings>>({});
   const [saving, setSaving] = useState(false);
+
+  useSectionDirty(value, form, onDirtyChange, disabled);
 
   useEffect(() => setForm(value), [value]);
 
@@ -273,10 +321,10 @@ export function MarketplaceSectionForm({
   }
 
   return (
-    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length}>
+    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length} disabled={disabled}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-kampmax-text">Marketplace</h2>
-        <ResetButton onReset={onReset} />
+        <ResetButton onReset={onReset} disabled={disabled} />
       </div>
 
       <FieldGrid>
@@ -355,14 +403,20 @@ export function OrdersSectionForm({
   value,
   onSave,
   onReset,
+  disabled,
+  onDirtyChange,
 }: {
   value: OrdersSettings;
   onSave: (v: OrdersSettings) => Promise<boolean>;
   onReset: () => void;
+  disabled?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [form, setForm] = useState(value);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  useSectionDirty(value, form, onDirtyChange, disabled);
 
   useEffect(() => setForm(value), [value]);
 
@@ -400,10 +454,10 @@ export function OrdersSectionForm({
   }
 
   return (
-    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length}>
+    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length} disabled={disabled}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-kampmax-text">Orders</h2>
-        <ResetButton onReset={onReset} />
+        <ResetButton onReset={onReset} disabled={disabled} />
       </div>
 
       <FieldGroup title="Delivery" description="Hostel and doorstep delivery behaviour.">
@@ -496,14 +550,20 @@ export function FinancialSectionForm({
   value,
   onSave,
   onReset,
+  disabled,
+  onDirtyChange,
 }: {
   value: FinancialSettings;
   onSave: (v: FinancialSettings) => Promise<boolean>;
   onReset: () => void;
+  disabled?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [form, setForm] = useState(value);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  useSectionDirty(value, form, onDirtyChange, disabled);
 
   useEffect(() => setForm(value), [value]);
 
@@ -532,10 +592,10 @@ export function FinancialSectionForm({
   }
 
   return (
-    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length}>
+    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length} disabled={disabled}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-kampmax-text">Financial</h2>
-        <ResetButton onReset={onReset} />
+        <ResetButton onReset={onReset} disabled={disabled} />
       </div>
 
       <FieldGrid>
@@ -599,14 +659,20 @@ export function LoyaltySectionForm({
   value,
   onSave,
   onReset,
+  disabled,
+  onDirtyChange,
 }: {
   value: LoyaltySettings;
   onSave: (v: LoyaltySettings) => Promise<boolean>;
   onReset: () => void;
+  disabled?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [form, setForm] = useState(value);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  useSectionDirty(value, form, onDirtyChange, disabled);
 
   useEffect(() => setForm(value), [value]);
 
@@ -640,10 +706,10 @@ export function LoyaltySectionForm({
   }
 
   return (
-    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length}>
+    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length} disabled={disabled}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-kampmax-text">Loyalty</h2>
-        <ResetButton onReset={onReset} />
+        <ResetButton onReset={onReset} disabled={disabled} />
       </div>
 
       <ToggleField
@@ -704,13 +770,19 @@ export function NotificationsSectionForm({
   value,
   onSave,
   onReset,
+  disabled,
+  onDirtyChange,
 }: {
   value: NotificationPreferences;
   onSave: (v: NotificationPreferences) => Promise<boolean>;
   onReset: () => void;
+  disabled?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [form, setForm] = useState(value);
   const [saving, setSaving] = useState(false);
+
+  useSectionDirty(value, form, onDirtyChange, disabled);
 
   useEffect(() => setForm(value), [value]);
 
@@ -758,12 +830,12 @@ export function NotificationsSectionForm({
   ];
 
   return (
-    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={0}>
+    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={0} disabled={disabled}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-kampmax-text">
           Notification preferences
         </h2>
-        <ResetButton onReset={onReset} />
+        <ResetButton onReset={onReset} disabled={disabled} />
       </div>
 
       <p className="-mt-2 text-[11px] leading-snug text-kampmax-text-secondary">
@@ -794,14 +866,20 @@ export function SecuritySectionForm({
   value,
   onSave,
   onReset,
+  disabled,
+  onDirtyChange,
 }: {
   value: SecuritySettings;
   onSave: (v: SecuritySettings) => Promise<boolean>;
   onReset: () => void;
+  disabled?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [form, setForm] = useState(value);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  useSectionDirty(value, form, onDirtyChange, disabled);
 
   useEffect(() => setForm(value), [value]);
 
@@ -847,10 +925,10 @@ export function SecuritySectionForm({
   }
 
   return (
-    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length}>
+    <SectionForm onSubmit={() => void handleSave()} saving={saving} errorCount={Object.keys(errors).length} disabled={disabled}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-kampmax-text">Security</h2>
-        <ResetButton onReset={onReset} />
+        <ResetButton onReset={onReset} disabled={disabled} />
       </div>
 
       <FieldGroup title="Sessions" description="How long admin sessions stay alive.">

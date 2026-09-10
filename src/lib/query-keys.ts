@@ -1,7 +1,7 @@
 import { NotificationCategory } from "@/types";
 import type { EmployerApplicationStatus } from "@/types/opportunity";
 import type { GlobalSearchQuery } from "@/types";
-import type { AdminRoleKey } from "@/types/admin";
+import type { AdminRoleKey, SettingsSectionKey } from "@/types/admin";
 
 /**
  * Structured TanStack Query key factory for Kampmax.
@@ -615,5 +615,21 @@ export const adminKeys = {
     roles: () => ["admin", "rbac", "roles"] as const,
     detail: (key: AdminRoleKey) => ["admin", "rbac", "detail", key] as const,
     mutation: () => ["admin", "rbac", "mutation"] as const,
+  } as const,
+  /**
+   * Admin platform settings key factory (Module 50). The settings
+   * console (`/admin/settings`) is restricted to full operators
+   * (SUPER_ADMIN/ADMIN) via nav permissions, so keys are neither
+   * user- nor campus-scoped — the same stance as auditTrail/rbac.
+   * The sectioned config is one record (`config`), and mutations
+   * invalidate the whole `settings` tree so the console plus any
+   * open form refresh together after a section save or reset.
+   */
+  settings: {
+    all: ["admin", "settings"] as const,
+    config: () => ["admin", "settings", "config"] as const,
+    section: (key: SettingsSectionKey) =>
+      ["admin", "settings", "section", key] as const,
+    mutation: () => ["admin", "settings", "mutation"] as const,
   } as const,
 };
