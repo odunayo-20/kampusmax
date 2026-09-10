@@ -36,6 +36,7 @@ const SEGMENT_TO_KEY: Record<string, AdminNavItemKey> = {
   categories: "categories",
   orders: "orders",
   transactions: "transactions",
+  payouts: "payouts",
   wallet: "wallet",
   withdrawals: "withdrawals",
   promotions: "promotions",

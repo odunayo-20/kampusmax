@@ -290,6 +290,15 @@ export const transactionManagementService: AdminTransactionManagementService =
   createTransactionManagementService();
 
 import {
+  AdminPayoutManagementService,
+  createPayoutManagementService,
+} from "./payout-management.service";
+
+/** /admin/payouts console (Admin Vendor/Freelancer Payouts - read-only recipient payout ledger over the real wallet/vendor/freelancer payout stores). */
+export const payoutManagementService: AdminPayoutManagementService =
+  createPayoutManagementService();
+
+import {
   AdminDisputeManagementService,
   createMockDisputeManagementService,
 } from "./dispute-management.service";

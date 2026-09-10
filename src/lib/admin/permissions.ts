@@ -19,6 +19,7 @@ export type AdminNavItemKey =
   | "categories"
   | "orders"
   | "transactions"
+  | "payouts"
   | "wallet"
   | "withdrawals"
   | "promotions"

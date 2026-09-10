@@ -2407,6 +2407,193 @@ export interface ManagedTransactionListQuery extends ListQuery {
 }
 
 // ------------------------------------------------------------
+// ADMIN VENDOR / FREELANCER PAYOUTS (/admin/payouts)  [Module 45]
+// ------------------------------------------------------------
+// Recipient payout console derived ONLY from real payout records across
+// the three stores that own them:
+//
+//   - walletTransactions  → records with `type: "vendor_payout"` (wt8, wt23)
+//   - vendor-financials   → INITIAL_PAYOUTS (POUT-2001, POUT-2000)
+//   - freelancer-financials → INITIAL_FL_PAYOUTS (FLPOUT-4003/4002/4001)
+//
+// There is NO seeded/PRNG generation here and no duplication of domain
+// data: customer funding/refunds stay in /admin/transactions (Module 44),
+// customer withdrawals stay in /admin/withdrawals, and reconciliation stays
+// out entirely (Module 46, not built). Statuses are LABELS over the owning
+// store's real value. No invented references, provider ids or settlement
+// states. Payout method account numbers are consumed exactly as the stores
+// mask them (e.g. "••••••••4317") and are never unmasked anywhere.
+// Like the transactions ledger, this console is NOT campus-scoped: payout
+// records are restricted to full operators (ADMIN/SUPER_ADMIN) at the
+// nav-permission layer.
+
+export const MANAGED_PAYOUT_STATUSES = [
+  "successful",
+  "pending",
+  "processing",
+  "failed",
+  "reversed",
+  "cancelled",
+] as const;
+export type ManagedPayoutStatus =
+  (typeof MANAGED_PAYOUT_STATUSES)[number];
+
+export const MANAGED_PAYOUT_METHODS = ["wallet", "bank_transfer"] as const;
+export type ManagedPayoutMethod =
+  (typeof MANAGED_PAYOUT_METHODS)[number];
+
+export const MANAGED_PAYOUT_RECIPIENT_TYPES = [
+  "vendor",
+  "freelancer",
+] as const;
+export type ManagedPayoutRecipientType =
+  (typeof MANAGED_PAYOUT_RECIPIENT_TYPES)[number];
+
+export const MANAGED_PAYOUT_SOURCES = [
+  "wallet_transaction",
+  "vendor_financials",
+  "freelancer_financials",
+] as const;
+export type ManagedPayoutSource =
+  (typeof MANAGED_PAYOUT_SOURCES)[number];
+
+export type ManagedPayoutSortField = "createdAt" | "amount";
+
+/** One console row derived from a real wallet/vendor/freelancer payout record. */
+export interface ManagedPayout {
+  id: string;
+  /** Internal reference where the owning store records one (e.g. PAY-2025-001). */
+  reference: string | null;
+  /** Which real store owns this record. */
+  source: ManagedPayoutSource;
+  /** Owning store record id (the wallet transaction id for wallet payouts). */
+  sourceRecordId: string;
+  recipientType: ManagedPayoutRecipientType;
+  recipientId: string;
+  recipientName: string;
+  /** Short recipient context (verification status, wallet id, account name). */
+  recipientSub: string | null;
+  /** Admin console deep link (vendor/freelancer detail) when one exists. */
+  recipientHref: string | null;
+  /** Console vocabulary — a label derived from `sourceStatus`. */
+  status: ManagedPayoutStatus;
+  /** Raw backend-owned status value from the owning store. */
+  sourceStatus: string;
+  /** Human explanation of how `status` was derived (never invented data). */
+  statusNote: string;
+  method: ManagedPayoutMethod;
+  bankName: string | null;
+  /** Payout account number exactly as masked by the owning store. */
+  maskedAccountNumber: string | null;
+  amount: number;
+  /** Platform fee recorded by the owning store (0 when the store records none). */
+  fee: number;
+  currency: "NGN";
+  /** Disbursement provider. The prototype backend wires none. */
+  provider: string | null;
+  /** Provider-side reference. The prototype backend records none. */
+  gatewayRef: string | null;
+  createdAt: string;
+  processedAt: string | null;
+  expectedAt: string | null;
+  failedReason: string | null;
+  reversalReason: string | null;
+}
+
+/** One order referenced by the owning payout record (wallet payouts only). */
+export interface ManagedPayoutReferencedOrder {
+  id: string;
+  /** Present only when the order id resolves in the real orders store. */
+  existsInOrdersStore: boolean;
+  vendorId: string | null;
+  vendorName: string | null;
+  status: string | null;
+  total: number | null;
+}
+
+export type ManagedPayoutActivityKind =
+  | "initiated"
+  | "completed"
+  | "failed"
+  | "reversed"
+  | "expected"
+  | "note";
+
+export interface ManagedPayoutActivity {
+  id: string;
+  kind: ManagedPayoutActivityKind;
+  title: string;
+  meta: string;
+  at: string;
+}
+
+export interface ManagedPayoutRecipientSummary {
+  recipientType: ManagedPayoutRecipientType;
+  recipientId: string;
+  recipientName: string;
+  recipientSub: string | null;
+  recipientHref: string | null;
+}
+
+export interface ManagedPayoutGatewayStatus {
+  /** Disbursement provider verification isn't wired into the prototype backend. */
+  tracked: boolean;
+  note: string;
+}
+
+export interface ManagedPayoutActionSupport {
+  /** No approve/process/retry/cancel/reverse endpoint exists in the prototype backend. */
+  supported: boolean;
+  note: string;
+}
+
+/** Real wallet account behind wallet-method payouts (wallet rows only). */
+export interface ManagedPayoutWalletInfo {
+  walletId: string;
+  ownerId: string;
+  ownerName: string;
+  balance: number;
+  pendingAmount: number;
+  currency: "NGN";
+}
+
+export interface ManagedPayoutDetail {
+  payout: ManagedPayout;
+  recipient: ManagedPayoutRecipientSummary;
+  referencedOrders: ManagedPayoutReferencedOrder[];
+  timeline: ManagedPayoutActivity[];
+  gateway: ManagedPayoutGatewayStatus;
+  actions: ManagedPayoutActionSupport;
+  /** Set only for wallet-method payouts — the customer wallet behind the credit. */
+  wallet: ManagedPayoutWalletInfo | null;
+}
+
+export interface ManagedPayoutStatusCounts {
+  all: number;
+  byStatus: Record<ManagedPayoutStatus, number>;
+  byRecipientType: Record<ManagedPayoutRecipientType, number>;
+  byMethod: Record<ManagedPayoutMethod, number>;
+  /** Sum of all payout amounts (naira, minor-unit-safe integers). */
+  totalVolume: number;
+  successfulVolume: number;
+  pendingVolume: number;
+}
+
+export interface ManagedPayoutFacets {
+  methods: { id: ManagedPayoutMethod; name: string }[];
+  statuses: { id: ManagedPayoutStatus; name: string }[];
+}
+
+export interface ManagedPayoutListQuery extends ListQuery {
+  search?: string;
+  status?: ManagedPayoutStatus | "all";
+  type?: ManagedPayoutRecipientType | "all";
+  method?: ManagedPayoutMethod | "all";
+  sortBy?: ManagedPayoutSortField;
+  sortDir?: SortDir;
+}
+
+// ------------------------------------------------------------
 // DISPUTE MANAGEMENT (/admin/disputes)
 // ------------------------------------------------------------
 

@@ -500,4 +500,28 @@ export const adminKeys = {
     facets: () => ["admin", "transactions", "facets"] as const,
     detail: (id: string) => ["admin", "transactions", "detail", id] as const,
   } as const,
+  /**
+   * Admin vendor/freelancer payout key factory (Module 45). Recipient payout
+   * ledger derived from the real wallet + vendor + freelancer payout stores.
+   * Keys are NOT campus-scoped (same as transactions): payout records are
+   * restricted to full operators (ADMIN/SUPER_ADMIN) via nav permissions,
+   * so no campus shard exists. Read-only namespace — the backend exposes no
+   * payout-level actions (approve/process/retry/cancel/reverse).
+   */
+  payouts: {
+    all: ["admin", "payouts"] as const,
+    list: (query: {
+      search?: string;
+      status?: string;
+      type?: string;
+      method?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      page?: number;
+      pageSize?: number;
+    }) => ["admin", "payouts", "list", query] as const,
+    counts: () => ["admin", "payouts", "counts"] as const,
+    facets: () => ["admin", "payouts", "facets"] as const,
+    detail: (id: string) => ["admin", "payouts", "detail", id] as const,
+  } as const,
 };

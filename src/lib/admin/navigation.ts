@@ -22,6 +22,7 @@ import {
   Users,
   Wallet,
   Landmark,
+  Send,
   Handshake,
   Boxes,
   ClipboardList,
@@ -92,6 +93,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     id: "finance",
     label: "Finance",
     items: [
+      { key: "payouts", href: "/admin/payouts", label: "Payouts", icon: Send },
       { key: "wallet", href: "/admin/wallet", label: "Wallets", icon: Wallet },
       { key: "withdrawals", href: "/admin/withdrawals", label: "Withdrawals", icon: Landmark },
     ],
