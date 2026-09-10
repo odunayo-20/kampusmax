@@ -393,6 +393,27 @@ describe("audit trail read contract", () => {
     expect((await svc.list({ search: "nk-1" })).total).toBe(1);
   });
 
+  it("securityOnly restricts to the backend-classified security subset (suspensions / deactivations / state resets)", async () => {
+    seed();
+    const all = await svc.list({ pageSize: 50 });
+    const security = await svc.list({ securityOnly: true, pageSize: 50 });
+    // Only USER_SUSPENDED in this seed qualifies.
+    expect(security.total).toBe(1);
+    expect(security.items[0].action).toBe("USER_SUSPENDED");
+    expect(security.items[0].result).not.toBe("denied");
+    // Every returned event is a member of the security set...
+    for (const event of security.items) {
+      expect(ADMIN_SECURITY_EVENT_ACTIONS.has(event.action)).toBe(true);
+    }
+    // ...and securityOnly is a strict subset of the full trail.
+    expect(security.total).toBeLessThan(all.total);
+    // Date + severity filters still compose with securityOnly.
+    expect((await svc.list({ securityOnly: true, dateFrom: "2026-01-04" })).total).toBe(0);
+    expect((await svc.list({ securityOnly: true, severity: "high" })).total).toBe(1);
+    // securityOnly never fabricates: excluded actions (rejection, notification) stay out.
+    expect((await svc.list({ securityOnly: true, action: "VENDOR_REJECTED" })).total).toBe(0);
+  });
+
   it("sorts by timestamp descending by default", async () => {
     seed();
     const list = await svc.list();

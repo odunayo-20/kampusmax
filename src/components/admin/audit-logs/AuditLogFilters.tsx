@@ -73,6 +73,8 @@ interface AuditLogFiltersProps {
   actorsLoading: boolean;
   onChange: (next: AuditFilterState) => void;
   onReset: () => void;
+  /** Restrict the action dropdown (e.g. the Security Center's security subset). */
+  actions?: AdminAuditAction[];
 }
 
 const SELECT_CLASS =
@@ -88,6 +90,7 @@ export function AuditLogFilters({
   actorsLoading,
   onChange,
   onReset,
+  actions = AUDIT_ACTION_FILTER_ORDER,
 }: AuditLogFiltersProps) {
   const set = (patch: Partial<AuditFilterState>) => onChange({ ...state, ...patch });
 
@@ -117,7 +120,7 @@ export function AuditLogFilters({
             className={SELECT_CLASS}
           >
             <option value="all">All actions</option>
-            {AUDIT_ACTION_FILTER_ORDER.map((a) => (
+            {actions.map((a) => (
               <option key={a} value={a}>
                 {auditActionLabel(a)}
               </option>

@@ -134,6 +134,7 @@ export function filterAuditEvents(query: AdminAuditQuery = {}): Paginated<AdminA
     severity,
     dateFrom,
     dateTo,
+    securityOnly,
     sortBy,
     sortDir = "desc",
     page,
@@ -147,6 +148,7 @@ export function filterAuditEvents(query: AdminAuditQuery = {}): Paginated<AdminA
   const severityMatch = splitOf(severity) as AdminAuditSeverity | undefined;
 
   let rows = store.filter((e) => {
+    if (securityOnly && !ADMIN_SECURITY_EVENT_ACTIONS.has(e.action)) return false;
     if (actorMatch && e.actor.id !== actorMatch) return false;
     if (actionMatch && e.action !== actionMatch) return false;
     if (resourceMatch && e.resource.type !== resourceMatch) return false;

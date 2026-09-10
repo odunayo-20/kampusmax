@@ -49,6 +49,7 @@ const SEGMENT_TO_KEY: Record<string, AdminNavItemKey> = {
   settings: "settings",
   permissions: "permissions",
   "audit-logs": "auditLogs",
+  security: "security",
 };
 
 function sectionDenied(pathname: string, role: AdminRole): boolean {

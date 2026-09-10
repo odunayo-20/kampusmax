@@ -632,4 +632,34 @@ export const adminKeys = {
       ["admin", "settings", "section", key] as const,
     mutation: () => ["admin", "settings", "mutation"] as const,
   } as const,
+  /**
+   * Admin Security Center key factory (Module 51). Restricted to full
+   * operators (SUPER_ADMIN/ADMIN) via nav permissions — the same
+   * stance as auditTrail/rbac/settings, and CAMPUS_ADMIN is excluded.
+   * Keys are neither user- nor campus-scoped because the surface is
+   * platform-wide, and there IS no `security` RBAC resource today
+   * (see MODULE-51-BACKEND-GAPS.md). `events` embeds the full query so
+   * every unique filter combination gets its own cache entry. Short
+   * `gcTime` (set in the hook) so sensitive telemetry is not retained
+   * in the browser cache; logout removes `adminKeys.all` anyway.
+   */
+  security: {
+    all: ["admin", "security"] as const,
+    metrics: () => ["admin", "security", "metrics"] as const,
+    events: (query: {
+      search?: string;
+      actorId?: string;
+      action?: string;
+      resourceType?: string;
+      result?: string;
+      severity?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      securityOnly?: boolean;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      page?: number;
+      pageSize?: number;
+    }) => ["admin", "security", "events", query] as const,
+  } as const,
 };

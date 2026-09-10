@@ -3489,6 +3489,13 @@ export interface AdminAuditQuery extends ListQuery {
   /** ISO date (yyyy-mm-dd) inclusive range over `at`. */
   dateFrom?: string;
   dateTo?: string;
+  /**
+   * Restrict to the backend-classified security-event subset
+   * (account-access changes: suspensions, deactivations, state
+   * resets). Consumed by the Security Center (Module 51); the mock
+   * data layer applies it server-side like any other filter.
+   */
+  securityOnly?: boolean;
 }
 
 /** Backend-authoritative metrics derived from the audit store. */
