@@ -1,6 +1,7 @@
 import { NotificationCategory } from "@/types";
 import type { EmployerApplicationStatus } from "@/types/opportunity";
 import type { GlobalSearchQuery } from "@/types";
+import type { AdminRoleKey } from "@/types/admin";
 
 /**
  * Structured TanStack Query key factory for Kampmax.
@@ -598,5 +599,21 @@ export const adminKeys = {
     detail: (id: string) => ["admin", "audit-trail", "detail", id] as const,
     metrics: () => ["admin", "audit-trail", "metrics"] as const,
     actors: () => ["admin", "audit-trail", "actors"] as const,
+  } as const,
+  /**
+   * Admin roles & permissions key factory (Module 49). The RBAC
+   * console (`/admin/permissions`) is restricted to full operators
+   * (SUPER_ADMIN/ADMIN) via nav permissions, so keys are neither
+   * user- nor campus-scoped — the same stance as auditTrail. Roles
+   * are few (system-seeded), so the list key returns the whole set;
+   * `detail` keys a single role and `mutation` marks in-flight edits.
+   * Mutations invalidate the whole `rbac` tree so list + detail stay
+   * consistent after a matrix edit or reset.
+   */
+  rbac: {
+    all: ["admin", "rbac"] as const,
+    roles: () => ["admin", "rbac", "roles"] as const,
+    detail: (key: AdminRoleKey) => ["admin", "rbac", "detail", key] as const,
+    mutation: () => ["admin", "rbac", "mutation"] as const,
   } as const,
 };
