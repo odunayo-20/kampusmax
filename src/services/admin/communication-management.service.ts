@@ -10,6 +10,7 @@ import {
   filterAdminNotifications,
   getAdminNotificationRow,
 } from "@/data/admin/communication-management";
+import { DEFAULT_ADMIN_ACTOR, recordAdminAuditEvent } from "@/data/admin/audit-trail";
 
 export type { AdminCommunicationService };
 
@@ -67,9 +68,28 @@ export function createAdminCommunicationService(): AdminCommunicationService {
       return buildAudiencePreview(audience, campusId, userId);
     },
 
-    async create(input) {
+    async create(input, ctx?) {
       await apiDelay(300);
-      return createAdminNotification(input);
+      const record = createAdminNotification(input);
+      const actor =
+        ctx?.actor && ctx.actor.name
+          ? { type: "admin" as const, id: ctx.actor.id, name: ctx.actor.name, role: ctx.actor.role }
+          : DEFAULT_ADMIN_ACTOR;
+      recordAdminAuditEvent({
+        action: "NOTIFICATION_SENT",
+        actor,
+        resource: {
+          type: "notification",
+          id: record.notificationIds[0] ?? "n/a",
+          label: input.title,
+        },
+        metadata: {
+          audience: input.audience,
+          title: input.title,
+          recipientCount: record.created,
+        },
+      });
+      return record;
     },
   };
 }

@@ -1,4 +1,5 @@
 import {
+  AdminActingContext,
   ManagedEmployer,
   ManagedEmployerDetail,
   Paginated,
@@ -18,6 +19,7 @@ import {
   setEmployerAdminStatus,
 } from "@/data/employer";
 import { EMPLOYER_ONBOARDING_STATUS } from "@/types/employer";
+import { DEFAULT_ADMIN_ACTOR, recordAdminAuditEvent } from "@/data/admin/audit-trail";
 
 // ------------------------------------------------------------
 // CONTRACT (future NestJS resource: /admin/employers)
@@ -35,11 +37,21 @@ export interface AdminEmployerManagementService {
   getById(id: string): Promise<ManagedEmployerDetail | null>;
   getCounts(): Promise<EmployerStatusCounts>;
   getIndustries(): Promise<string[]>;
-  suspend(id: string): Promise<ManagedEmployer>;
-  restore(id: string): Promise<ManagedEmployer>;
-  approve(id: string): Promise<ManagedEmployer>;
-  reject(id: string, reason?: string): Promise<ManagedEmployer>;
+  suspend(id: string, ctx?: AdminActingContext): Promise<ManagedEmployer>;
+  restore(id: string, ctx?: AdminActingContext): Promise<ManagedEmployer>;
+  approve(id: string, ctx?: AdminActingContext): Promise<ManagedEmployer>;
+  reject(id: string, reason?: string, ctx?: AdminActingContext): Promise<ManagedEmployer>;
   getActivity(id: string): Promise<EmployerActivityEvent[]>;
+}
+
+function auditActorFor(ctx?: AdminActingContext) {
+  if (!ctx?.actor) return DEFAULT_ADMIN_ACTOR;
+  return {
+    type: "admin" as const,
+    id: ctx.actor.id,
+    name: ctx.actor.name,
+    role: ctx.actor.role,
+  };
 }
 
 // ------------------------------------------------------------
@@ -133,7 +145,7 @@ export function createEmployerManagementService(): AdminEmployerManagementServic
       return employerIndustries(dataset.employers);
     },
 
-    async suspend(id) {
+    async suspend(id, ctx) {
       await apiDelay();
       const employer = resolveManagedEmployer(id);
       if (!employer.userId) {
@@ -145,10 +157,16 @@ export function createEmployerManagementService(): AdminEmployerManagementServic
         "Your employer profile was suspended by an administrator."
       );
       if (!res.ok) throw new Error(res.message);
+      recordAdminAuditEvent({
+        action: "EMPLOYER_SUSPENDED",
+        actor: auditActorFor(ctx),
+        resource: { type: "employer", id, label: employer.name },
+        metadata: { previousStatus: employer.status, newStatus: "suspended" },
+      });
       return reloadManagedEmployer(id);
     },
 
-    async restore(id) {
+    async restore(id, ctx) {
       await apiDelay();
       const employer = resolveManagedEmployer(id);
       if (!employer.userId) {
@@ -159,10 +177,16 @@ export function createEmployerManagementService(): AdminEmployerManagementServic
         EMPLOYER_ONBOARDING_STATUS.APPROVED
       );
       if (!res.ok) throw new Error(res.message);
+      recordAdminAuditEvent({
+        action: "EMPLOYER_RESTORED",
+        actor: auditActorFor(ctx),
+        resource: { type: "employer", id, label: employer.name },
+        metadata: { previousStatus: employer.status, newStatus: "active" },
+      });
       return reloadManagedEmployer(id);
     },
 
-    async approve(id) {
+    async approve(id, ctx) {
       await apiDelay();
       const employer = resolveManagedEmployer(id);
       if (!employer.userId) {
@@ -173,21 +197,36 @@ export function createEmployerManagementService(): AdminEmployerManagementServic
         EMPLOYER_ONBOARDING_STATUS.APPROVED
       );
       if (!res.ok) throw new Error(res.message);
+      recordAdminAuditEvent({
+        action: "EMPLOYER_APPROVED",
+        actor: auditActorFor(ctx),
+        resource: { type: "employer", id, label: employer.name },
+        metadata: { previousStatus: employer.status, newStatus: "active" },
+      });
       return reloadManagedEmployer(id);
     },
 
-    async reject(id, reason) {
+    async reject(id, reason, ctx) {
       await apiDelay();
       const employer = resolveManagedEmployer(id);
       if (!employer.userId) {
         throw new Error(`${employer.name} has no Kampmax employer profile to reject.`);
       }
+      const finalReason = reason?.trim()
+        ? reason.trim()
+        : "Your employer profile was rejected by an administrator.";
       const res = setEmployerAdminStatus(
         employer.userId,
         EMPLOYER_ONBOARDING_STATUS.REJECTED,
-        reason?.trim() ? reason.trim() : "Your employer profile was rejected by an administrator."
+        finalReason
       );
       if (!res.ok) throw new Error(res.message);
+      recordAdminAuditEvent({
+        action: "EMPLOYER_REJECTED",
+        actor: auditActorFor(ctx),
+        resource: { type: "employer", id, label: employer.name },
+        metadata: { reason: finalReason, previousStatus: employer.status, newStatus: "rejected" },
+      });
       return reloadManagedEmployer(id);
     },
 

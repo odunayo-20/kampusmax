@@ -1,174 +1,179 @@
 import {
-  BarChart3,
   BadgeCheck,
   Ban,
-  Bell,
-  BookOpenCheck,
-  FileDown,
-  Landmark,
+  Building2,
+  EyeOff,
+  FileClock,
   Megaphone,
-  MessageSquareText,
-  Package,
   Pencil,
-  PlusCircle,
-  Scale,
-  Settings,
+  RotateCcw,
   ShieldCheck,
-  ShoppingBag,
+  Sparkles,
   Star,
   Store,
-  Tags,
-  Trash2,
-  Undo2,
-  UserRound,
-  Wallet,
+  User,
+  Users,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import type { BadgeVariant } from "@/components/admin/StatusBadge";
+import {
+  ADMIN_AUDIT_SEVERITY,
+  ADMIN_SECURITY_EVENT_ACTIONS,
+} from "@/data/admin/audit-trail";
 import type {
-  AuditActionType,
-  AuditResource,
-  AuditResult,
+  AdminAuditAction,
+  AdminAuditEvent,
+  AdminAuditResourceType,
+  AdminAuditResult,
+  AdminAuditSeverity,
 } from "@/types/admin";
 
 // ------------------------------------------------------------
-// ACTIONS
+// ACTIONS (canonical vocabulary — mirrors the backend enum)
 // ------------------------------------------------------------
 
-export const AUDIT_ACTION_LABELS: Record<AuditActionType, string> = {
-  create: "Created",
-  update: "Updated",
-  delete: "Deleted",
-  approve: "Approved",
-  reject: "Rejected",
-  suspend: "Suspended",
-  restore: "Restored",
-  resolve: "Resolved",
-  publish: "Published",
-  send: "Sent",
-  export: "Exported",
+export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
+  USER_SUSPENDED: "Suspended user",
+  USER_ACTIVATED: "Activated user",
+  USER_DEACTIVATED: "Deactivated user",
+  USER_MARKED_PENDING: "Marked user pending",
+  USER_PROFILE_UPDATED: "Updated user profile",
+  USER_STATE_RESET: "Reset user state",
+  VENDOR_APPROVED: "Approved vendor",
+  VENDOR_REJECTED: "Rejected vendor",
+  VENDOR_SUSPENDED: "Suspended vendor",
+  VENDOR_ACTIVATED: "Activated vendor",
+  VENDOR_DEACTIVATED: "Deactivated vendor",
+  FREELANCER_SUSPENDED: "Suspended freelancer",
+  FREELANCER_ACTIVATED: "Activated freelancer",
+  FREELANCER_DEACTIVATED: "Deactivated freelancer",
+  FREELANCER_FEATURED: "Featured freelancer",
+  FREELANCER_UNFEATURED: "Unfeatured freelancer",
+  EMPLOYER_SUSPENDED: "Suspended employer",
+  EMPLOYER_RESTORED: "Restored employer",
+  EMPLOYER_APPROVED: "Approved employer",
+  EMPLOYER_REJECTED: "Rejected employer",
+  NOTIFICATION_SENT: "Sent notification",
 };
 
-export function auditActionLabel(action: AuditActionType): string {
+export function auditActionLabel(action: AdminAuditAction): string {
   return AUDIT_ACTION_LABELS[action] ?? action;
 }
 
-export const AUDIT_ACTION_ICONS: Record<AuditActionType, LucideIcon> = {
-  create: PlusCircle,
-  update: Pencil,
-  delete: Trash2,
-  approve: BadgeCheck,
-  reject: ShieldCheck,
-  suspend: Ban,
-  restore: Undo2,
-  resolve: BookOpenCheck,
-  publish: Megaphone,
-  send: Megaphone,
-  export: FileDown,
+export const AUDIT_ACTION_ICONS: Record<AdminAuditAction, LucideIcon> = {
+  USER_SUSPENDED: Ban,
+  USER_ACTIVATED: ShieldCheck,
+  USER_DEACTIVATED: EyeOff,
+  USER_MARKED_PENDING: FileClock,
+  USER_PROFILE_UPDATED: Pencil,
+  USER_STATE_RESET: RotateCcw,
+  VENDOR_APPROVED: BadgeCheck,
+  VENDOR_REJECTED: XCircle,
+  VENDOR_SUSPENDED: Ban,
+  VENDOR_ACTIVATED: Store,
+  VENDOR_DEACTIVATED: EyeOff,
+  FREELANCER_SUSPENDED: Ban,
+  FREELANCER_ACTIVATED: ShieldCheck,
+  FREELANCER_DEACTIVATED: EyeOff,
+  FREELANCER_FEATURED: Sparkles,
+  FREELANCER_UNFEATURED: Star,
+  EMPLOYER_SUSPENDED: Ban,
+  EMPLOYER_RESTORED: RotateCcw,
+  EMPLOYER_APPROVED: BadgeCheck,
+  EMPLOYER_REJECTED: XCircle,
+  NOTIFICATION_SENT: Megaphone,
 };
 
-export function auditActionVariant(action: AuditActionType): BadgeVariant {
-  switch (action) {
-    case "approve":
-    case "restore":
-      return "success";
-    case "delete":
-    case "suspend":
-      return "error";
-    case "reject":
-      return "warning";
-    case "publish":
-    case "send":
-      return "blue";
-    default:
-      return "info"; // create, update, resolve, export
-  }
+const SEVERITY_VARIANT: Record<AdminAuditSeverity, BadgeVariant> = {
+  critical: "error",
+  high: "warning",
+  medium: "info",
+  low: "blue",
+  informational: "neutral",
+};
+
+function severityVariant(severity: AdminAuditSeverity): BadgeVariant {
+  return SEVERITY_VARIANT[severity] ?? "blue";
 }
 
-export const AUDIT_ACTION_FILTER_ORDER: AuditActionType[] = [
-  "approve",
-  "reject",
-  "suspend",
-  "restore",
-  "resolve",
-  "create",
-  "update",
-  "delete",
-  "publish",
-  "send",
-  "export",
+/** Badge color reflects the backend-assigned severity of the action. */
+export function auditActionVariant(action: AdminAuditAction): BadgeVariant {
+  return severityVariant(ADMIN_AUDIT_SEVERITY[action] ?? "low");
+}
+
+export const AUDIT_ACTION_FILTER_ORDER: AdminAuditAction[] = [
+  "USER_SUSPENDED",
+  "USER_ACTIVATED",
+  "USER_DEACTIVATED",
+  "USER_MARKED_PENDING",
+  "USER_PROFILE_UPDATED",
+  "USER_STATE_RESET",
+  "VENDOR_APPROVED",
+  "VENDOR_REJECTED",
+  "VENDOR_SUSPENDED",
+  "VENDOR_ACTIVATED",
+  "VENDOR_DEACTIVATED",
+  "FREELANCER_SUSPENDED",
+  "FREELANCER_ACTIVATED",
+  "FREELANCER_DEACTIVATED",
+  "FREELANCER_FEATURED",
+  "FREELANCER_UNFEATURED",
+  "EMPLOYER_SUSPENDED",
+  "EMPLOYER_RESTORED",
+  "EMPLOYER_APPROVED",
+  "EMPLOYER_REJECTED",
+  "NOTIFICATION_SENT",
 ];
+
+/** True for actions the backend classifies as security-sensitive events. */
+export function isSecurityAction(action: AdminAuditAction): boolean {
+  return ADMIN_SECURITY_EVENT_ACTIONS.has(action);
+}
 
 // ------------------------------------------------------------
 // RESOURCES
 // ------------------------------------------------------------
 
-export const AUDIT_RESOURCE_LABELS: Record<AuditResource, string> = {
-  vendor: "Vendor",
+export const AUDIT_RESOURCE_LABELS: Record<AdminAuditResourceType, string> = {
   user: "User",
-  product: "Product",
-  category: "Category",
-  withdrawal: "Withdrawal",
-  platform_setting: "Platform setting",
-  campus_post: "Campus post",
-  dispute: "Dispute",
-  review: "Review",
-  announcement: "Announcement",
-  promotion: "Promotion",
-  order: "Order",
-  role_permissions: "Role permissions",
-  reports: "Reports",
+  vendor: "Vendor",
+  freelancer: "Freelancer",
+  employer: "Employer",
+  notification: "Notification",
 };
 
-export function auditResourceLabel(resource: AuditResource): string {
+export function auditResourceLabel(resource: AdminAuditResourceType): string {
   return AUDIT_RESOURCE_LABELS[resource] ?? resource;
 }
 
-export const AUDIT_RESOURCE_ICONS: Record<AuditResource, LucideIcon> = {
+export const AUDIT_RESOURCE_ICONS: Record<AdminAuditResourceType, LucideIcon> = {
+  user: User,
   vendor: Store,
-  user: UserRound,
-  product: Package,
-  category: Tags,
-  withdrawal: Landmark,
-  platform_setting: Settings,
-  campus_post: MessageSquareText,
-  dispute: Scale,
-  review: Star,
-  announcement: Megaphone,
-  promotion: Megaphone,
-  order: ShoppingBag,
-  role_permissions: ShieldCheck,
-  reports: BarChart3,
+  freelancer: Users,
+  employer: Building2,
+  notification: Megaphone,
 };
 
-export const AUDIT_RESOURCE_FILTER_ORDER: AuditResource[] = [
-  "vendor",
+export const AUDIT_RESOURCE_FILTER_ORDER: AdminAuditResourceType[] = [
   "user",
-  "product",
-  "category",
-  "withdrawal",
-  "platform_setting",
-  "campus_post",
-  "dispute",
-  "review",
-  "announcement",
-  "promotion",
-  "order",
-  "role_permissions",
-  "reports",
+  "vendor",
+  "freelancer",
+  "employer",
+  "notification",
 ];
 
 // ------------------------------------------------------------
-// RESULTS
+// RESULTS & SEVERITY
 // ------------------------------------------------------------
 
-export const AUDIT_RESULT_LABELS: Record<AuditResult, string> = {
+export const AUDIT_RESULT_LABELS: Record<AdminAuditResult, string> = {
   success: "Success",
   failed: "Failed",
   denied: "Denied",
 };
 
-export function auditResultVariant(result: AuditResult): BadgeVariant {
+export function auditResultVariant(result: AdminAuditResult): BadgeVariant {
   switch (result) {
     case "success":
       return "success";
@@ -177,4 +182,55 @@ export function auditResultVariant(result: AuditResult): BadgeVariant {
     default:
       return "error"; // denied
   }
+}
+
+// ------------------------------------------------------------
+// HUMAN-READABLE SUMMARY
+// ------------------------------------------------------------
+
+const STATUS_WORDS: Record<string, string> = {
+  active: "active",
+  suspended: "suspended",
+  pending_verification: "pending verification",
+  deactivated: "deactivated",
+  rejected: "rejected",
+  approved: "approved",
+  verified: "verified",
+  featured: "featured",
+  not_featured: "not featured",
+};
+
+function sanitizeFragment(value?: string): string | null {
+  if (!value) return null;
+  const text = value.trim();
+  if (!text) return null;
+  return text.length > 160 ? `${text.slice(0, 157)}…` : text;
+}
+
+/**
+ * One-line, plain-text summary of an audit event built only from
+ * allowlisted fields. Used in table rows and mobile cards. Never
+ * interpolates raw user-provided strings beyond the label, which is
+ * rendered as plain text (React escapes it).
+ */
+export function auditEventSummary(event: AdminAuditEvent): string {
+  const action = auditActionLabel(event.action);
+  const target = event.resource.label
+    ? `${event.resource.label} (${event.resource.id})`
+    : event.resource.id;
+  let out = `${action} — ${target}`;
+
+  const reason = sanitizeFragment(event.metadata?.reason);
+  if (reason) out += ` · ${reason}`;
+
+  const prev = event.metadata?.previousStatus;
+  const next = event.metadata?.newStatus;
+  if (prev && next) {
+    out += ` · ${STATUS_WORDS[prev] ?? prev} → ${STATUS_WORDS[next] ?? next}`;
+  }
+  return out;
+}
+
+export function auditSeverityLabel(severity: AdminAuditSeverity): string {
+  return severity.charAt(0).toUpperCase() + severity.slice(1);
 }

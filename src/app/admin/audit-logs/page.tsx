@@ -1,35 +1,40 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import {
-  AlertTriangle,
-  ScrollText,
-  Search,
-} from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ScrollText } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { Pagination } from "@/components/admin/Pagination";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
-import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
-import { cn } from "@/lib/utils";
-import { useDebounce } from "@/hooks/use-debounce";
 import { AuditLogsTable } from "@/components/admin/audit-logs/AuditLogsTable";
-import { AuditLogDetailDialog } from "@/components/admin/audit-logs/AuditLogDetailDialog";
+import { AuditLogMetrics } from "@/components/admin/audit-logs/AuditLogMetrics";
 import {
-  AUDIT_ACTION_FILTER_ORDER,
-  AUDIT_RESOURCE_FILTER_ORDER,
-  auditActionLabel,
-  auditResourceLabel,
-} from "@/components/admin/audit-logs/audit-logs-meta";
-import { auditLogService } from "@/services/admin";
-import type {
-  AuditActionType,
-  AuditLog,
-  AuditResource,
-  AuditResult,
-  Paginated,
-} from "@/types/admin";
+  AuditLogFilters,
+  DEFAULT_AUDIT_FILTERS,
+  auditQueryFromFilter,
+  hasAuditFilters,
+  type AuditFilterState,
+} from "@/components/admin/audit-logs/AuditLogFilters";
+import {
+  useAdminAuditActors,
+  useAdminAuditEvents,
+  useAdminAuditMetrics,
+} from "@/hooks/admin/use-admin-audit-trail";
+import { useDebounce } from "@/hooks/use-debounce";
+import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
+import type { AdminAuditEvent } from "@/types/admin";
+
+const PAGE_SIZE = 15;
+
+const AUDIT_FILTER_KEYS = [
+  "search",
+  "action",
+  "resourceType",
+  "result",
+  "severity",
+  "actorId",
+  "dateFrom",
+  "dateTo",
+] as const;
 
 export default function AdminAuditLogsPage() {
   return (
@@ -39,308 +44,110 @@ export default function AdminAuditLogsPage() {
   );
 }
 
-function parseInitialStatus(params: { get(name: string): string | null }) {
-  const raw = params.get("result");
-  return raw === "success" || raw === "failed" || raw === "denied"
-    ? (raw as AuditResult)
-    : "all";
+function readInitialFilters(params: URLSearchParams): AuditFilterState {
+  const state: AuditFilterState = { ...DEFAULT_AUDIT_FILTERS };
+  for (const key of AUDIT_FILTER_KEYS) {
+    const value = params.get(key);
+    if (value) (state as Record<typeof key, string>)[key] = value;
+  }
+  return state;
 }
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
-
 function AuditLogsConsole() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ----- filters -----
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebounce(searchInput.trim(), 350);
-  const [adminId, setAdminId] = useState("all");
-  const [action, setAction] = useState<AuditActionType | "all">("all");
-  const [resource, setResource] = useState<AuditResource | "all">("all");
-  const [result, setResult] = useState<AuditResult | "all">(() =>
-    parseInitialStatus(searchParams)
-  );
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const initialFilters = useMemo(() => readInitialFilters(searchParams), [searchParams]);
+  const [filters, setFilters] = useState<AuditFilterState>(initialFilters);
+  const debouncedSearch = useDebounce(filters.search.trim(), 350);
   const [page, setPage] = useState(1);
 
-  // ----- data -----
-  const [list, setList] = useState<Paginated<AuditLog> | null>(null);
-  const [adminOptions, setAdminOptions] = useState<
-    { id: string; name: string; role: string }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  // ----- overlays -----
-  const [detailTarget, setDetailTarget] = useState<AuditLog | null>(null);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters.action, filters.resourceType, filters.result, filters.severity, filters.actorId, filters.dateFrom, filters.dateTo]);
 
   useEffect(() => {
     const params = new URLSearchParams();
-    if (result !== "all") params.set("result", result);
+    for (const key of AUDIT_FILTER_KEYS) {
+      const value = filters[key];
+      if (value && value !== "all") params.set(key, value);
+    }
     const qs = params.toString();
-    window.history.replaceState(null, "", qs ? `?${qs}` : "/admin/audit-logs");
-  }, [result]);
+    router.replace(qs ? `?${qs}` : "/admin/audit-logs", { scroll: false });
+  }, [filters, router]);
 
-  const loadMeta = useCallback(async () => {
-    try {
-      setAdminOptions(await auditLogService.getAdminOptions());
-    } catch {
-      /* non-critical */
-    }
-  }, []);
+  const query = useMemo(
+    () => auditQueryFromFilter({ ...filters, search: debouncedSearch }),
+    [filters, debouncedSearch]
+  );
 
-  const loadList = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const res = await auditLogService.list({
-        search: search || undefined,
-        adminId,
-        action,
-        resource,
-        result,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-        page,
-        pageSize: 15,
-      });
-      setList(res);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, adminId, action, resource, result, dateFrom, dateTo, page]);
+  const listQuery = useMemo(
+    () => ({ ...query, page, pageSize: PAGE_SIZE, sortBy: "at" as const, sortDir: "desc" as const }),
+    [query, page]
+  );
 
-  useEffect(() => {
-    void loadList();
-  }, [loadList]);
+  const events = useAdminAuditEvents(listQuery);
+  const metrics = useAdminAuditMetrics();
+  const actors = useAdminAuditActors();
 
-  useEffect(() => {
-    void loadMeta();
-  }, [loadMeta]);
-
-  const hasActiveFilters =
-    searchInput.trim().length > 0 ||
-    adminId !== "all" ||
-    action !== "all" ||
-    resource !== "all" ||
-    result !== "all" ||
-    dateFrom !== "" ||
-    dateTo !== "";
+  const hasActiveFilters = hasAuditFilters({ ...filters, search: debouncedSearch });
 
   function clearFilters() {
-    setSearchInput("");
-    setAdminId("all");
-    setAction("all");
-    setResource("all");
-    setResult("all");
-    setDateFrom("");
-    setDateTo("");
+    setFilters({ ...DEFAULT_AUDIT_FILTERS });
+    setPage(1);
+  }
+
+  function openEvent(event: AdminAuditEvent) {
+    router.push(`/admin/audit-logs/${event.id}`);
   }
 
   return (
     <>
       <AdminPageHeader
         title="Audit Logs"
-        description="Read-only trail of administrative actions across the platform. Mock data - no backend logging yet."
+        description="Immutable, backend-authoritative record of privileged admin actions. Refreshes from the audit store on each visit — no fabricated entries."
         actions={
-          list && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-3 text-xs font-medium text-kampmax-text-secondary">
-                <ScrollText className="h-3.5 w-3.5 opacity-60" />
-                {list.total.toLocaleString("en-NG")} events
-              </span>
-              {(list.items.some((l) => l.result !== "success") ||
-                searchInput.trim()) && (
-                <span className="hidden h-9 items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 text-xs font-medium text-amber-700 lg:inline-flex">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Includes failures / denials
-                </span>
-              )}
-            </div>
+          events.data && (
+            <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-3 text-xs font-medium text-kampmax-text-secondary">
+              <ScrollText className="h-3.5 w-3.5 opacity-60" />
+              {events.data.total.toLocaleString("en-NG")} events
+            </span>
           )
         }
       />
 
-      {/* Filter toolbar */}
-      <div className="my-3 space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="w-full sm:w-56">
-            <Input
-              value={searchInput}
-              placeholder="Search description or ID…"
-              leftIcon={<Search className="h-4 w-4" />}
-              aria-label="Search audit logs"
-              onChange={(e) => {
-                setSearchInput(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <Select
-            value={adminId}
-            aria-label="Filter by admin"
-            onChange={(e) => {
-              setAdminId(e.target.value);
-              setPage(1);
-            }}
-            className="h-9 max-w-[180px] text-xs"
-          >
-            <option value="all">All admins</option>
-            {adminOptions.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={action}
-            aria-label="Filter by action"
-            onChange={(e) => {
-              setAction(e.target.value as AuditActionType | "all");
-              setPage(1);
-            }}
-            className="w-auto h-9 text-xs"
-          >
-            <option value="all">All actions</option>
-            {AUDIT_ACTION_FILTER_ORDER.map((a) => (
-              <option key={a} value={a}>
-                {auditActionLabel(a)}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={resource}
-            aria-label="Filter by resource"
-            onChange={(e) => {
-              setResource(e.target.value as AuditResource | "all");
-              setPage(1);
-            }}
-            className="w-auto h-9 text-xs"
-          >
-            <option value="all">All resources</option>
-            {AUDIT_RESOURCE_FILTER_ORDER.map((r) => (
-              <option key={r} value={r}>
-                {auditResourceLabel(r)}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={result}
-            aria-label="Filter by result"
-            onChange={(e) => {
-              setResult(e.target.value as AuditResult | "all");
-              setPage(1);
-            }}
-            className="w-auto h-9 text-xs"
-          >
-            <option value="all">Any result</option>
-            <option value="success">Success</option>
-            <option value="failed">Failed</option>
-            <option value="denied">Denied</option>
-          </Select>
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-xs font-medium text-kampmax-blue hover:underline"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
-
-        {/* Date range row */}
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex h-9 items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-2 text-xs text-kampmax-text-secondary">
-            From
-            <input
-              type="date"
-              value={dateFrom}
-              max={dateTo || undefined}
-              onChange={(e) => {
-                setDateFrom(e.target.value);
-                setPage(1);
-              }}
-              className="bg-transparent text-xs font-medium tabular-nums text-kampmax-text focus:outline-none"
-              aria-label="Filter from date"
-            />
-          </label>
-          <span className="text-kampmax-text-secondary">→</span>
-          <label className="inline-flex h-9 items-center gap-1.5 rounded-md border border-kampmax-border bg-white px-2 text-xs text-kampmax-text-secondary">
-            To
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              max={todayIso()}
-              onChange={(e) => {
-                setDateTo(e.target.value);
-                setPage(1);
-              }}
-              className="bg-transparent text-xs font-medium tabular-nums text-kampmax-text focus:outline-none"
-              aria-label="Filter to date"
-            />
-          </label>
-          {/* Quick ranges */}
-          {(
-            [
-              { label: "24h", days: 1 },
-              { label: "7d", days: 7 },
-              { label: "30d", days: 30 },
-            ] as const
-          ).map((q) => (
-            <button
-              key={q.label}
-              type="button"
-              onClick={() => {
-                const to = new Date();
-                const fromD = new Date(
-                  Date.now() - q.days * 86_400_000
-                );
-                setDateFrom(fromD.toISOString().slice(0, 10));
-                setDateTo(to.toISOString().slice(0, 10));
-                setPage(1);
-              }}
-              className={cn(
-                "h-9 rounded-md border border-kampmax-border bg-white px-2.5 text-xs font-medium text-kampmax-text-secondary transition-colors hover:bg-kampmax-muted/60"
-              )}
-            >
-              Last {q.label}
-            </button>
-          ))}
-        </div>
+      <div className="my-3 space-y-3">
+        <AuditLogMetrics metrics={metrics.data} loading={metrics.isLoading} />
+        <AuditLogFilters
+          state={filters}
+          actors={actors.data ?? []}
+          actorsLoading={actors.isLoading}
+          onChange={(next) => setFilters(next)}
+          onReset={clearFilters}
+        />
       </div>
 
-      {/* Table + pagination */}
       <AuditLogsTable
-        items={list?.items ?? []}
-        loading={loading && !list}
-        error={error}
+        items={events.data?.items ?? []}
+        loading={events.isLoading}
+        error={events.isError}
         hasActiveFilters={hasActiveFilters}
-        onRetry={() => void loadList()}
+        onRetry={() => void events.refetch()}
         onClearFilters={clearFilters}
-        onView={(l) => setDetailTarget(l)}
+        onView={openEvent}
       />
 
-      {list && list.totalPages > 1 && (
+      {events.data && events.data.totalPages > 1 && (
         <Pagination
-          page={list.page}
-          pageSize={list.pageSize}
-          total={list.total}
-          totalPages={list.totalPages}
+          page={events.data.page}
+          pageSize={events.data.pageSize}
+          total={events.data.total}
+          totalPages={events.data.totalPages}
           onPageChange={setPage}
           className="mt-3 rounded-lg border border-kampmax-border bg-white"
+          unitLabel="events"
         />
       )}
-
-      {/* Detail view */}
-      <AuditLogDetailDialog
-        log={detailTarget}
-        onClose={() => setDetailTarget(null)}
-      />
     </>
   );
 }

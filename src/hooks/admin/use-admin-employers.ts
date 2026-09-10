@@ -69,7 +69,7 @@ export function useAdminEmployerSuspendMutation() {
   const { invalidate } = useEmployerTreeInvalidator();
   const admin = useActor();
   return useMutation({
-    mutationFn: (id: string) => employerManagementService.suspend(id),
+    mutationFn: (id: string) => employerManagementService.suspend(id, { actor: admin }),
     onSuccess: invalidate,
   });
 }
@@ -78,7 +78,7 @@ export function useAdminEmployerRestoreMutation() {
   const { invalidate } = useEmployerTreeInvalidator();
   const admin = useActor();
   return useMutation({
-    mutationFn: (id: string) => employerManagementService.restore(id),
+    mutationFn: (id: string) => employerManagementService.restore(id, { actor: admin }),
     onSuccess: invalidate,
   });
 }
@@ -87,7 +87,7 @@ export function useAdminEmployerApproveMutation() {
   const { invalidate } = useEmployerTreeInvalidator();
   const admin = useActor();
   return useMutation({
-    mutationFn: (id: string) => employerManagementService.approve(id),
+    mutationFn: (id: string) => employerManagementService.approve(id, { actor: admin }),
     onSuccess: invalidate,
   });
 }
@@ -97,7 +97,7 @@ export function useAdminEmployerRejectMutation() {
   const admin = useActor();
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
-      employerManagementService.reject(id, reason),
+      employerManagementService.reject(id, reason, { actor: admin }),
     onSuccess: invalidate,
   });
 }

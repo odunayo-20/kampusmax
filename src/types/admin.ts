@@ -3181,7 +3181,8 @@ export interface AdminCommunicationService {
   ): Promise<ManagedAdminAudiencePreview>;
   /** Real in-app dispatch: writes one record per recipient in the shared store. */
   create(
-    input: ManagedAdminNotificationCreateInput
+    input: ManagedAdminNotificationCreateInput,
+    ctx?: AdminActingContext
   ): Promise<ManagedAdminNotificationCreateResult>;
 }
 
@@ -3367,67 +3368,143 @@ export function toPermissionIds(
 }
 
 // ------------------------------------------------------------
-// AUDIT LOGS (/admin/audit-logs)
+// ADMIN AUDIT TRAIL (/admin/audit-logs + /admin/audit-logs/[id])
 //
-// Read-only administrative audit interface. No backend logging is
-// implemented - rows are mock data and nothing writes here.
+// Backend-authoritative security record (Module 48). Events are
+// APPEND-ONLY: they are recorded by the prototype data-layer
+// mutations at the exact boundary a real NestJS audit interceptor
+// would write (after the backend authorizes and performs the
+// action) - never by a button click. The store starts empty for a
+// session and grows one row per real privileged action. There are
+// NO update/delete/clear surfaces here. IP, user agent, request
+// and correlation IDs are NOT captured by any prototype store and
+// are honest backend gaps, not fabricated columns.
 // ------------------------------------------------------------
 
-export type AuditActionType =
-  | "create"
-  | "update"
-  | "delete"
-  | "approve"
-  | "reject"
-  | "suspend"
-  | "restore"
-  | "resolve"
-  | "publish"
-  | "send"
-  | "export";
+export type AdminAuditSeverity =
+  | "informational"
+  | "low"
+  | "medium"
+  | "high"
+  | "critical";
 
-export type AuditResource =
-  | "vendor"
+export type AdminAuditActorType =
+  | "admin"
+  | "system"
+  | "service"
   | "user"
-  | "product"
-  | "category"
-  | "withdrawal"
-  | "platform_setting"
-  | "campus_post"
-  | "dispute"
-  | "review"
-  | "announcement"
-  | "promotion"
-  | "order"
-  | "role_permissions"
-  | "reports";
+  | "automation";
 
-export type AuditResult = "success" | "failed" | "denied";
+export type AdminAuditResult = "success" | "failed" | "denied";
 
-export interface AuditLog {
-  id: string;
-  at: string;
-  adminId: string;
-  adminName: string;
-  adminRole: AdminRoleKey;
-  action: AuditActionType;
-  resource: AuditResource;
-  resourceId: string;
-  description: string;
-  /** Placeholder values - the real backend will capture these. */
-  ip: string;
-  device: string;
-  result: AuditResult;
+export type AdminAuditResourceType =
+  | "user"
+  | "vendor"
+  | "freelancer"
+  | "employer"
+  | "notification";
+
+/** Canonical bootstrap event vocabulary. Real backend names win when wired. */
+export type AdminAuditAction =
+  | "USER_SUSPENDED"
+  | "USER_ACTIVATED"
+  | "USER_DEACTIVATED"
+  | "USER_MARKED_PENDING"
+  | "USER_PROFILE_UPDATED"
+  | "USER_STATE_RESET"
+  | "VENDOR_APPROVED"
+  | "VENDOR_REJECTED"
+  | "VENDOR_SUSPENDED"
+  | "VENDOR_ACTIVATED"
+  | "VENDOR_DEACTIVATED"
+  | "FREELANCER_SUSPENDED"
+  | "FREELANCER_ACTIVATED"
+  | "FREELANCER_DEACTIVATED"
+  | "FREELANCER_FEATURED"
+  | "FREELANCER_UNFEATURED"
+  | "EMPLOYER_SUSPENDED"
+  | "EMPLOYER_RESTORED"
+  | "EMPLOYER_APPROVED"
+  | "EMPLOYER_REJECTED"
+  | "NOTIFICATION_SENT";
+
+/** Only safe, allowlisted display fields. Never dump backend payloads. */
+export interface AdminAuditMetadata {
+  /** Free-text reason where the mutation accepts one. */
+  reason?: string;
+  /** Previous resource status when the action changed it. */
+  previousStatus?: string;
+  /** New resource status after the action. */
+  newStatus?: string;
+  /** Notification dispatch details (NOTIFICATION_SENT only). */
+  audience?: string;
+  recipientCount?: number;
+  title?: string;
 }
 
-export interface AuditLogListQuery extends ListQuery {
+export interface AdminAuditEventActor {
+  type: AdminAuditActorType;
+  id: string;
+  /** Safe display name. Never email/identifier lookups. */
+  name: string;
+  role?: AdminRole;
+}
+
+export interface AdminAuditResourceRef {
+  type: AdminAuditResourceType;
+  id: string;
+  /** Safe human-readable resource label. */
+  label?: string;
+}
+
+export interface AdminAuditEvent {
+  id: string;
+  at: string;
+  action: AdminAuditAction;
+  actor: AdminAuditEventActor;
+  resource: AdminAuditResourceRef;
+  result: AdminAuditResult;
+  severity: AdminAuditSeverity;
+  /** Allowlisted safe fields only - never tokens/credentials/PII. */
+  metadata: AdminAuditMetadata;
+}
+
+export interface AdminAuditEventInput {
+  action: AdminAuditAction;
+  actor: AdminAuditEventActor;
+  resource: AdminAuditResourceRef;
+  severity?: AdminAuditSeverity;
+  result?: AdminAuditResult;
+  metadata?: AdminAuditMetadata;
+  at?: string;
+}
+
+export interface AdminAuditQuery extends ListQuery {
   search?: string;
-  adminId?: string | "all";
-  action?: AuditActionType | "all";
-  resource?: AuditResource | "all";
-  result?: AuditResult | "all";
+  actorId?: string | "all";
+  action?: AdminAuditAction | "all";
+  resourceType?: AdminAuditResourceType | "all";
+  result?: AdminAuditResult | "all";
+  severity?: AdminAuditSeverity | "all";
+  /** ISO date (yyyy-mm-dd) inclusive range over `at`. */
   dateFrom?: string;
   dateTo?: string;
+}
+
+/** Backend-authoritative metrics derived from the audit store. */
+export interface AdminAuditMetrics {
+  total: number;
+  today: number;
+  highSeverity: number;
+  /** Security-relevant subset (suspensions / deactivations / state resets). */
+  securityEvents: number;
+  failed: number;
+  denied: number;
+}
+
+/** Acting operator context for mutation services that record audit events. */
+export interface AdminActingContext {
+  actor: AdminProfile;
 }
 
 // ------------------------------------------------------------

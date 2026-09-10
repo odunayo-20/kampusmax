@@ -1,4 +1,5 @@
 import {
+  AdminActingContext,
   ListQuery,
   ManagedFreelancer,
   ManagedFreelancerDetail,
@@ -10,6 +11,7 @@ import {
 } from "@/types/admin";
 import { apiDelay, applySearch, applySort, paginate } from "@/lib/admin/api";
 import { buildFreelancerDataset, filterFreelancers, computeFreelancerCounts, type FreelancerDataset } from "@/data/admin/freelancer-management";
+import { DEFAULT_ADMIN_ACTOR, recordAdminAuditEvent } from "@/data/admin/audit-trail";
 
 // ------------------------------------------------------------
 // CONTRACT (future NestJS resource: /admin/freelancers)
@@ -27,11 +29,11 @@ export interface AdminFreelancerManagementService {
   getById(id: string): Promise<ManagedFreelancerDetail | null>;
   getCounts(): Promise<FreelancerStatusCounts>;
   getCategories(): Promise<string[]>;
-  suspend(id: string): Promise<ManagedFreelancer>;
-  activate(id: string): Promise<ManagedFreelancer>;
-  deactivate(id: string): Promise<ManagedFreelancer>;
-  feature(id: string): Promise<ManagedFreelancer>;
-  unfeature(id: string): Promise<ManagedFreelancer>;
+  suspend(id: string, ctx?: AdminActingContext): Promise<ManagedFreelancer>;
+  activate(id: string, ctx?: AdminActingContext): Promise<ManagedFreelancer>;
+  deactivate(id: string, ctx?: AdminActingContext): Promise<ManagedFreelancer>;
+  feature(id: string, ctx?: AdminActingContext): Promise<ManagedFreelancer>;
+  unfeature(id: string, ctx?: AdminActingContext): Promise<ManagedFreelancer>;
   getActivity(id: string): Promise<FreelancerActivityEvent[]>;
 }
 
@@ -56,6 +58,16 @@ export function createFreelancerManagementService(
     if (d) {
       d.freelancer = fl;
     }
+  }
+
+  function auditActor(ctx?: AdminActingContext) {
+    if (!ctx?.actor) return DEFAULT_ADMIN_ACTOR;
+    return {
+      type: "admin" as const,
+      id: ctx.actor.id,
+      name: ctx.actor.name,
+      role: ctx.actor.role,
+    };
   }
 
   return {
@@ -113,71 +125,106 @@ export function createFreelancerManagementService(
       return Array.from(cats).sort();
     },
 
-    async suspend(id) {
+    async suspend(id, ctx) {
       await apiDelay();
       const idx = freelancers.findIndex((f) => f.id === id);
       if (idx === -1) throw new Error(`Freelancer ${id} not found`);
-      const updated = { ...freelancers[idx], status: "suspended" as const };
+      const prev = freelancers[idx];
+      const updated = { ...prev, status: "suspended" as const };
       freelancers[idx] = updated;
       const d = details.get(id);
       if (d) {
         d.freelancer = updated;
         d.profile = { ...d.profile, status: "suspended" };
       }
+      recordAdminAuditEvent({
+        action: "FREELANCER_SUSPENDED",
+        actor: auditActor(ctx),
+        resource: { type: "freelancer", id, label: prev.displayName },
+        metadata: { previousStatus: prev.status, newStatus: "suspended" },
+      });
       return updated;
     },
 
-    async activate(id) {
+    async activate(id, ctx) {
       await apiDelay();
       const idx = freelancers.findIndex((f) => f.id === id);
       if (idx === -1) throw new Error(`Freelancer ${id} not found`);
-      const updated = { ...freelancers[idx], status: "approved" as const };
+      const prev = freelancers[idx];
+      const updated = { ...prev, status: "approved" as const };
       freelancers[idx] = updated;
       const d = details.get(id);
       if (d) {
         d.freelancer = updated;
         d.profile = { ...d.profile, status: "approved" };
       }
+      recordAdminAuditEvent({
+        action: "FREELANCER_ACTIVATED",
+        actor: auditActor(ctx),
+        resource: { type: "freelancer", id, label: prev.displayName },
+        metadata: { previousStatus: prev.status, newStatus: "approved" },
+      });
       return updated;
     },
 
-    async deactivate(id) {
+    async deactivate(id, ctx) {
       await apiDelay();
       const idx = freelancers.findIndex((f) => f.id === id);
       if (idx === -1) throw new Error(`Freelancer ${id} not found`);
-      const updated = { ...freelancers[idx], status: "rejected" as const };
+      const prev = freelancers[idx];
+      const updated = { ...prev, status: "rejected" as const };
       freelancers[idx] = updated;
       const d = details.get(id);
       if (d) {
         d.freelancer = updated;
         d.profile = { ...d.profile, status: "rejected" };
       }
+      recordAdminAuditEvent({
+        action: "FREELANCER_DEACTIVATED",
+        actor: auditActor(ctx),
+        resource: { type: "freelancer", id, label: prev.displayName },
+        metadata: { previousStatus: prev.status, newStatus: "rejected" },
+      });
       return updated;
     },
 
-    async feature(id) {
+    async feature(id, ctx) {
       await apiDelay();
       const idx = freelancers.findIndex((f) => f.id === id);
       if (idx === -1) throw new Error(`Freelancer ${id} not found`);
-      const updated = { ...freelancers[idx], featured: true };
+      const prev = freelancers[idx];
+      const updated = { ...prev, featured: true };
       freelancers[idx] = updated;
       const d = details.get(id);
       if (d) {
         d.freelancer = updated;
       }
+      recordAdminAuditEvent({
+        action: "FREELANCER_FEATURED",
+        actor: auditActor(ctx),
+        resource: { type: "freelancer", id, label: prev.displayName },
+        metadata: { previousStatus: prev.featured ? "featured" : "not_featured", newStatus: "featured" },
+      });
       return updated;
     },
 
-    async unfeature(id) {
+    async unfeature(id, ctx) {
       await apiDelay();
       const idx = freelancers.findIndex((f) => f.id === id);
       if (idx === -1) throw new Error(`Freelancer ${id} not found`);
-      const updated = { ...freelancers[idx], featured: false };
+      const prev = freelancers[idx];
+      const updated = { ...prev, featured: false };
       freelancers[idx] = updated;
       const d = details.get(id);
       if (d) {
         d.freelancer = updated;
       }
+      recordAdminAuditEvent({
+        action: "FREELANCER_UNFEATURED",
+        actor: auditActor(ctx),
+        resource: { type: "freelancer", id, label: prev.displayName },
+        metadata: { previousStatus: prev.featured ? "featured" : "not_featured", newStatus: "not_featured" },
+      });
       return updated;
     },
 

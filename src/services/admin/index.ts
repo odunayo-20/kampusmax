@@ -402,13 +402,17 @@ import {
 export const rbacService: AdminRbacService = createMockRbacService();
 
 import {
-  AuditLogService,
-  createMockAuditLogService,
-} from "./audit-logs.service";
+  AdminAuditTrailService,
+  createAdminAuditTrailService,
+} from "./audit-trail.service";
 
-/** /admin/audit-logs console (read-only audit trail). */
-export const auditLogService: AuditLogService =
-  createMockAuditLogService();
+/**
+ * /admin/audit-logs console (Module 48). READ-ONLY window over the
+ * append-only audit trail; records are written by the real mutation
+ * services, never by the UI.
+ */
+export const adminAuditTrailService: AdminAuditTrailService =
+  createAdminAuditTrailService();
 
 export const notificationService: AdminNotificationService =
   createMockNotificationService(mockNotifications);

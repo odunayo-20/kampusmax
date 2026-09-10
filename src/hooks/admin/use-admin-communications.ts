@@ -72,11 +72,11 @@ export function useAdminAudiencePreview(
 }
 
 export function useAdminCreateNotification() {
-  useActor();
+  const admin = useActor();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: ManagedAdminNotificationCreateInput) =>
-      adminCommunicationService.create(input),
+      adminCommunicationService.create(input, { actor: admin }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.notifications.all });
     },

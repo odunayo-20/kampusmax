@@ -62,7 +62,7 @@ export function useAdminFreelancerSuspendMutation() {
   const admin = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => freelancerManagementService.suspend(id),
+    mutationFn: (id: string) => freelancerManagementService.suspend(id, { actor: admin }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.freelancers.all });
     },
@@ -73,7 +73,7 @@ export function useAdminFreelancerActivateMutation() {
   const admin = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => freelancerManagementService.activate(id),
+    mutationFn: (id: string) => freelancerManagementService.activate(id, { actor: admin }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.freelancers.all });
     },
@@ -84,7 +84,7 @@ export function useAdminFreelancerDeactivateMutation() {
   const admin = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => freelancerManagementService.deactivate(id),
+    mutationFn: (id: string) => freelancerManagementService.deactivate(id, { actor: admin }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.freelancers.all });
     },
@@ -95,7 +95,7 @@ export function useAdminFreelancerFeatureMutation() {
   const admin = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => freelancerManagementService.feature(id),
+    mutationFn: (id: string) => freelancerManagementService.feature(id, { actor: admin }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.freelancers.all });
     },
@@ -106,7 +106,7 @@ export function useAdminFreelancerUnfeatureMutation() {
   const admin = useActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => freelancerManagementService.unfeature(id),
+    mutationFn: (id: string) => freelancerManagementService.unfeature(id, { actor: admin }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminKeys.freelancers.all });
     },

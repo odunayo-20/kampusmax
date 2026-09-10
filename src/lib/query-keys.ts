@@ -570,4 +570,33 @@ export const adminKeys = {
       ["admin", "notifications", "preview", audience, campusId ?? "all", userId ?? "none"] as const,
     mutation: () => ["admin", "notifications", "mutation"] as const,
   } as const,
+  /**
+   * Admin audit trail key factory (Module 48). READ-ONLY, append-only
+   * namespace over the shared audit store. Keys are neither user- nor
+   * campus-scoped: the console is restricted to SUPER_ADMIN/ADMIN via
+   * nav permissions. There are NO mutation keys — audit records are
+   * immutable. Hooks keep gcTime short so sensitive activity is not
+   * retained in the browser cache, and normal mount/window-focus
+   * refetch (no polling) surfaces events recorded elsewhere.
+   */
+  auditTrail: {
+    all: ["admin", "audit-trail"] as const,
+    list: (query: {
+      search?: string;
+      actorId?: string;
+      action?: string;
+      resourceType?: string;
+      result?: string;
+      severity?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      page?: number;
+      pageSize?: number;
+    }) => ["admin", "audit-trail", "list", query] as const,
+    detail: (id: string) => ["admin", "audit-trail", "detail", id] as const,
+    metrics: () => ["admin", "audit-trail", "metrics"] as const,
+    actors: () => ["admin", "audit-trail", "actors"] as const,
+  } as const,
 };

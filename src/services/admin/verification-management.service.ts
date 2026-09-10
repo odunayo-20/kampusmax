@@ -14,6 +14,7 @@ import {
   sortVerificationRows,
 } from "@/data/admin/verification-management";
 import { createVendorManagementService } from "./vendor-management.service";
+import type { AdminActingContext, AdminProfile } from "@/types/admin";
 
 // ------------------------------------------------------------
 // CONTRACT (future NestJS resource: /admin/verifications)
@@ -21,7 +22,7 @@ import { createVendorManagementService } from "./vendor-management.service";
 
 /** Acting operator identity — campus scope is enforced in the service. */
 export interface VerificationActingContext {
-  actor?: { role?: string; campusId?: string | null };
+  actor?: { id?: string; name?: string; role?: string; campusId?: string | null };
 }
 
 export interface AdminVerificationManagementService {
@@ -59,6 +60,19 @@ export function createVerificationManagementService(): AdminVerificationManageme
   function scopeCampusId(ctx?: VerificationActingContext): string | null {
     if (ctx?.actor?.role === "CAMPUS_ADMIN") return ctx.actor.campusId ?? null;
     return null;
+  }
+
+  /**
+   * Bridges to the vendor service so decisions carry the real operator.
+   * The hook path always carries the full session profile; the cast mirrors
+   * the backend session resolver that will populate it server-side. When no
+   * named actor is present (legacy/test callers) the vendor service falls
+   * back to the documented Platform Admin surrogate.
+   */
+  function toVendorActingContext(ctx?: VerificationActingContext): AdminActingContext | undefined {
+    const a = ctx?.actor;
+    if (!a?.name) return undefined;
+    return { actor: a as AdminProfile };
   }
 
   function visibleRows(campusScope: string | null): ManagedVerificationRow[] {
@@ -126,7 +140,7 @@ export function createVerificationManagementService(): AdminVerificationManageme
       await apiDelay();
       const row = findRow(id, ctx);
       requireVendorApplicant(row, "approve");
-      await vendorService.approve(row.applicantId);
+      await vendorService.approve(row.applicantId, toVendorActingContext(ctx));
       return findRow(id, ctx);
     },
 
@@ -136,7 +150,7 @@ export function createVerificationManagementService(): AdminVerificationManageme
       requireVendorApplicant(row, "reject");
       const message = reason.trim();
       if (!message) throw new Error("A rejection reason is required.");
-      await vendorService.reject(row.applicantId, message);
+      await vendorService.reject(row.applicantId, message, toVendorActingContext(ctx));
       return findRow(id, ctx);
     },
   };

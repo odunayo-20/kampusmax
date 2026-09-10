@@ -1,4 +1,6 @@
 import {
+  AdminActingContext,
+  AdminAuditAction,
   AdminProfile,
   AdminRole,
   ListQuery,
@@ -17,6 +19,7 @@ import {
   buildManagedUserDataset,
   type ManagedUserDataset,
 } from "@/data/admin/user-management";
+import { recordAdminAuditEvent } from "@/data/admin/audit-trail";
 
 // ------------------------------------------------------------
 // CONTRACT (future NestJS resource: /admin/users)
@@ -48,8 +51,18 @@ export interface ManagedUserListFilters {
 export interface ManagedUserListQuery extends ListQuery, ManagedUserListFilters {}
 
 /** Acting operator context. Future backend derives this from the session. */
-export interface AdminActingContext {
-  actor: AdminProfile;
+export type { AdminActingContext } from "@/types/admin";
+
+/** Audit event name per target status transition (canonical vocabulary). */
+const USER_ACTION_BY_STATUS: Record<ManagedUserStatus, AdminAuditAction> = {
+  active: "USER_ACTIVATED",
+  suspended: "USER_SUSPENDED",
+  pending_verification: "USER_MARKED_PENDING",
+  deactivated: "USER_DEACTIVATED",
+};
+
+function auditActorFor(actor: AdminProfile) {
+  return { type: "admin" as const, id: actor.id, name: actor.name, role: actor.role };
 }
 
 /** Hierarchy used to decide who may manage whom. */
@@ -461,6 +474,11 @@ export function createUserManagementService(
       users[idx] = { ...users[idx], ...sanitized };
       syncDetail(id);
       logActivity(id, "Profile updated by platform admin");
+      recordAdminAuditEvent({
+        action: "USER_PROFILE_UPDATED",
+        actor: auditActorFor(actor),
+        resource: { type: "user", id: user.id, label: user.name },
+      });
       return { ok: true, user: users[idx], message: "Profile updated." };
     },
 
@@ -495,6 +513,12 @@ export function createUserManagementService(
       users[idx] = { ...user, status };
       syncDetail(id);
       logActivity(id, `Account ${STATUS_VERB[status]} by platform admin`);
+      recordAdminAuditEvent({
+        action: USER_ACTION_BY_STATUS[status],
+        actor: auditActorFor(actor),
+        resource: { type: "user", id: user.id, label: user.name },
+        metadata: { previousStatus: user.status, newStatus: status },
+      });
       return { ok: true, user: users[idx], message: `Account ${STATUS_VERB[status]}.` };
     },
 
@@ -527,6 +551,12 @@ export function createUserManagementService(
           "Account state reset · open reports dismissed and moderation flags cleared"
         );
       }
+      recordAdminAuditEvent({
+        action: "USER_STATE_RESET",
+        actor: auditActorFor(actor),
+        resource: { type: "user", id: user.id, label: user.name },
+        metadata: { previousStatus: user.status, newStatus: "active" },
+      });
       return {
         ok: true,
         user: restored,

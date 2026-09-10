@@ -1,4 +1,5 @@
 import {
+  AdminActingContext,
   ListQuery,
   ManagedVendor,
   ManagedVendorDetail,
@@ -14,6 +15,7 @@ import {
   bucketOf,
   buildManagedVendorDataset,
 } from "@/data/admin/vendor-management";
+import { DEFAULT_ADMIN_ACTOR, recordAdminAuditEvent } from "@/data/admin/audit-trail";
 
 // ------------------------------------------------------------
 // CONTRACT (future NestJS resource: /admin/vendors)
@@ -40,11 +42,11 @@ export interface AdminVendorManagementService {
   getById(id: string): Promise<ManagedVendorDetail | null>;
   getCounts(): Promise<VendorStatusCounts>;
   getCategories(): Promise<string[]>;
-  approve(id: string): Promise<ManagedVendor>;
-  reject(id: string, reason: string): Promise<ManagedVendor>;
-  suspend(id: string): Promise<ManagedVendor>;
-  activate(id: string): Promise<ManagedVendor>;
-  deactivate(id: string): Promise<ManagedVendor>;
+  approve(id: string, ctx?: AdminActingContext): Promise<ManagedVendor>;
+  reject(id: string, reason: string, ctx?: AdminActingContext): Promise<ManagedVendor>;
+  suspend(id: string, ctx?: AdminActingContext): Promise<ManagedVendor>;
+  activate(id: string, ctx?: AdminActingContext): Promise<ManagedVendor>;
+  deactivate(id: string, ctx?: AdminActingContext): Promise<ManagedVendor>;
   getActivity(id: string): Promise<VendorActivityEvent[]>;
 }
 
@@ -67,6 +69,16 @@ export function createVendorManagementService(): AdminVendorManagementService {
     const vendor = fresh().vendors.find((v) => v.id === id);
     if (!vendor) throw new Error(`Vendor ${id} not found`);
     return vendor;
+  }
+
+  function auditActor(ctx?: AdminActingContext) {
+    if (!ctx?.actor) return DEFAULT_ADMIN_ACTOR;
+    return {
+      type: "admin" as const,
+      id: ctx.actor.id,
+      name: ctx.actor.name,
+      role: ctx.actor.role,
+    };
   }
 
   return {
@@ -146,28 +158,44 @@ export function createVendorManagementService(): AdminVendorManagementService {
       return [...new Set(fresh().vendors.map((v) => v.category))].sort();
     },
 
-    async approve(id) {
+    async approve(id, ctx) {
       await apiDelay();
       const vendor = findVendor(id);
       if (vendor.verificationStatus !== "pending_verification") {
         throw new Error("Only pending stores can be approved.");
       }
-      applyVerificationVerdict(id, "verified", "Platform Admin");
+      applyVerificationVerdict(id, "verified", ctx?.actor?.name ?? "Platform Admin");
+      recordAdminAuditEvent({
+        action: "VENDOR_APPROVED",
+        actor: auditActor(ctx),
+        resource: { type: "vendor", id, label: vendor.storeName },
+        metadata: { previousStatus: vendor.verificationStatus, newStatus: "verified" },
+      });
       return findVendor(id);
     },
 
-    async reject(id, reason) {
+    async reject(id, reason, ctx) {
       await apiDelay();
       const vendor = findVendor(id);
       if (!reason.trim()) throw new Error("A rejection reason is required.");
       if (vendor.verificationStatus !== "pending_verification") {
         throw new Error("Only pending stores can be rejected.");
       }
-      applyVerificationVerdict(id, "rejected", "Platform Admin", reason.trim());
+      applyVerificationVerdict(id, "rejected", ctx?.actor?.name ?? "Platform Admin", reason.trim());
+      recordAdminAuditEvent({
+        action: "VENDOR_REJECTED",
+        actor: auditActor(ctx),
+        resource: { type: "vendor", id, label: vendor.storeName },
+        metadata: {
+          reason: reason.trim(),
+          previousStatus: vendor.verificationStatus,
+          newStatus: "rejected",
+        },
+      });
       return findVendor(id);
     },
 
-    async suspend(id) {
+    async suspend(id, ctx) {
       await apiDelay();
       const vendor = findVendor(id);
       if (vendor.verificationStatus !== "verified") {
@@ -177,10 +205,16 @@ export function createVendorManagementService(): AdminVendorManagementService {
         throw new Error(`Store is already ${vendor.storeStatus}.`);
       }
       applyStoreVerdict(id, "suspended");
+      recordAdminAuditEvent({
+        action: "VENDOR_SUSPENDED",
+        actor: auditActor(ctx),
+        resource: { type: "vendor", id, label: vendor.storeName },
+        metadata: { previousStatus: vendor.storeStatus, newStatus: "suspended" },
+      });
       return findVendor(id);
     },
 
-    async activate(id) {
+    async activate(id, ctx) {
       await apiDelay();
       const vendor = findVendor(id);
       if (vendor.verificationStatus !== "verified") {
@@ -190,10 +224,16 @@ export function createVendorManagementService(): AdminVendorManagementService {
         throw new Error("Store is already active.");
       }
       applyStoreVerdict(id, "active");
+      recordAdminAuditEvent({
+        action: "VENDOR_ACTIVATED",
+        actor: auditActor(ctx),
+        resource: { type: "vendor", id, label: vendor.storeName },
+        metadata: { previousStatus: vendor.storeStatus, newStatus: "active" },
+      });
       return findVendor(id);
     },
 
-    async deactivate(id) {
+    async deactivate(id, ctx) {
       await apiDelay();
       const vendor = findVendor(id);
       if (vendor.verificationStatus !== "verified") {
@@ -203,6 +243,12 @@ export function createVendorManagementService(): AdminVendorManagementService {
         throw new Error("Store is already deactivated.");
       }
       applyStoreVerdict(id, "deactivated");
+      recordAdminAuditEvent({
+        action: "VENDOR_DEACTIVATED",
+        actor: auditActor(ctx),
+        resource: { type: "vendor", id, label: vendor.storeName },
+        metadata: { previousStatus: vendor.storeStatus, newStatus: "deactivated" },
+      });
       return findVendor(id);
     },
 

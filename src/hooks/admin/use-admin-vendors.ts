@@ -76,7 +76,7 @@ export function useAdminVendorApproveMutation() {
   const { invalidate } = useVendorTreeInvalidator();
   const admin = useActor();
   return useMutation({
-    mutationFn: (id: string) => vendorManagementService.approve(id),
+    mutationFn: (id: string) => vendorManagementService.approve(id, { actor: admin }),
     onSuccess: invalidate,
   });
 }
@@ -86,7 +86,7 @@ export function useAdminVendorRejectMutation() {
   const admin = useActor();
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      vendorManagementService.reject(id, reason),
+      vendorManagementService.reject(id, reason, { actor: admin }),
     onSuccess: invalidate,
   });
 }
@@ -95,7 +95,7 @@ export function useAdminVendorSuspendMutation() {
   const { invalidate } = useVendorTreeInvalidator();
   const admin = useActor();
   return useMutation({
-    mutationFn: (id: string) => vendorManagementService.suspend(id),
+    mutationFn: (id: string) => vendorManagementService.suspend(id, { actor: admin }),
     onSuccess: invalidate,
   });
 }
@@ -104,7 +104,7 @@ export function useAdminVendorActivateMutation() {
   const { invalidate } = useVendorTreeInvalidator();
   const admin = useActor();
   return useMutation({
-    mutationFn: (id: string) => vendorManagementService.activate(id),
+    mutationFn: (id: string) => vendorManagementService.activate(id, { actor: admin }),
     onSuccess: invalidate,
   });
 }
@@ -113,7 +113,7 @@ export function useAdminVendorDeactivateMutation() {
   const { invalidate } = useVendorTreeInvalidator();
   const admin = useActor();
   return useMutation({
-    mutationFn: (id: string) => vendorManagementService.deactivate(id),
+    mutationFn: (id: string) => vendorManagementService.deactivate(id, { actor: admin }),
     onSuccess: invalidate,
   });
 }
