@@ -62,7 +62,6 @@ export const ROLE_NAV_ACCESS: Record<AdminRole, AdminNavItemKey[] | "*"> = {
     "disputes",
     "reports",
     "campusFeed",
-    "notifications",
   ],
 };
 

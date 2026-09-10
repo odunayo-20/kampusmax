@@ -540,4 +540,34 @@ export const adminKeys = {
     reconciliation: () => ["admin", "finance", "reconciliation"] as const,
     report: (id: string) => ["admin", "finance", "report", id] as const,
   } as const,
+  /**
+   * Admin communications key factory (Module 47). Read-only console +
+   * one real dispatch (create) over the shared Module 26A in-app
+   * notification store. Keys are NOT campus-scoped: communications are
+   * restricted to full operators (ADMIN/SUPER_ADMIN) via nav permissions
+   * and CAMPUS_ADMIN no longer sees the console. The MutationKey invalidates
+   * list + overview together; the shared notification store also emits its
+   * own change bridge, so user-facing feeds refresh independently.
+   */
+  notifications: {
+    all: ["admin", "notifications"] as const,
+    overview: () => ["admin", "notifications", "overview"] as const,
+    list: (query: {
+      search?: string;
+      type?: string;
+      category?: string;
+      read?: string;
+      from?: string;
+      to?: string;
+      sortBy?: string;
+      sortDir?: "asc" | "desc";
+      page?: number;
+      pageSize?: number;
+    }) => ["admin", "notifications", "list", query] as const,
+    detail: (id: string) =>
+      ["admin", "notifications", "detail", id] as const,
+    audiencePreview: (audience: string, campusId?: string | null, userId?: string | null) =>
+      ["admin", "notifications", "preview", audience, campusId ?? "all", userId ?? "none"] as const,
+    mutation: () => ["admin", "notifications", "mutation"] as const,
+  } as const,
 };

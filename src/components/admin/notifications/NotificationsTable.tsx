@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  CalendarClock,
-  Eye,
-  Pencil,
-  Send,
-} from "lucide-react";
+import { Eye } from "lucide-react";
 import { Pagination } from "@/components/admin/Pagination";
 import {
   StatusBadge,
@@ -14,47 +9,48 @@ import {
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ErrorState } from "@/components/admin/ErrorState";
 import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
-import { communityCampusName, previewText } from "@/components/admin/campus-community/campus-community-utils";
-import { cn, formatDateShort, timeAgo } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import {
-  DELIVERY_ICONS,
-  audienceLabel,
-  notificationActionsFor,
-  notificationStatusLabel,
-  notificationStatusVariant,
   notificationTypeIcon,
   notificationTypeLabel,
   notificationTypeVariant,
+  readStateLabel,
+  readStateVariant,
+  previewText,
 } from "./notifications-meta";
-import type { ManagedNotification } from "@/types/admin";
+import type {
+  ManagedAdminNotificationRow,
+  Paginated,
+} from "@/types/admin";
 
 export interface NotificationsTableProps {
-  items: ManagedNotification[];
+  data: Paginated<ManagedAdminNotificationRow> | undefined;
   loading: boolean;
   error: boolean;
   hasActiveFilters: boolean;
   onRetry: () => void;
   onClearFilters: () => void;
-  onView: (n: ManagedNotification) => void;
-  onEdit: (n: ManagedNotification) => void;
-  onSendNow: (n: ManagedNotification) => void;
+  onView: (row: ManagedAdminNotificationRow) => void;
+  onPageChange: (page: number) => void;
 }
 
 export function NotificationsTable(props: NotificationsTableProps) {
   const {
-    items,
+    data,
     loading,
     error,
     hasActiveFilters,
     onRetry,
     onClearFilters,
     onView,
-    onEdit,
-    onSendNow,
+    onPageChange,
   } = props;
 
   if (loading) return <LoadingSkeleton variant="table" rows={6} />;
   if (error) return <ErrorState onRetry={onRetry} />;
+
+  const items = data?.items ?? [];
+
   if (items.length === 0)
     return (
       <EmptyState
@@ -62,7 +58,7 @@ export function NotificationsTable(props: NotificationsTableProps) {
         message={
           hasActiveFilters
             ? "Try different search terms or clear the filters."
-            : "Compose your first platform broadcast to reach students and vendors."
+            : "Dispatch your first in-app notification from the Create page."
         }
         action={
           hasActiveFilters ? (
@@ -83,101 +79,75 @@ export function NotificationsTable(props: NotificationsTableProps) {
       {/* Desktop / tablet */}
       <div className="hidden overflow-hidden rounded-lg border border-kampmax-border bg-white md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
               <tr className="border-b border-kampmax-border bg-kampmax-muted/40 text-[11px] uppercase tracking-wide text-kampmax-text-secondary">
                 <th scope="col" className="px-4 py-2.5 font-medium">Notification</th>
                 <th scope="col" className="px-3 py-2.5 font-medium">Type</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Audience</th>
-                <th scope="col" className="hidden px-3 py-2.5 font-medium xl:table-cell">Channels</th>
-                <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">Recipients</th>
-                <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">Opens</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Date</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">Status</th>
+                <th scope="col" className="px-3 py-2.5 font-medium">Recipient</th>
+                <th scope="col" className="hidden px-3 py-2.5 font-medium lg:table-cell">Status</th>
+                <th scope="col" className="px-3 py-2.5 font-medium">Created</th>
                 <th scope="col" className="w-10 px-2 py-2.5"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-kampmax-border">
-              {items.map((n) => (
+              {items.map((r) => (
                 <tr
-                  key={n.id}
-                  onClick={() => onView(n)}
+                  key={r.id}
+                  onClick={() => onView(r)}
                   className="cursor-pointer transition-colors hover:bg-kampmax-muted/40"
                 >
                   <td className="max-w-[280px] px-4 py-2.5">
-                    <p className="truncate font-medium text-kampmax-text" title={n.title}>
-                      {n.title}
+                    <p className="truncate font-medium text-kampmax-text" title={r.title}>
+                      {r.title}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-kampmax-text-secondary" title={n.message}>
-                      {previewText(n.message, 64)}
+                    <p className="mt-0.5 truncate text-xs text-kampmax-text-secondary" title={r.message}>
+                      {previewText(r.message, 64)}
                     </p>
                   </td>
 
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <TypeBadge n={n} />
+                    <TypeBadge type={r.type} />
                   </td>
 
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <span className="text-xs font-medium text-kampmax-text">
-                      {audienceLabel(n.audience)}
-                    </span>
-                    <span className="mt-0.5 block text-[11px] text-kampmax-text-secondary">
-                      {n.campusId ? communityCampusName(n.campusId) : "All campuses"}
-                    </span>
-                  </td>
-
-                  {/* Delivery channels */}
-                  <td className="px-3 py-2.5 xl:table-cell">
-                    <span className="inline-flex items-center gap-1">
-                      {n.deliveryTypes.map((t) => {
-                        const Icon = DELIVERY_ICONS[t];
-                        return (
-                          <span
-                            key={t}
-                            title={t.replace("_", "-")}
-                            className="flex h-6 w-6 items-center justify-center rounded-md bg-kampmax-muted text-kampmax-text-secondary"
-                          >
-                            <Icon className="h-3 w-3" aria-hidden />
-                          </span>
-                        );
-                      })}
+                    <a
+                      href={r.recipientHref}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium text-kampmax-text hover:underline"
+                    >
+                      {r.recipientName}
+                    </a>
+                    <span className="mt-0.5 block font-mono text-[11px] text-kampmax-text-secondary">
+                      {r.recipientId}
                     </span>
                   </td>
 
-                  <td className="hidden whitespace-nowrap px-3 py-2.5 tabular-nums lg:table-cell">
-                    {n.status === "sent"
-                      ? n.recipients.toLocaleString("en-NG")
-                      : <span className="text-kampmax-text-secondary">-</span>}
-                  </td>
-
-                  <td className="hidden whitespace-nowrap px-3 py-2.5 tabular-nums lg:table-cell">
-                    {n.status === "sent" ? `${n.openRate}%` : <span className="text-kampmax-text-secondary">-</span>}
-                  </td>
-
-                  <td
-                    className="whitespace-nowrap px-3 py-2.5 tabular-nums text-kampmax-text-secondary"
-                    title={new Date(n.deliverAt || n.createdAt).toISOString()}
-                  >
-                    {n.status === "scheduled" && (
-                      <CalendarClock className="mr-1 inline h-3 w-3 text-kampmax-info" aria-hidden />
-                    )}
-                    {n.status === "draft"
-                      ? "-"
-                      : formatDateShort(n.deliverAt)}
-                    <span className="ml-1.5 hidden text-[11px] 2xl:inline">
-                      {n.status !== "draft" ? timeAgo(n.deliverAt) : ""}
-                    </span>
-                  </td>
-
-                  <td className="px-3 py-2.5">
+                  <td className="hidden whitespace-nowrap px-3 py-2.5 lg:table-cell">
                     <StatusBadge
-                      variant={notificationStatusVariant(n.status)}
-                      label={notificationStatusLabel(n.status)}
+                      variant={readStateVariant(r.read)}
+                      label={readStateLabel(r.read)}
                     />
                   </td>
 
+                  <td
+                    className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-kampmax-text-secondary"
+                    title={r.createdAt}
+                  >
+                    {formatDateTime(r.createdAt)}
+                  </td>
+
                   <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
-                    <RowActions n={n} onView={onView} onEdit={onEdit} onSendNow={onSendNow} />
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      title="View details"
+                      onClick={() => onView(r)}
+                      onKeyDown={(e) => e.key === "Enter" && onView(r)}
+                      className="inline-flex cursor-pointer rounded-md p-1.5 text-kampmax-text-secondary transition-colors hover:bg-kampmax-muted"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -188,77 +158,59 @@ export function NotificationsTable(props: NotificationsTableProps) {
 
       {/* Mobile cards */}
       <ul className="space-y-2.5 md:hidden">
-        {items.map((n) => {
-          const allowed = notificationActionsFor(n);
-          return (
-            <li
-              key={n.id}
-              onClick={() => onView(n)}
-              className="cursor-pointer rounded-lg border border-kampmax-border bg-white p-3 transition-colors active:bg-kampmax-muted/50"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="min-w-0 text-sm font-medium leading-snug text-kampmax-text">
-                  {n.title}
-                </p>
-                <StatusBadge
-                  variant={notificationStatusVariant(n.status)}
-                  label={notificationStatusLabel(n.status)}
-                />
-              </div>
-
-              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-kampmax-text-secondary">
-                {previewText(n.message, 110)}
+        {items.map((r) => (
+          <li
+            key={r.id}
+            onClick={() => onView(r)}
+            className="cursor-pointer rounded-lg border border-kampmax-border bg-white p-3 transition-colors active:bg-kampmax-muted/50"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="min-w-0 text-sm font-medium leading-snug text-kampmax-text">
+                {r.title}
               </p>
+              <StatusBadge
+                variant={readStateVariant(r.read)}
+                label={readStateLabel(r.read)}
+              />
+            </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-dashed border-kampmax-border pt-2 text-[11px] text-kampmax-text-secondary">
-                <TypeBadge n={n} compact />
-                <span>{audienceLabel(n.audience)}</span>
-                <span>· {n.campusId ? communityCampusName(n.campusId) : "All campuses"}</span>
-                <span className="ml-auto inline-flex items-center gap-1">
-                  {n.deliveryTypes.map((t) => {
-                    const Icon = DELIVERY_ICONS[t];
-                    return <Icon key={t} className="h-3 w-3" aria-hidden />;
-                  })}
-                </span>
-              </div>
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-kampmax-text-secondary">
+              {previewText(r.message, 110)}
+            </p>
 
-              {(allowed.edit || allowed.sendNow) && (
-                <div
-                  className="mt-2 flex items-center justify-end gap-1.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {allowed.edit && (
-                    <button
-                      type="button"
-                      onClick={() => onEdit(n)}
-                      className="inline-flex h-7 items-center gap-1 rounded-md border border-kampmax-border bg-white px-2.5 text-[11px] font-medium text-kampmax-text transition-colors hover:bg-kampmax-muted/60"
-                    >
-                      <Pencil className="h-3 w-3" aria-hidden />
-                      Edit
-                    </button>
-                  )}
-                  {allowed.sendNow && (
-                    <button
-                      type="button"
-                      onClick={() => onSendNow(n)}
-                      className="inline-flex h-7 items-center gap-1 rounded-md border border-kampmax-blue/30 bg-kampmax-blue/10 px-2.5 text-[11px] font-medium text-kampmax-blue transition-colors hover:bg-kampmax-blue/15"
-                    >
-                      <Send className="h-3 w-3" aria-hidden />
-                      Send now
-                    </button>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-dashed border-kampmax-border pt-2 text-[11px] text-kampmax-text-secondary">
+              <TypeBadge type={r.type} compact />
+              <span>{r.recipientName}</span>
+              <span className="ml-auto text-kampmax-text-secondary">
+                {formatDateTime(r.createdAt)}
+              </span>
+            </div>
+          </li>
+        ))}
       </ul>
+
+      {data && data.totalPages > 1 && (
+        <Pagination
+          page={data.page}
+          pageSize={data.pageSize}
+          total={data.total}
+          totalPages={data.totalPages}
+          onPageChange={onPageChange}
+          className="mt-3 rounded-lg border border-kampmax-border bg-white"
+        />
+      )}
     </>
   );
 }
 
-function TypeBadge({ n, compact }: { n: ManagedNotification; compact?: boolean }) {
-  const Icon = notificationTypeIcon(n.type);
+function TypeBadge({
+  type,
+  compact,
+}: {
+  type: ManagedAdminNotificationRow["type"];
+  compact?: boolean;
+}) {
+  const Icon = notificationTypeIcon(type);
   return (
     <span
       className={cn(
@@ -269,57 +221,12 @@ function TypeBadge({ n, compact }: { n: ManagedNotification; compact?: boolean }
       <span
         className={cn(
           "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-          badgeVariantClasses(notificationTypeVariant(n.type))
+          badgeVariantClasses(notificationTypeVariant(type))
         )}
       >
         <Icon className="h-3 w-3" aria-hidden />
-        {notificationTypeLabel(n.type)}
+        {notificationTypeLabel(type)}
       </span>
     </span>
-  );
-}
-
-function RowActions({
-  n,
-  onView,
-  onEdit,
-  onSendNow,
-}: Pick<NotificationsTableProps, "onView" | "onEdit" | "onSendNow"> & {
-  n: ManagedNotification;
-}) {
-  const allowed = notificationActionsFor(n);
-  return (
-    <div className="flex items-center justify-end gap-0.5">
-      {allowed.sendNow && (
-        <button
-          type="button"
-          title="Send now"
-          onClick={() => onSendNow(n)}
-          className="rounded-md p-1.5 text-kampmax-success transition-colors hover:bg-emerald-50"
-        >
-          <Send className="h-3.5 w-3.5" />
-        </button>
-      )}
-      {allowed.edit && (
-        <button
-          type="button"
-          title="Edit draft"
-          onClick={() => onEdit(n)}
-          className="rounded-md p-1.5 text-kampmax-text-secondary transition-colors hover:bg-kampmax-muted"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-      )}
-      <span
-        role="button"
-        tabIndex={0}
-        title="View details"
-        onClick={() => onView(n)}
-        onKeyDown={(e) => e.key === "Enter" && onView(n)}
-        className="hidden cursor-pointer rounded-md p-1.5 text-kampmax-text-secondary transition-colors hover:bg-kampmax-muted sm:block"
-      >
-        <Eye className="h-3.5 w-3.5" />
-      </span>
-    </div>
   );
 }

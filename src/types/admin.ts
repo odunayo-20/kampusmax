@@ -11,6 +11,7 @@ import type {
   OpportunityStatus,
   OpportunityWorkArrangement,
 } from "./opportunity";
+import type { NotificationCategory, NotificationType } from "./index";
 
 // ------------------------------------------------------------
 // AUTH & ROLES
@@ -3047,6 +3048,141 @@ export interface NotificationListQuery extends ListQuery {
   audience?: ManagedNotificationAudience | "all";
   status?: ManagedNotificationStatus | "all";
   campusId?: string | "all";
+}
+
+// ------------------------------------------------------------
+// ADMIN COMMUNICATIONS (/admin/notifications*) [Module 47]
+//
+// Rebuilt on the REAL Module 26A in-app notification store
+// (src/data/notifications.ts) and the REAL user registry
+// (src/data/users.ts). Notification types/categories/rows reuse
+// the user-facing NotificationType / NotificationCategory unions
+// from @/types — the console administers the same records the
+// user notification center reads; it is NOT a second system.
+// In-app is the ONLY wired delivery channel; every unsupported
+// channel/status/template surface is a documented backend gap.
+// ------------------------------------------------------------
+
+export type ManagedAdminNotificationType = NotificationType;
+export type ManagedAdminNotificationCategory = NotificationCategory;
+
+/** Real recipient targeting for in-app dispatch. */
+export type ManagedAdminNotificationAudience =
+  | "specific_user"
+  | "all_users"
+  | "customers"
+  | "vendors"
+  | "campus";
+
+export type ManagedAdminReadState = "all" | "unread" | "read";
+
+export type ManagedAdminDateRange =
+  | "all"
+  | "today"
+  | "7d"
+  | "30d"
+  | "month"
+  | "custom";
+
+export interface ManagedAdminAudiencePreviewUser {
+  userId: string;
+  name: string;
+  role: string;
+  campusId: string;
+  verified: boolean;
+  /** Deep link to the existing /admin/users/:id console (no fabricated targets). */
+  href: string;
+}
+
+export interface ManagedAdminAudiencePreview {
+  audience: ManagedAdminNotificationAudience;
+  campusId: string | null;
+  /** Expanded audience label ("Vendors", "All platform users", …). */
+  label: string;
+  /** Real wired channel — never a channel with no backend integration. */
+  channel: "in_app";
+  /** Recipient count computed from the real user registry. */
+  recipients: number;
+  users: ManagedAdminAudiencePreviewUser[];
+  note: string;
+}
+
+/** Explicit communication DTO — only fields the dispatch endpooint needs. */
+export interface ManagedAdminNotificationCreateInput {
+  title: string;
+  message: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  audience: ManagedAdminNotificationAudience;
+  userId?: string | null;
+  campusId?: string | null;
+  /** Optional internal deep link; only safe in-app routes are accepted. */
+  actionUrl?: string | null;
+}
+
+export interface ManagedAdminNotificationCreateResult {
+  created: number;
+  notificationIds: string[];
+  channel: "in_app";
+}
+
+export interface ManagedAdminNotificationRow {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  recipientId: string;
+  recipientName: string;
+  recipientHref: string;
+  read: boolean;
+  createdAt: string;
+  actionUrl: string | null;
+  groupId: string | null;
+}
+
+export interface ManagedAdminNotificationCounts {
+  total: number;
+  unread: number;
+  read: number;
+  recipients: number;
+  byCategory: Record<NotificationCategory, number>;
+  byType: Record<NotificationType, number>;
+}
+
+export interface ManagedAdminNotificationOverview {
+  counts: ManagedAdminNotificationCounts;
+  platformUsers: number;
+  /** True in this prototype — only the in-app channel is wired. */
+  inAppOnly: boolean;
+  deliveryNote: string;
+  campusBreakdown: { campusId: string; count: number }[];
+}
+
+export interface ManagedAdminNotificationQuery extends ListQuery {
+  type?: NotificationType | "all";
+  category?: NotificationCategory | "all";
+  read?: ManagedAdminReadState;
+  /** ISO date (yyyy-mm-dd) inclusive range over createdAt. */
+  from?: string;
+  to?: string;
+}
+
+export interface AdminCommunicationService {
+  getOverview(): Promise<ManagedAdminNotificationOverview>;
+  list(
+    query?: ManagedAdminNotificationQuery
+  ): Promise<Paginated<ManagedAdminNotificationRow>>;
+  getById(id: string): Promise<ManagedAdminNotificationRow | null>;
+  getAudiencePreview(
+    audience: ManagedAdminNotificationAudience,
+    campusId?: string | null,
+    userId?: string | null
+  ): Promise<ManagedAdminAudiencePreview>;
+  /** Real in-app dispatch: writes one record per recipient in the shared store. */
+  create(
+    input: ManagedAdminNotificationCreateInput
+  ): Promise<ManagedAdminNotificationCreateResult>;
 }
 
 // ------------------------------------------------------------

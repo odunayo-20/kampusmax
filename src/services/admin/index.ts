@@ -310,6 +310,15 @@ export const financeConsoleService: FinanceManagementService =
 export type { ManagedFinanceReportId } from "@/types/admin";
 
 import {
+  AdminCommunicationService,
+  createAdminCommunicationService,
+} from "./communication-management.service";
+
+/** /admin/notifications console (Admin Communications - read-only over the real Module 26A in-app notification store + real user registry, with real in-app dispatch via pushNotificationRecord). */
+export const adminCommunicationService: AdminCommunicationService =
+  createAdminCommunicationService();
+
+import {
   AdminDisputeManagementService,
   createMockDisputeManagementService,
 } from "./dispute-management.service";
