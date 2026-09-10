@@ -524,4 +524,20 @@ export const adminKeys = {
     facets: () => ["admin", "payouts", "facets"] as const,
     detail: (id: string) => ["admin", "payouts", "detail", id] as const,
   } as const,
+  /**
+   * Admin finance reconciliation & reports key factory (Module 46).
+   * Read-only platform finance surface derived from the real orders,
+   * wallet, vendor/freelancer/service-provider financials stores.
+   * Keys are NOT campus-scoped (same as transactions/payouts): finance
+   * records are restricted to full operators (ADMIN/SUPER_ADMIN) via nav
+   * permissions, so no campus shard exists. Read-only namespace — the
+   * backend exposes no fee/settlement/invoice ledger and no payout or
+   * refund actions, so there are no mutation keys.
+   */
+  finance: {
+    all: ["admin", "finance"] as const,
+    overview: () => ["admin", "finance", "overview"] as const,
+    reconciliation: () => ["admin", "finance", "reconciliation"] as const,
+    report: (id: string) => ["admin", "finance", "report", id] as const,
+  } as const,
 };

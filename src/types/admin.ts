@@ -2594,6 +2594,143 @@ export interface ManagedPayoutListQuery extends ListQuery {
 }
 
 // ------------------------------------------------------------
+// FINANCE RECONCILIATION & REPORTS (/admin/finance) [Module 46]
+// ------------------------------------------------------------
+// Read-only reconciliation + reporting layer. Every value is derived from the
+// real orders, wallet, vendor-financials, freelancer-financials and
+// service-provider-financials stores at runtime — never seeded, never PRNG.
+// This module does NOT own any money record: it compares the stores.
+
+/** Report kinds exposed by the Finance reports console. */
+export const MANAGED_FINANCE_REPORT_IDS = [
+  "revenue_fees",
+  "refunds",
+  "payouts",
+  "wallet_movements",
+] as const;
+export type ManagedFinanceReportId = (typeof MANAGED_FINANCE_REPORT_IDS)[number];
+
+/** A single labelled money figure. */
+export interface ManagedFinanceAmount {
+  label: string;
+  amount: number;
+  hint?: string;
+}
+
+/** A label → value pair for chart/table rendering. */
+export interface ManagedFinanceSeries {
+  label: string;
+  value: number;
+}
+
+/** Widths the finance pages plot with ChartCard-compatible bar/line charts. */
+export type ManagedFinanceChartKind = "bar" | "hbar" | "line";
+
+export interface ManagedFinanceKpis {
+  /** Customer money collected: paid order payments + completed wallet deposits. */
+  collected: number;
+  /** GMV of orders currently paid (paymentStatus = paid, 5 orders) — refunded orders are tracked separately. */
+  gmv: number;
+  /** Sum of platform fees STORED on paid orders (retained + refunded-order fees). */
+  platformFees: number;
+  /** Platform fees on retained (paid, non-refunded) orders. */
+  retainedFees: number;
+  /** Refunds issued: refunded order totals + wallet refund credits. */
+  refunds: number;
+  /** Payouts successfully delivered to recipients (successful only). */
+  payoutsDelivered: number;
+  /** Payouts captured but not yet delivered: processing + pending. */
+  payoutsInFlight: number;
+  /** Total wallet balances currently held on customer/seller wallets (available). */
+  heldInWallet: number;
+}
+
+export interface ManagedFinanceOverview {
+  asOf: string;
+  kpis: ManagedFinanceKpis;
+  incoming: ManagedFinanceSeries[];
+  distributed: ManagedFinanceSeries[];
+  retained: ManagedFinanceSeries[];
+  feeByVendor: ManagedFinanceSeries[];
+  orderByVendor: ManagedFinanceSeries[];
+  scopeNote: string;
+}
+
+/** Reconciliation outcome of one check. */
+export type ManagedReconciliationCheckState =
+  | "balanced"
+  | "variance"
+  | "informational";
+
+/** One side of a reconciliation check with the real records that produce it. */
+export interface ManagedReconciliationSide {
+  label: string;
+  amount: number;
+  rows: ManagedReconciliationRow[];
+}
+
+/** A real, traceable record backing a reconciliation figure. */
+export interface ManagedReconciliationRow {
+  id: string;
+  label: string;
+  amount: number;
+  createdAt: string | null;
+  status: string;
+  href?: string;
+}
+
+export interface ManagedReconciliationCheck {
+  id: string;
+  title: string;
+  description: string;
+  scope: string;
+  outcome: ManagedReconciliationCheckState;
+  left: ManagedReconciliationSide;
+  right: ManagedReconciliationSide;
+  variance: number;
+  note?: string;
+}
+
+export interface ManagedReconciliationSummary {
+  totalChecks: number;
+  balancedChecks: number;
+  varianceChecks: number;
+  informationalChecks: number;
+  totalVariance: number;
+}
+
+export interface ManagedReconciliationResult {
+  asOf: string;
+  summary: ManagedReconciliationSummary;
+  checks: ManagedReconciliationCheck[];
+  scopeNote: string;
+}
+
+export interface ManagedFinanceReportColumn {
+  key: string;
+  label: string;
+  align?: "left" | "right";
+}
+
+export interface ManagedFinanceReport {
+  id: ManagedFinanceReportId;
+  title: string;
+  description: string;
+  summary: ManagedFinanceAmount[];
+  charts: { id: string; title: string; kind: ManagedFinanceChartKind; series: ManagedFinanceSeries[] }[];
+  columns: ManagedFinanceReportColumn[];
+  rows: Record<string, string | number | null>[];
+  exportFilename: string;
+  scopeNote: string;
+}
+
+export interface FinanceManagementService {
+  getOverview(): Promise<ManagedFinanceOverview>;
+  getReconciliation(): Promise<ManagedReconciliationResult>;
+  getReport(id: ManagedFinanceReportId): Promise<ManagedFinanceReport | null>;
+}
+
+// ------------------------------------------------------------
 // DISPUTE MANAGEMENT (/admin/disputes)
 // ------------------------------------------------------------
 

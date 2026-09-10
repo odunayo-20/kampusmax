@@ -299,6 +299,17 @@ export const payoutManagementService: AdminPayoutManagementService =
   createPayoutManagementService();
 
 import {
+  FinanceManagementService,
+  createFinanceConsoleService,
+} from "./finance-management.service";
+
+/** /admin/finance console (Admin Finance Reconciliation & Reports - read-only platform overview, reconciliation checks and CSV-exportable reports over the real orders/wallet/financials stores). */
+export const financeConsoleService: FinanceManagementService =
+  createFinanceConsoleService();
+
+export type { ManagedFinanceReportId } from "@/types/admin";
+
+import {
   AdminDisputeManagementService,
   createMockDisputeManagementService,
 } from "./dispute-management.service";

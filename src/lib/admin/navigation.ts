@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Megaphone,
   Package,
+  PieChart,
   Receipt,
   Scale,
   ScrollText,
@@ -93,6 +94,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     id: "finance",
     label: "Finance",
     items: [
+      { key: "finance", href: "/admin/finance", label: "Finance", icon: PieChart },
       { key: "payouts", href: "/admin/payouts", label: "Payouts", icon: Send },
       { key: "wallet", href: "/admin/wallet", label: "Wallets", icon: Wallet },
       { key: "withdrawals", href: "/admin/withdrawals", label: "Withdrawals", icon: Landmark },
