@@ -54,6 +54,14 @@ const SECTION_TABS: { key: SectionTab; label: string; icon: typeof BarChart3 }[]
   { key: "financial", label: "Financial", icon: CircleDollarSign },
 ];
 
+/** Financial analytics is a finance-permission boundary in Module 53:
+ *  CAMPUS_ADMIN may use the Analytics console for their operational
+ *  sections but must never see platform-wide finance metrics, even if
+ *  they navigate to /admin/reports?section=financial directly. */
+function canSeeFinanceAnalytics(role: AdminRole): boolean {
+  return role === "SUPER_ADMIN" || role === "ADMIN";
+}
+
 const RANGE_OPTIONS: { key: AnalyticsRange; label: string }[] = [
   { key: "7d", label: "7D" },
   { key: "30d", label: "30D" },
