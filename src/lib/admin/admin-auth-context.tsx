@@ -41,6 +41,10 @@ export interface AdminSessionValue {
   admins: AdminProfile[];
   status: AdminAuthStatus;
   token: string | null;
+  /** The identity the operator originally signed in as (session scope). */
+  baseAdmin: AdminProfile | null;
+  /** True while the current `admin` differs from the original sign-in. */
+  isSwitchedAccount: boolean;
   login: (
     email: string,
     password: string
@@ -49,6 +53,8 @@ export interface AdminSessionValue {
   switchAccount: (
     adminId: string
   ) => Promise<AdminSessionActionResult>;
+  /** Switch back to the original sign-in identity (impersonation exit). */
+  switchBackToBase: () => Promise<AdminSessionActionResult>;
 }
 
 const AdminSessionContext = createContext<AdminSessionValue | null>(null);
@@ -75,6 +81,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminProfile | null>(null);
   const [admins, setAdmins] = useState<AdminProfile[]>([]);
   const [status, setStatus] = useState<AdminAuthStatus>("loading");
+  const [baseAdminId, setBaseAdminId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +97,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
       if (result) {
         setToken(stored);
         setAdmin(result.admin);
+        setBaseAdminId(result.admin.id);
         setAdmins(await adminAuthService.listActiveAdmins());
         setStatus("authenticated");
       } else {
@@ -113,6 +121,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
       persistToken(result.token);
       setToken(result.token);
       setAdmin(result.admin);
+      setBaseAdminId(result.admin.id);
       setAdmins(await adminAuthService.listActiveAdmins());
       setStatus("authenticated");
       return { success: true };
@@ -129,6 +138,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     clearStoredToken();
     setToken(null);
     setAdmin(null);
+    setBaseAdminId(null);
     setStatus("unauthenticated");
     queryClient.removeQueries({ queryKey: adminKeys.all });
   }, [token, queryClient]);
@@ -153,17 +163,45 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     [token, queryClient]
   );
 
+  const switchBackToBase = useCallback(async () => {
+    if (!baseAdminId || !admin || baseAdminId === admin.id) {
+      return { success: false, message: "No switched account to return from." };
+    }
+    return switchAccount(baseAdminId);
+  }, [baseAdminId, admin, switchAccount]);
+
+  const baseAdmin = useMemo(
+    () => admins.find((a) => a.id === baseAdminId) ?? null,
+    [admins, baseAdminId]
+  );
+  const isSwitchedAccount =
+    baseAdminId !== null && admin !== null && baseAdminId !== admin.id;
+
   const value = useMemo(
     () => ({
       admin,
       admins,
       status,
       token,
+      baseAdmin,
+      isSwitchedAccount,
       login,
       logout,
       switchAccount,
+      switchBackToBase,
     }),
-    [admin, admins, status, token, login, logout, switchAccount]
+    [
+      admin,
+      admins,
+      status,
+      token,
+      baseAdmin,
+      isSwitchedAccount,
+      login,
+      logout,
+      switchAccount,
+      switchBackToBase,
+    ]
   );
 
   return (

@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { adminErrorMessage } from "@/lib/admin/error-reporting";
 import { LoadingSkeleton } from "@/components/admin/LoadingSkeleton";
 import {
   PayoutMethodBadge,
@@ -68,7 +69,7 @@ function PayoutDetailPageInner() {
           }
         />
         <div className="mt-6 rounded-lg border border-kampmax-border bg-kampmax-surface p-12 text-center text-sm text-kampmax-text-muted">
-          {error ? String(error) : "This payout could not be found."}
+          {error ? adminErrorMessage(error) : "This payout could not be found."}
         </div>
       </>
     );

@@ -11,6 +11,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { adminErrorMessage } from "@/lib/admin/error-reporting";
 import { ChartCard, nairaAxis } from "@/components/admin/ChartCard";
 import { StatCard } from "@/components/admin/StatCard";
 import { FinanceTabs } from "@/components/admin/finance/FinanceTabs";
@@ -73,7 +74,7 @@ function AdminFinancePageInner() {
       {isLoading && !overview ? (
         <ErrorOrLoading kind="loading" />
       ) : error ? (
-        <ErrorOrLoading kind="error" onRetry={() => void refetch()} message={String(error)} />
+        <ErrorOrLoading kind="error" onRetry={() => void refetch()} message={adminErrorMessage(error)} />
       ) : !overview ? (
         <ErrorOrLoading kind="empty" />
       ) : (

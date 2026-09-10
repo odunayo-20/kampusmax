@@ -14,7 +14,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, ReactNode } from "react";
-import { Ban, Lock, ShieldAlert } from "lucide-react";
+import { Ban, Eye, Lock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminUI } from "@/lib/admin/admin-ui-context";
 import { useAdminSession } from "@/lib/admin/admin-auth-context";
@@ -159,6 +159,41 @@ function RouteUnauthorized() {
 }
 
 /**
+ * Impersonation-visibility banner (Module 52). While one operator is
+ * viewing the console as another account, the switched identity stays
+ * on screen with a one-click return to the original sign-in.
+ */
+function SwitchedAccountBanner() {
+  const { admin, baseAdmin, isSwitchedAccount, switchBackToBase } =
+    useAdminSession();
+  if (!isSwitchedAccount || !admin) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-xs text-amber-900">
+      <Eye className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        Viewing as <span className="font-semibold">{admin.name}</span>
+        <span className="text-amber-700"> ({admin.role})</span>
+        {baseAdmin ? (
+          <>
+            {" · "}
+            signed in as <span className="font-semibold">{baseAdmin.name}</span>
+          </>
+        ) : null}
+      </span>
+      <button
+        type="button"
+        onClick={() => void switchBackToBase()}
+        className="rounded-md border border-amber-300 bg-white px-2 py-0.5 font-medium text-amber-900 transition-colors hover:bg-amber-100"
+      >
+        {baseAdmin
+          ? `Return to ${baseAdmin.name}`
+          : "Return to your account"}
+      </button>
+    </div>
+  );
+}
+
+/**
  * Guard + chrome. The server layout renders this one component for the
  * whole /admin group, so pages stay free of auth concerns.
  */
@@ -194,6 +229,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         )}
       >
         <AdminHeader />
+        <SwitchedAccountBanner />
         <main className="mx-auto w-full max-w-[1600px] flex-1 px-3 py-4 sm:px-4 lg:px-6 lg:py-5">
           {children}
         </main>

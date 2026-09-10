@@ -59,6 +59,7 @@ import {
   useAdminVendorRejectMutation,
   useAdminVendorSuspendMutation,
 } from "@/hooks/admin/use-admin-vendors";
+import { useActionGuard } from "@/hooks/admin/use-action-guard";
 import type { ManagedVendorDetail } from "@/types/admin";
 
 interface ToastMessage {
@@ -98,6 +99,7 @@ export default function AdminVendorDetailPage() {
   const [confirmWorking, setConfirmWorking] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
+  const { runExclusive } = useActionGuard();
 
   // ----- data hooks (always called at top level) -----
   const { data: detail, isPending, isError, refetch } = useAdminVendor(vendorId);
@@ -119,30 +121,30 @@ export default function AdminVendorDetailPage() {
   }
 
   async function approve() {
-    try {
+    await runExclusive(`vendor:approve:${vendorId}`, async () => {
       await approveMut.mutateAsync(vendorId);
       refresh(`${detail?.vendor.storeName} verified - storefront is live.`);
-    } catch {
+    }).catch(() => {
       pushToast("error", "Couldn't approve the vendor. Try again.");
-    }
+    });
   }
 
   async function reject(reason: string) {
-    try {
+    await runExclusive(`vendor:reject:${vendorId}`, async () => {
       await rejectMut.mutateAsync({ id: vendorId, reason });
       refresh("Application rejected - the owner has been notified.");
-    } catch {
+    }).catch(() => {
       pushToast("error", "Couldn't reject the application. Try again.");
-    }
+    });
   }
 
   async function activate() {
-    try {
+    await runExclusive(`vendor:activate:${vendorId}`, async () => {
       await activateMut.mutateAsync(vendorId);
       refresh(`${detail?.vendor.storeName} is trading again.`);
-    } catch {
+    }).catch(() => {
       pushToast("error", "Couldn't activate the store. Try again.");
-    }
+    });
   }
 
   async function runSuspend() {

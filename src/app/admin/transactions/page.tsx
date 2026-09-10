@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Receipt } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { adminErrorMessage } from "@/lib/admin/error-reporting";
 import { Pagination } from "@/components/admin/Pagination";
 import {
   TransactionsFilters,
@@ -257,7 +258,7 @@ function AdminTransactionsPageInner() {
         ) : error ? (
           <div className="rounded-lg border border-kampmax-error/30 bg-kampmax-error/5 p-6 text-center">
             <p className="text-sm font-medium text-kampmax-error">Failed to load transactions</p>
-            <p className="mt-1 text-xs text-kampmax-text-muted">{String(error)}</p>
+            <p className="mt-1 text-xs text-kampmax-text-muted">{adminErrorMessage(error)}</p>
             <button
               onClick={() => void refetch()}
               className="mt-3 rounded-md bg-kampmax-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-kampmax-primary/90"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMockRbacService } from "../rbac.service";
+import { createMockRbacService, sanitizePermissionMatrix } from "../rbac.service";
 import {
   RESOURCE_ACTIONS,
   RBAC_RESOURCES,
@@ -163,4 +163,51 @@ describe("Admin RBAC service (Module 49)", () => {
       });
     });
   });
+
+  it("drops resources not in the RBAC catalog (mass-assignment guard)", () => {
+    const tampered = fullAdminMatrix();
+    (tampered as unknown as Record<string, unknown>)["audit_logs"] =
+      JSON.parse(JSON.stringify(tampered.users));
+    expect(() => sanitizePermissionMatrix(tampered)).toThrow(
+      /unknown resource/i
+    );
+  });
+
+  it("rejects a matrix missing any seeded resource row", () => {
+    const invalid = fullAdminMatrix();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (invalid as any).settings;
+    expect(() => sanitizePermissionMatrix(invalid)).toThrow(/missing resource/i);
+  });
+
+  it("coerces inapplicable and non-boolean actions to false", () => {
+    const dirty = fullAdminMatrix();
+    // "manage" is not applicable on categories.
+    dirty.categories.manage = true;
+    // Non-boolean junk on a legal action.
+    dirty.users.view = "yes" as unknown as boolean;
+    const clean = sanitizePermissionMatrix(dirty);
+    expect(clean.categories.manage).toBe(false);
+    expect(clean.users.view).toBe(false);
+    // Legal grants survive intact.
+    expect(clean.users.suspend).toBe(true);
+    expect(clean.withdrawals.approve).toBe(true);
+  });
+
+  it("sanitizes the live store so client-injected inapplicable grants never persist", async () => {
+    const svc = make();
+    const admin = (await svc.getRole("ADMIN")) as RbacRole;
+    const edited = JSON.parse(JSON.stringify(admin.permissions)) as RolePermissionMatrix;
+    edited.categories.manage = true;
+    edited.users.view = 1 as unknown as boolean;
+    const updated = await svc.updatePermissions("ADMIN", edited);
+    expect(updated.permissions.categories.manage).toBe(false);
+    expect(updated.permissions.users.view).toBe(false);
+  });
+
+  function fullAdminMatrix(): RolePermissionMatrix {
+    const admin = buildRbacRoles().find((r) => r.key === "ADMIN");
+    if (!admin) throw new Error("ADMIN role missing from seed");
+    return JSON.parse(JSON.stringify(admin.permissions)) as RolePermissionMatrix;
+  }
 });

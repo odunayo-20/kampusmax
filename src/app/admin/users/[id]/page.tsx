@@ -45,6 +45,7 @@ import {
   useAdminUserSetStatusMutation,
   useAdminUserUpdateMutation,
 } from "@/hooks/admin/use-admin-users";
+import { useActionGuard } from "@/hooks/admin/use-action-guard";
 import type { ManagedUserStatus, ManagedUserUpdateInput } from "@/types/admin";
 import type { UserActionPolicy } from "@/services/admin";
 
@@ -79,6 +80,7 @@ export default function AdminUserDetailPage() {
   const [confirmWorking, setConfirmWorking] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
+  const { runExclusive } = useActionGuard();
 
   const pushToast = useCallback((tone: ToastMessage["tone"], text: string) => {
     const cid = ++toastId.current;
@@ -93,12 +95,14 @@ export default function AdminUserDetailPage() {
   const resetMutation = useAdminUserResetStateMutation();
 
   async function runSetStatus(userId: string, status: ManagedUserStatus, successMessage: string) {
-    const result = await setStatusMutation.mutateAsync({ id: userId, status });
-    if (result.ok) {
-      pushToast("success", successMessage);
-    } else {
-      pushToast("error", result.message);
-    }
+    await runExclusive(`user-status:${userId}:${status}`, async () => {
+      const result = await setStatusMutation.mutateAsync({ id: userId, status });
+      if (result.ok) {
+        pushToast("success", successMessage);
+      } else {
+        pushToast("error", result.message);
+      }
+    });
   }
 
   async function runConfirmedAction() {

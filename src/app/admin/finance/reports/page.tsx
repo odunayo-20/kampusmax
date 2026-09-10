@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Download } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { adminErrorMessage } from "@/lib/admin/error-reporting";
 import { ChartCard, nairaAxis } from "@/components/admin/ChartCard";
 import { StatCard } from "@/components/admin/StatCard";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -117,7 +118,7 @@ function AdminFinanceReportsInner() {
       ) : error ? (
         <div className="mt-4 rounded-lg border border-kampmax-error/30 bg-kampmax-error/5 p-6 text-center">
           <p className="text-sm font-medium text-kampmax-error">Failed to load report</p>
-          <p className="mt-1 text-xs text-kampmax-text-muted">{String(error)}</p>
+          <p className="mt-1 text-xs text-kampmax-text-muted">{adminErrorMessage(error)}</p>
           <button
             onClick={() => void refetch()}
             className="mt-3 rounded-md bg-kampmax-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-kampmax-primary/90"

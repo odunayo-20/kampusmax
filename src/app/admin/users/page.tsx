@@ -23,6 +23,7 @@ import {
   useAdminUserUpdateMutation,
   useAdminUsers,
 } from "@/hooks/admin/use-admin-users";
+import { useActionGuard } from "@/hooks/admin/use-action-guard";
 import { useAdminSession } from "@/lib/admin/admin-auth-context";
 import { USER_ROLE_LABELS, USER_STATUS_LABELS } from "@/components/admin/users/users-meta";
 import type {
@@ -160,6 +161,7 @@ function AdminUsersPageInner() {
   const [confirmWorking, setConfirmWorking] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
+  const { runExclusive } = useActionGuard();
 
   const pushToast = useCallback((tone: ToastMessage["tone"], text: string) => {
     const id = ++toastId.current;
@@ -197,12 +199,14 @@ function AdminUsersPageInner() {
     status: ManagedUserStatus,
     successMessage: string
   ) {
-    const result = await setStatusMutation.mutateAsync({ id: user.id, status });
-    if (result.ok) {
-      pushToast("success", successMessage);
-    } else {
-      pushToast("error", result.message);
-    }
+    await runExclusive(`user-status:${user.id}:${status}`, async () => {
+      const result = await setStatusMutation.mutateAsync({ id: user.id, status });
+      if (result.ok) {
+        pushToast("success", successMessage);
+      } else {
+        pushToast("error", result.message);
+      }
+    });
   }
 
   async function runConfirmedAction() {

@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { adminErrorMessage } from "@/lib/admin/error-reporting";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { FinanceTabs } from "@/components/admin/finance/FinanceTabs";
 import {
@@ -51,7 +52,7 @@ function AdminFinanceReconciliationInner() {
           <p className="text-sm font-medium text-kampmax-error">
             Failed to load reconciliation
           </p>
-          <p className="mt-1 text-xs text-kampmax-text-muted">{String(error)}</p>
+          <p className="mt-1 text-xs text-kampmax-text-muted">{adminErrorMessage(error)}</p>
           <button
             onClick={() => void refetch()}
             className="mt-3 rounded-md bg-kampmax-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-kampmax-primary/90"

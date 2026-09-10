@@ -28,6 +28,7 @@ import {
   useAdminVendors,
   useAdminVendorSuspendMutation,
 } from "@/hooks/admin/use-admin-vendors";
+import { useActionGuard } from "@/hooks/admin/use-action-guard";
 import type { ManagedVendor, SortDir, VendorBucket } from "@/types/admin";
 import type { ManagedVendorSortField } from "@/services/admin";
 
@@ -94,6 +95,7 @@ function AdminVendorsPageInner() {
   const [confirmWorking, setConfirmWorking] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
+  const { runExclusive } = useActionGuard();
 
   const pushToast = useCallback((tone: ToastMessage["tone"], text: string) => {
     const id = ++toastId.current;
@@ -184,30 +186,30 @@ function AdminVendorsPageInner() {
   }, [refetch]);
 
   async function approveVendor(vendor: ManagedVendor) {
-    try {
+    await runExclusive(`vendor:approve:${vendor.id}`, async () => {
       await approveMut.mutateAsync(vendor.id);
       pushToast("success", `${vendor.storeName} verified - storefront is live.`);
-    } catch {
+    }).catch(() => {
       pushToast("error", `Couldn't approve ${vendor.storeName}. Try again.`);
-    }
+    });
   }
 
   async function rejectVendor(vendor: ManagedVendor, reason: string) {
-    try {
+    await runExclusive(`vendor:reject:${vendor.id}`, async () => {
       await rejectMut.mutateAsync({ id: vendor.id, reason });
       pushToast("success", `${vendor.storeName}'s application was rejected.`);
-    } catch {
+    }).catch(() => {
       pushToast("error", `Couldn't reject ${vendor.storeName}. Try again.`);
-    }
+    });
   }
 
   async function activateVendor(vendor: ManagedVendor) {
-    try {
+    await runExclusive(`vendor:activate:${vendor.id}`, async () => {
       await activateMut.mutateAsync(vendor.id);
       pushToast("success", `${vendor.storeName} is trading again.`);
-    } catch {
+    }).catch(() => {
       pushToast("error", `Couldn't activate ${vendor.storeName}. Try again.`);
-    }
+    });
   }
 
   async function runSuspend() {
