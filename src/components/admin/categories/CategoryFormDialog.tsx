@@ -170,7 +170,7 @@ export function CategoryFormDialog({
             <span className="mb-1.5 block text-sm font-medium text-kampmax-text">
               Icon
             </span>
-            <div role="radiogroup" aria-label="Category icon" className="grid grid-cols-10 gap-1.5">
+            <div role="radiogroup" aria-label="Category icon" className="grid grid-cols-5 gap-1.5 sm:grid-cols-10">
               {ICON_PICKER_KEYS.map((key) => {
                 const Icon = categoryIcon(key);
                 const selected = form.icon === key;

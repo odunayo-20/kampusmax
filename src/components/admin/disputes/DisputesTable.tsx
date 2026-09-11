@@ -68,7 +68,19 @@ export function DisputesTable(props: DisputesTableProps) {
       {/* Desktop / tablet: full table */}
       <div className="hidden overflow-hidden rounded-lg border border-kampmax-border bg-white md:block">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px] text-left text-sm">
+          <table className="w-full min-w-[1000px] table-fixed text-left text-sm">
+            <colgroup>
+              <col />
+              <col className="hidden w-28 lg:table-column" />
+              <col className="w-28" />
+              <col className="hidden w-28 xl:table-column" />
+              <col className="hidden w-24 lg:table-column" />
+              <col className="w-28" />
+              <col className="w-28" />
+              <col className="w-28" />
+              <col className="hidden w-32 xl:table-column" />
+              <col className="w-28" />
+            </colgroup>
             <thead>
               <tr className="border-b border-kampmax-border bg-kampmax-muted/40 text-[11px] uppercase tracking-wide text-kampmax-text-secondary">
                 <th scope="col" className="px-4 py-2.5 font-medium">Dispute</th>
