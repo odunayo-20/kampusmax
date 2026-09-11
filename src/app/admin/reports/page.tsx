@@ -35,6 +35,7 @@ import type {
   AnalyticsRange,
   AnalyticsReport,
 } from "@/types/admin";
+import type { AdminRole } from "@/types/admin";
 
 export default function AdminReportsPage() {
   return (

@@ -88,15 +88,15 @@ export function CategoriesTable({
   return (
     <div className="overflow-hidden rounded-lg border border-kampmax-border bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] text-left text-sm">
+        <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="border-b border-kampmax-border bg-kampmax-muted/40 text-[11px] uppercase tracking-wide text-kampmax-text-secondary">
             <tr>
               <th scope="col" className="px-4 py-2.5 font-medium">Category</th>
-              <th scope="col" className="px-4 py-2.5 text-right font-medium">Products</th>
-              <th scope="col" className="hidden px-4 py-2.5 text-right font-medium md:table-cell">
+              <th scope="col" className="hidden px-4 py-2.5 text-right font-medium md:table-cell">Products</th>
+              <th scope="col" className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
                 Subcategories
               </th>
-              <th scope="col" className="px-4 py-2.5 text-center font-medium">Order</th>
+              <th scope="col" className="hidden px-4 py-2.5 text-center font-medium sm:table-cell">Order</th>
               <th scope="col" className="px-4 py-2.5 font-medium">Status</th>
               <th scope="col" className="hidden px-4 py-2.5 font-medium lg:table-cell">Updated</th>
               <th scope="col" className="px-4 py-2.5 text-right font-medium">
@@ -174,7 +174,7 @@ function Row({
       </td>
 
       {/* Products */}
-      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+      <td className="hidden whitespace-nowrap px-4 py-2.5 text-right tabular-nums md:table-cell">
         <span className="font-medium text-kampmax-text">
           {category.productCount.toLocaleString("en-NG")}
         </span>
@@ -186,12 +186,12 @@ function Row({
       </td>
 
       {/* Subcategories */}
-      <td className="hidden whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-kampmax-text-secondary md:table-cell">
+      <td className="hidden whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-kampmax-text-secondary lg:table-cell">
         {isChild ? "—" : category.subcategoryCount}
       </td>
 
       {/* Order controls */}
-      <td className="px-4 py-2.5">
+      <td className="hidden px-4 py-2.5 sm:table-cell">
         <div className="flex items-center justify-center gap-1">
           <button
             type="button"
