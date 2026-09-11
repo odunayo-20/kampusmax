@@ -419,3 +419,17 @@ export const notificationService: AdminNotificationService =
 
 export const settingService: AdminSettingService =
   createMockSettingService(mockSettings);
+
+import {
+  AdminSupportManagementService,
+  createMockSupportManagementService,
+} from "./support-management.service";
+
+/**
+ * /admin/support console (Module 56). Ticket resolution built on a
+ * deterministic dataset referencing the real user, order, vendor and
+ * job stores. All mutations audit via Module 48 and customer-visible
+ * replies dispatch real in-app notifications (Module 26A).
+ */
+export const supportManagementService: AdminSupportManagementService =
+  createMockSupportManagementService();

@@ -28,6 +28,7 @@ import {
   Boxes,
   ClipboardList,
   Fingerprint,
+  Headphones,
 } from "lucide-react";
 import { AdminNavItemKey, canSeeSection } from "./permissions";
 import { AdminRole } from "@/types/admin";
@@ -109,6 +110,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "reviews", href: "/admin/reviews", label: "Reviews", icon: Star },
       { key: "safety", href: "/admin/safety", label: "Trust & Safety", icon: ShieldAlert },
       { key: "disputes", href: "/admin/disputes", label: "Disputes", icon: Scale },
+      { key: "support", href: "/admin/support", label: "Support", icon: Headphones },
     ],
   },
   {
@@ -152,7 +154,7 @@ export function breadcrumbLabel(segment: string, index: number): string {
 }
 
 export function isDetailSegment(segment: string): boolean {
-    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer|p\d+|opp_|r\d+|prv_|vrf-)/i.test(segment);
+    return /^(KMP-|usr-|vnd-|prd-|dsp-|rpt-|rev-|pst-|wdr-|prm-|fl-|freelancer|p\d+|opp_|r\d+|prv_|vrf-|tkt-)/i.test(segment);
 }
 
 function titleCase(value: string): string {

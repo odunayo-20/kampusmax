@@ -4,6 +4,8 @@ import {
   Building2,
   EyeOff,
   FileClock,
+  Headphones,
+  Mail,
   Megaphone,
   Pencil,
   RotateCcw,
@@ -55,6 +57,13 @@ export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
   EMPLOYER_APPROVED: "Approved employer",
   EMPLOYER_REJECTED: "Rejected employer",
   NOTIFICATION_SENT: "Sent notification",
+  SUPPORT_TICKET_ASSIGNED: "Assigned support ticket",
+  SUPPORT_TICKET_STATUS_CHANGED: "Changed ticket status",
+  SUPPORT_TICKET_PRIORITY_CHANGED: "Changed ticket priority",
+  SUPPORT_TICKET_RESPONDED: "Replied to ticket",
+  SUPPORT_TICKET_NOTE_ADDED: "Added internal note",
+  SUPPORT_TICKET_ESCALATED: "Escalated support ticket",
+  SUPPORT_TICKET_REOPENED: "Reopened support ticket",
 };
 
 export function auditActionLabel(action: AdminAuditAction): string {
@@ -83,6 +92,13 @@ export const AUDIT_ACTION_ICONS: Record<AdminAuditAction, LucideIcon> = {
   EMPLOYER_APPROVED: BadgeCheck,
   EMPLOYER_REJECTED: XCircle,
   NOTIFICATION_SENT: Megaphone,
+  SUPPORT_TICKET_ASSIGNED: User,
+  SUPPORT_TICKET_STATUS_CHANGED: Pencil,
+  SUPPORT_TICKET_PRIORITY_CHANGED: Star,
+  SUPPORT_TICKET_RESPONDED: Mail,
+  SUPPORT_TICKET_NOTE_ADDED: FileClock,
+  SUPPORT_TICKET_ESCALATED: ShieldCheck,
+  SUPPORT_TICKET_REOPENED: RotateCcw,
 };
 
 const SEVERITY_VARIANT: Record<AdminAuditSeverity, BadgeVariant> = {
@@ -124,6 +140,13 @@ export const AUDIT_ACTION_FILTER_ORDER: AdminAuditAction[] = [
   "EMPLOYER_APPROVED",
   "EMPLOYER_REJECTED",
   "NOTIFICATION_SENT",
+  "SUPPORT_TICKET_ASSIGNED",
+  "SUPPORT_TICKET_STATUS_CHANGED",
+  "SUPPORT_TICKET_PRIORITY_CHANGED",
+  "SUPPORT_TICKET_RESPONDED",
+  "SUPPORT_TICKET_NOTE_ADDED",
+  "SUPPORT_TICKET_ESCALATED",
+  "SUPPORT_TICKET_REOPENED",
 ];
 
 /** True for actions the backend classifies as security-sensitive events. */
@@ -141,6 +164,7 @@ export const AUDIT_RESOURCE_LABELS: Record<AdminAuditResourceType, string> = {
   freelancer: "Freelancer",
   employer: "Employer",
   notification: "Notification",
+  ticket: "Support ticket",
 };
 
 export function auditResourceLabel(resource: AdminAuditResourceType): string {
@@ -153,6 +177,7 @@ export const AUDIT_RESOURCE_ICONS: Record<AdminAuditResourceType, LucideIcon> = 
   freelancer: Users,
   employer: Building2,
   notification: Megaphone,
+  ticket: Headphones,
 };
 
 export const AUDIT_RESOURCE_FILTER_ORDER: AdminAuditResourceType[] = [
@@ -161,6 +186,7 @@ export const AUDIT_RESOURCE_FILTER_ORDER: AdminAuditResourceType[] = [
   "freelancer",
   "employer",
   "notification",
+  "ticket",
 ];
 
 // ------------------------------------------------------------

@@ -3402,7 +3402,8 @@ export type AdminAuditResourceType =
   | "vendor"
   | "freelancer"
   | "employer"
-  | "notification";
+  | "notification"
+  | "ticket";
 
 /** Canonical bootstrap event vocabulary. Real backend names win when wired. */
 export type AdminAuditAction =
@@ -3426,7 +3427,14 @@ export type AdminAuditAction =
   | "EMPLOYER_RESTORED"
   | "EMPLOYER_APPROVED"
   | "EMPLOYER_REJECTED"
-  | "NOTIFICATION_SENT";
+  | "NOTIFICATION_SENT"
+  | "SUPPORT_TICKET_ASSIGNED"
+  | "SUPPORT_TICKET_STATUS_CHANGED"
+  | "SUPPORT_TICKET_PRIORITY_CHANGED"
+  | "SUPPORT_TICKET_RESPONDED"
+  | "SUPPORT_TICKET_NOTE_ADDED"
+  | "SUPPORT_TICKET_ESCALATED"
+  | "SUPPORT_TICKET_REOPENED";
 
 /** Only safe, allowlisted display fields. Never dump backend payloads. */
 export interface AdminAuditMetadata {
@@ -4151,4 +4159,216 @@ export interface ManagedJobDetail {
   applications: ManagedJobApplicationsSummary;
   contracts: ManagedJobContractInfo;
   activity: ManagedJobActivityEvent[];
+}
+
+// ------------------------------------------------------------
+// SUPPORT / CUSTOMER SERVICE (Module 56)
+// Canonical support-ticket vocabulary. In the prototype the dataset
+// is generated deterministically; a real NestJS backend replaces the
+// factory (see KAMPUSMAX_SUPPORT_BACKEND_GAPS.md).
+// ------------------------------------------------------------
+
+export type SupportTicketStatus =
+  | "open"
+  | "pending"
+  | "in_progress"
+  | "waiting_on_customer"
+  | "resolved"
+  | "closed";
+
+export type SupportTicketPriority = "low" | "normal" | "high" | "urgent";
+
+export type SupportTicketCategory =
+  | "account"
+  | "marketplace"
+  | "payments"
+  | "freelancer"
+  | "service_provider"
+  | "employer"
+  | "verification"
+  | "technical"
+  | "other";
+
+export type SupportPostedBy = "customer" | "support";
+
+/** Who the message is intended for. Internal notes never reach the customer. */
+export type SupportMessageVisibility = "customer" | "internal";
+
+export type SupportAttachmentKind = "image" | "pdf" | "document" | "other";
+
+export interface SupportAttachment {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  mimeType: string;
+  kind: SupportAttachmentKind;
+  uploadedBy: SupportPostedBy;
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  postedBy: SupportPostedBy;
+  authorName: string;
+  visibility: SupportMessageVisibility;
+  body: string;
+  attachments: SupportAttachment[];
+  at: string;
+}
+
+export type SupportTimelineKind =
+  | "created"
+  | "assigned"
+  | "status_changed"
+  | "priority_changed"
+  | "responded"
+  | "note_added"
+  | "escaped"
+  | "escalated"
+  | "reopened";
+
+export interface SupportTimelineEvent {
+  id: string;
+  ticketId: string;
+  kind: SupportTimelineKind;
+  label: string;
+  detail?: string;
+  actorName: string;
+  at: string;
+}
+
+export type SupportEscalationTarget =
+  | "finance"
+  | "trust_safety"
+  | "verification"
+  | "technical_operations"
+  | "vendor_operations"
+  | "management";
+
+export interface SupportEscalation {
+  target: SupportEscalationTarget;
+  note: string;
+  byName: string;
+  at: string;
+}
+
+/** Admin-facing link to the related module this ticket references. */
+export interface SupportRelatedResource {
+  type:
+    | "order"
+    | "transaction"
+    | "payout"
+    | "vendor"
+    | "job"
+    | "application"
+    | "contract"
+    | "verification_request"
+    | "dispute";
+  id: string;
+  label: string;
+  href: string;
+}
+
+/** Least-privilege customer summary — identity for triage, no PII dump. */
+export interface SupportCustomerRef {
+  id: string;
+  name: string;
+  role: ManagedUserRole;
+  campusId: string | null;
+  campusName: string | null;
+  joinedAt: string;
+  isVerified: boolean;
+}
+
+export interface SupportAssignee {
+  id: string;
+  name: string;
+  role: AdminRole;
+  activeTicketCount: number;
+}
+
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  category: SupportTicketCategory;
+  customer: SupportCustomerRef;
+  assigneeId: string | null;
+  assigneeName: string | null;
+  relatedResource: SupportRelatedResource | null;
+  escalated: boolean;
+  escalation: SupportEscalation | null;
+  createdAt: string;
+  updatedAt: string;
+  lastResponseAt: string | null;
+  reopenedAt: string | null;
+}
+
+export interface SupportTicketDetail {
+  ticket: SupportTicket;
+  description: string;
+  messages: SupportMessage[];
+  timeline: SupportTimelineEvent[];
+  assignees: SupportAssignee[];
+}
+
+export interface SupportTicketMetrics {
+  open: number;
+  escalated: number;
+  unassigned: number;
+  awaitingCustomer: number;
+  resolved: number;
+  closed: number;
+  urgent: number;
+  highPriority: number;
+  current: SupportTicketStatus[];
+  avgFirstResponseHours: number;
+  byStatus: { status: SupportTicketStatus; count: number }[];
+  byPriority: { priority: SupportTicketPriority; count: number }[];
+  byCategory: { category: SupportTicketCategory; count: number }[];
+}
+
+export type SupportTicketListSort =
+  | "createdAt"
+  | "updatedAt"
+  | "priority"
+  | "subject";
+
+export interface SupportTicketListQuery extends ListQuery {
+  status?: SupportTicketStatus | "all";
+  priority?: SupportTicketPriority | "all";
+  category?: SupportTicketCategory | "all";
+  assigneeId?: string | "all" | "unassigned";
+  campusId?: string | "all";
+  escalated?: boolean;
+  sortBy?: SupportTicketListSort;
+  sortDir?: SortDir;
+}
+
+export interface SupportRespondInput {
+  body: string;
+  visibility: SupportMessageVisibility;
+}
+
+export interface SupportAssignInput {
+  assigneeId: string;
+}
+
+export interface SupportSetStatusInput {
+  status: SupportTicketStatus;
+  note?: string;
+}
+
+export interface SupportSetPriorityInput {
+  priority: SupportTicketPriority;
+}
+
+export interface SupportEscalateInput {
+  target: SupportEscalationTarget;
+  note: string;
+}
+
+export interface SupportMutationResult {
+  detail: SupportTicketDetail | null;
 }

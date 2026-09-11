@@ -56,6 +56,13 @@ export const ADMIN_AUDIT_SEVERITY: Record<AdminAuditAction, AdminAuditSeverity> 
   EMPLOYER_APPROVED: "medium",
   EMPLOYER_REJECTED: "medium",
   NOTIFICATION_SENT: "low",
+  SUPPORT_TICKET_ASSIGNED: "low",
+  SUPPORT_TICKET_STATUS_CHANGED: "medium",
+  SUPPORT_TICKET_PRIORITY_CHANGED: "low",
+  SUPPORT_TICKET_RESPONDED: "low",
+  SUPPORT_TICKET_NOTE_ADDED: "low",
+  SUPPORT_TICKET_ESCALATED: "medium",
+  SUPPORT_TICKET_REOPENED: "medium",
 };
 
 /** Security-relevant subset highlighted by the security-event filter. */

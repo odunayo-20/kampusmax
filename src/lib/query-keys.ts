@@ -662,4 +662,37 @@ export const adminKeys = {
       pageSize?: number;
     }) => ["admin", "security", "events", query] as const,
   } as const,
+  /**
+   * Admin support & customer service key factory (Module 56). The
+   * /admin/support console is campus-scoped for CAMPUS_ADMIN operators
+   * (their list, detail and metrics never cross campus boundaries) and
+   * mutation-capable for SUPER_ADMIN/ADMIN. Mutations invalidate the
+   * whole `support` tree so list, detail and metrics stay consistent
+   * after respond / note / assign / status / priority / escalate.
+   */
+  support: {
+    all: ["admin", "support"] as const,
+    list: (
+      query: {
+        search?: string;
+        status?: string;
+        priority?: string;
+        category?: string;
+        assigneeId?: string;
+        campusId?: string;
+        escalated?: boolean;
+        sortBy?: string;
+        sortDir?: "asc" | "desc";
+        page?: number;
+        pageSize?: number;
+      },
+      scopeCampusId?: string | null
+    ) => ["admin", "support", "list", scopeCampusId ?? "platform", query] as const,
+    metrics: (scopeCampusId?: string | null) =>
+      ["admin", "support", "metrics", scopeCampusId ?? "platform"] as const,
+    staff: (scopeCampusId?: string | null) =>
+      ["admin", "support", "staff", scopeCampusId ?? "platform"] as const,
+    detail: (id: string, scopeCampusId?: string | null) =>
+      ["admin", "support", "detail", id, scopeCampusId ?? "platform"] as const,
+  } as const,
 };
