@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wrench } from "lucide-react";
+import { KAMPMAX_ROLE_PATHS } from "@/components/layout/footer/role-paths";
 
 /** Minimal public footer for the service marketplace pages. */
 export function ServiceMarketplaceFooter() {
@@ -21,6 +22,33 @@ export function ServiceMarketplaceFooter() {
         >
           Browse services
         </Link>
+      </div>
+      <div className="max-w-[1280px] mx-auto px-4 pb-5">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-kampmax-border pt-4">
+          <span className="text-xs font-semibold text-kampmax-navy mr-1">
+            Join Kampmax:
+          </span>
+          {(["customer", "vendor", "freelancer", "service_provider", "employer"] as const).map(
+            (id, index) => {
+              const path = KAMPMAX_ROLE_PATHS[id];
+              return (
+                <span key={id} className="inline-flex items-center">
+                  {index > 0 && (
+                    <span className="text-kampmax-text-muted px-1.5" aria-hidden>
+                      ·
+                    </span>
+                  )}
+                  <Link
+                    href={path.guestHref}
+                    className="text-xs text-kampmax-text-secondary hover:text-kampmax-blue transition-colors"
+                  >
+                    {path.title}
+                  </Link>
+                </span>
+              );
+            }
+          )}
+        </div>
       </div>
     </footer>
   );

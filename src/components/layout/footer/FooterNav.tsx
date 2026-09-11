@@ -3,32 +3,43 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { footerSections, type FooterSection } from "./sections";
+import { type FooterSection } from "./sections";
 import { cn } from "@/lib/utils";
 
 function FooterLinkItem({
   href,
-  placeholder,
+  description,
   children,
 }: {
   href: string;
-  placeholder?: boolean;
+  description?: string;
   children: React.ReactNode;
 }) {
-  if (placeholder) {
-    return (
-      <span className="text-sm text-kampmax-text-secondary/80 cursor-not-allowed inline-block py-0.5">
-        {children}
-      </span>
-    );
-  }
   return (
     <Link
       href={href}
-      className="text-sm text-kampmax-text-secondary hover:text-kampmax-blue transition-colors inline-block py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kampmax-blue rounded-sm"
+      className="group text-sm text-kampmax-text-secondary hover:text-kampmax-blue transition-colors inline-block py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kampmax-blue rounded-sm"
     >
-      {children}
+      <span className="inline-block">{children}</span>
+      {description && (
+        <span className="block text-xs text-kampmax-text-muted group-hover:text-kampmax-text-secondary leading-snug">
+          {description}
+        </span>
+      )}
     </Link>
+  );
+}
+
+function SectionTitle({ section }: { section: FooterSection }) {
+  return (
+    <h3
+      className={cn(
+        "text-sm font-bold text-kampmax-text mb-3",
+        section.highlight && "text-kampmax-navy"
+      )}
+    >
+      {section.title}
+    </h3>
   );
 }
 
@@ -36,14 +47,16 @@ function DesktopColumns({ sections }: { sections: FooterSection[] }) {
   return (
     <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
       {sections.map((section) => (
-        <nav key={section.id} aria-label={section.title}>
-          <h3 className="text-sm font-bold text-kampmax-text mb-3">
-            {section.title}
-          </h3>
+        <nav
+          key={section.id}
+          aria-label={section.title}
+          className={cn(section.highlight && "lg:pr-4")}
+        >
+          <SectionTitle section={section} />
           <ul className="space-y-1">
             {section.links.map((link) => (
               <li key={link.label}>
-                <FooterLinkItem href={link.href} placeholder={link.placeholder}>
+                <FooterLinkItem href={link.href} description={link.description}>
                   {link.label}
                 </FooterLinkItem>
               </li>
@@ -56,7 +69,7 @@ function DesktopColumns({ sections }: { sections: FooterSection[] }) {
 }
 
 function MobileAccordion({ sections }: { sections: FooterSection[] }) {
-  const [openIds, setOpenIds] = useState<string[]>(["shop"]);
+  const [openIds, setOpenIds] = useState<string[]>(["join"]);
 
   const toggle = (id: string) => {
     setOpenIds((prev) =>
@@ -77,7 +90,12 @@ function MobileAccordion({ sections }: { sections: FooterSection[] }) {
               aria-controls={`footer-section-${section.id}`}
               className="w-full flex items-center justify-between py-3.5 pr-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kampmax-blue rounded-sm"
             >
-              <span className="text-sm font-bold text-kampmax-text">
+              <span
+                className={cn(
+                  "text-sm font-bold text-kampmax-text",
+                  section.highlight && "text-kampmax-navy"
+                )}
+              >
                 {section.title}
               </span>
               <ChevronDown
@@ -88,16 +106,13 @@ function MobileAccordion({ sections }: { sections: FooterSection[] }) {
               />
             </button>
             {isOpen && (
-              <div
-                id={`footer-section-${section.id}`}
-                className="pb-3"
-              >
+              <div id={`footer-section-${section.id}`} className="pb-3">
                 <ul className="space-y-1">
                   {section.links.map((link) => (
                     <li key={link.label}>
                       <FooterLinkItem
                         href={link.href}
-                        placeholder={link.placeholder}
+                        description={link.description}
                       >
                         {link.label}
                       </FooterLinkItem>

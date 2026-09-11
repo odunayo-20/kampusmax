@@ -1,98 +1,122 @@
 import type { UserRole } from "@/types";
+import {
+  KAMPMAX_ROLE_PATHS,
+  roleHrefFor,
+  type KampmaxRoleId,
+} from "./role-paths";
 
 /**
  * Footer navigation configuration.
  *
- * Internal links use Next.js `Link` (client-side navigation). Any route that
- * does not yet exist in the app is marked with `placeholder: true` so it can
- * be wired up once the corresponding page ships. Placeholders render as
- * non-navigating, disabled-looking anchors so they never cause a 404 or a
- * page reload gut.
+ * Every `href` below is a route that actually exists in the app (verified by
+ * route audit). Links that have no real page yet are omitted instead of being
+ * faked — dead links are never rendered.
  */
 
 export interface FooterLink {
   label: string;
   href: string;
-  /** True when the target route does not exist yet. */
-  placeholder?: boolean;
+  /** Optional one-line pitch rendered under the label (Join Kampmax column). */
+  description?: string;
 }
 
 export interface FooterSection {
   id: string;
   title: string;
   links: FooterLink[];
+  /** Visually emphasised column (Join Kampmax). */
+  highlight?: boolean;
 }
 
+const RESERVED: KampmaxRoleId[] = [
+  "customer",
+  "vendor",
+  "freelancer",
+  "service_provider",
+  "employer",
+];
+
+function joinLinks(signedIn: boolean): FooterLink[] {
+  return RESERVED.map((id) => {
+    const path = KAMPMAX_ROLE_PATHS[id];
+    return {
+      label: path.joinLabel,
+      href: roleHrefFor(id, signedIn),
+      description: path.description,
+    };
+  });
+}
+
+/**
+ * Static footer sections with guest-only "Join Kampmax" links.
+ * Prefer `getFooterSections(signedIn)` at render time for auth-aware hrefs.
+ */
 export const footerSections: FooterSection[] = [
   {
-    id: "shop",
-    title: "Shop",
+    id: "explore",
+    title: "Explore",
     links: [
-      { label: "Browse Products", href: "/marketplace" },
-      { label: "Categories", href: "/marketplace" },
-      { label: "Nearby Vendors", href: "/marketplace", placeholder: true },
-      { label: "Featured Products", href: "/marketplace", placeholder: true },
-      { label: "Deals & Offers", href: "/marketplace", placeholder: true },
-      { label: "New Arrivals", href: "/marketplace", placeholder: true },
+      { label: "Home", href: "/home" },
+      { label: "Marketplace", href: "/marketplace" },
+      { label: "Jobs", href: "/jobs" },
+      { label: "Services", href: "/services" },
+      { label: "Community", href: "/community" },
     ],
   },
   {
-    id: "services",
-    title: "Services & Opportunities",
+    id: "join",
+    title: "Join Kampmax",
+    highlight: true,
+    links: RESERVED.map((id) => {
+      const path = KAMPMAX_ROLE_PATHS[id];
+      return {
+        label: path.joinLabel,
+        href: path.guestHref,
+        description: path.description,
+      };
+    }),
+  },
+  {
+    id: "support",
+    title: "Support",
     links: [
-      { label: "Find Services", href: "/services", placeholder: true },
-      { label: "Find Freelancers", href: "/services", placeholder: true },
-      { label: "Post a Service", href: "/services", placeholder: true },
-      { label: "Find Jobs", href: "/jobs", placeholder: true },
-      { label: "Post a Job", href: "/jobs", placeholder: true },
-      { label: "Become a Service Provider", href: "/services", placeholder: true },
+      { label: "Help Center", href: "/profile/help" },
+      { label: "Contact Support", href: "/profile/help" },
+      { label: "Report a Problem", href: "/profile/help" },
     ],
   },
   {
-    id: "sell",
-    title: "Sell & Earn",
+    id: "company",
+    title: "Company",
     links: [
-      { label: "Become a Vendor", href: "/vendor", placeholder: true },
-      { label: "Vendor Dashboard", href: "/vendor" },
-      { label: "Vendor Resources", href: "/vendor", placeholder: true },
-      { label: "Become a Campus Ambassador", href: "/onboarding", placeholder: true },
-      { label: "Referral Program", href: "/profile", placeholder: true },
-      { label: "Earning Opportunities", href: "/vendor/earnings", placeholder: true },
-    ],
-  },
-  {
-    id: "help",
-    title: "Help & Company",
-    links: [
-      { label: "Help Center", href: "/profile/help", placeholder: true },
-      { label: "Contact Us", href: "/profile/help", placeholder: true },
-      { label: "About Kampmax", href: "/home", placeholder: true },
-      { label: "Safety & Trust", href: "/home", placeholder: true },
-      { label: "FAQs", href: "/profile/help", placeholder: true },
-      { label: "Terms & Conditions", href: "/profile/help", placeholder: true },
-      { label: "Privacy Policy", href: "/profile/help", placeholder: true },
-      { label: "Refund Policy", href: "/profile/help", placeholder: true },
+      { label: "Terms & Conditions", href: "/profile/help" },
+      { label: "Privacy Policy", href: "/profile/help" },
+      { label: "Refund Policy", href: "/profile/help" },
+      { label: "Cookie Policy", href: "/profile/help" },
     ],
   },
 ];
 
-const LEGAL_LINKS: FooterLink[] = [
-  { label: "Privacy Policy", href: "/profile/help", placeholder: true },
-  { label: "Terms & Conditions", href: "/profile/help", placeholder: true },
-  { label: "Refund Policy", href: "/profile/help", placeholder: true },
-  { label: "Cookie Policy", href: "/profile/help", placeholder: true },
-];
-
-export function getLegalLinks(): FooterLink[] {
-  return LEGAL_LINKS;
+/**
+ * Footer sections with the "Join Kampmax" links resolved for the current
+ * session: guests are sent to the guest onboarding/registration entry,
+ * signed-in members to their existing dashboard/profile area.
+ */
+export function getFooterSections(signedIn: boolean): FooterSection[] {
+  return footerSections.map((section) =>
+    section.id === "join"
+      ? { ...section, links: joinLinks(signedIn) }
+      : section
+  );
 }
 
 export type FooterRole = UserRole | "freelancer" | "employer" | "ambassador";
 
 /**
  * Contextual quick links surfaced for the current user, based on role.
- * Only roles that exist in the current app (`student`, `vendor`) produce
- * links today; the other role types are reserved for the future ecosystem.
+ * Only routes that exist are used. Freelancer/employer entries are reserved
+ * for the future ecosystem (the current auth contract can only issue
+ * `student`, `vendor` and `admin`).
  */
 const CONTEXTUAL_LINKS: Record<FooterRole, FooterLink[]> = {
   student: [
@@ -108,21 +132,16 @@ const CONTEXTUAL_LINKS: Record<FooterRole, FooterLink[]> = {
   ],
   admin: [],
   freelancer: [
-    { label: "Services", href: "/services", placeholder: true },
-    { label: "Jobs", href: "/jobs", placeholder: true },
-    { label: "Proposals", href: "/profile", placeholder: true },
-    { label: "Earnings", href: "/profile/wallet", placeholder: true },
+    { label: "Dashboard", href: "/freelancer/dashboard" },
+    { label: "Saved Jobs", href: "/freelancer/saved-jobs" },
+    { label: "Earnings", href: "/freelancer/earnings" },
   ],
   employer: [
-    { label: "Post Job", href: "/jobs", placeholder: true },
-    { label: "Manage Jobs", href: "/jobs", placeholder: true },
-    { label: "Applicants", href: "/jobs", placeholder: true },
+    { label: "Post Job", href: "/employer/jobs/create" },
+    { label: "Manage Jobs", href: "/employer/jobs" },
+    { label: "Applications", href: "/employer/applications" },
   ],
-  ambassador: [
-    { label: "Ambassador Dashboard", href: "/profile", placeholder: true },
-    { label: "Referrals", href: "/profile", placeholder: true },
-    { label: "Earnings", href: "/profile/wallet", placeholder: true },
-  ],
+  ambassador: [],
 };
 
 export function getContextualLinks(role: FooterRole): FooterLink[] {

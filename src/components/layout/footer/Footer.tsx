@@ -3,47 +3,69 @@
 import Link from "next/link";
 import {
   MapPin,
-  ChevronRight,
   BadgeCheck,
   Lock,
   ShieldCheck,
   GraduationCap,
-  Store,
+  ArrowRight,
 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useAuth } from "@/lib/auth-context";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { footerSections, getContextualLinks } from "./sections";
+import { getContextualLinks, getFooterSections } from "./sections";
+import { HOMEPAGE_ROLE_CARDS } from "./role-paths";
 import { FooterNav } from "./FooterNav";
 import { CampusSelector } from "./CampusSelector";
 import { SocialLinks } from "./SocialLinks";
 
-function FooterCta() {
+/**
+ * "More than a marketplace" — role-discovery CTA shown just above the footer
+ * columns. Compact, native to the Kampmax design system, no animations.
+ */
+function FooterRoleCta() {
+  const { user } = useAuth();
+  const signedIn = Boolean(user);
+
   return (
     <div className="rounded-2xl border border-kampmax-border bg-white p-6 sm:p-8 mb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
-        <div className="max-w-xl">
-          <h2 className="text-xl sm:text-2xl font-bold text-kampmax-text tracking-tight">
-            Everything you need, closer to you.
-          </h2>
-          <p className="text-sm text-kampmax-text-secondary mt-1.5">
-            Discover products, services and opportunities around your campus.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/marketplace"
-            className="inline-flex items-center justify-center h-12 px-5 text-sm font-semibold rounded-md bg-kampmax-blue text-white hover:bg-kampmax-blue-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kampmax-blue focus-visible:ring-offset-2"
-          >
-            Start Shopping
-          </Link>
-          <Link
-            href="/vendor"
-            className="inline-flex items-center justify-center h-12 px-5 text-sm font-semibold rounded-md border border-kampmax-border bg-white text-kampmax-text hover:bg-neutral-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kampmax-blue"
-          >
-            Become a Vendor
-          </Link>
-        </div>
+      <div className="max-w-2xl">
+        <h2 className="text-xl sm:text-2xl font-bold text-kampmax-text tracking-tight">
+          More than a marketplace
+        </h2>
+        <p className="text-sm text-kampmax-text-secondary mt-1.5">
+          Whether you&apos;re here to shop, sell, offer your skills, provide
+          services, or hire talent, there&apos;s a place for you on Kampmax.
+        </p>
+      </div>
+      <div className="mt-6 grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {HOMEPAGE_ROLE_CARDS.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Link
+              key={card.title}
+              href={card.href(signedIn)}
+              className="group flex flex-col justify-between gap-2 rounded-xl border border-kampmax-border bg-kampmax-muted/30 p-3.5 transition-colors hover:border-kampmax-blue/40 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kampmax-blue"
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-8 w-8 shrink-0 rounded-lg bg-kampmax-blue/10 flex items-center justify-center">
+                  <Icon className="h-4 w-4 text-kampmax-blue" aria-hidden />
+                </span>
+                <span className="text-sm font-semibold text-kampmax-text">
+                  {card.title}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs text-kampmax-text-secondary leading-snug">
+                  {card.tagline}
+                </p>
+                <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-kampmax-blue">
+                  {card.cta}
+                  <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                </span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
@@ -74,7 +96,7 @@ const trustItems = [
 
 function TrustRow() {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-6 border-y border-kampmax-border mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-6 border-b border-kampmax-border mb-8">
       {trustItems.map((item) => {
         const Icon = item.icon;
         return (
@@ -109,8 +131,8 @@ function FooterBrand() {
           </span>
         </Link>
         <p className="text-sm text-kampmax-text-secondary mt-2 max-w-sm leading-relaxed">
-          Your campus marketplace for products, services, jobs and
-          opportunities.
+          Your campus marketplace and platform for buying, selling, working and
+          hiring.
         </p>
       </div>
 
@@ -148,31 +170,23 @@ function ContextualNav() {
   return (
     <div className="bg-neutral-50 border border-kampmax-border rounded-xl p-4 sm:p-5 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <Store className="h-4 w-4 text-kampmax-blue" />
+        <BadgeCheck className="h-4 w-4 text-kampmax-blue" />
         <h3 className="text-sm font-bold text-kampmax-text">
           Your Kampmax shortcuts
         </h3>
       </div>
       <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-1">
-        {links.map((link) =>
-          link.placeholder ? (
-            <li key={link.label}>
-              <span className="text-sm text-kampmax-text-secondary/80 cursor-not-allowed inline-block py-0.5">
-                {link.label}
-              </span>
-            </li>
-          ) : (
-            <li key={link.label}>
-              <Link
-                href={link.href}
-                className="group flex items-center gap-1 text-sm text-kampmax-text-secondary hover:text-kampmax-blue transition-colors inline-block py-0.5"
-              >
-                {link.label}
-                <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </Link>
-            </li>
-          )
-        )}
+        {links.map((link) => (
+          <li key={link.label}>
+            <Link
+              href={link.href}
+              className="group flex items-center gap-1 text-sm text-kampmax-text-secondary hover:text-kampmax-blue transition-colors inline-block py-0.5"
+            >
+              {link.label}
+              <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden />
+            </Link>
+          </li>
+        ))}
       </ul>
     </div>
   );
@@ -185,57 +199,29 @@ function FooterBottom() {
         <p className="text-xs text-kampmax-text-muted">
           © 2026 Kampmax · Nigeria · ₦ NGN
         </p>
-        <ul className="flex flex-wrap gap-x-5 gap-y-1">
-          <li>
-            <Link
-              href="/profile/help"
-              className="text-xs text-kampmax-text-muted hover:text-kampmax-text transition-colors"
-            >
-              Privacy Policy
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/profile/help"
-              className="text-xs text-kampmax-text-muted hover:text-kampmax-text transition-colors"
-            >
-              Terms &amp; Conditions
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/profile/help"
-              className="text-xs text-kampmax-text-muted hover:text-kampmax-text transition-colors"
-            >
-              Refund Policy
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/profile/help"
-              className="text-xs text-kampmax-text-muted hover:text-kampmax-text transition-colors"
-            >
-              Cookie Policy
-            </Link>
-          </li>
-        </ul>
+        <p className="text-xs text-kampmax-text-muted">
+          Shop, sell, freelance, provide services, and hire — all on Kampmax.
+        </p>
       </div>
     </div>
   );
 }
 
 export function Footer() {
+  const { user } = useAuth();
+  const sections = getFooterSections(Boolean(user));
+
   return (
     <footer className="bg-white border-t border-kampmax-border mt-10">
       <PageContainer className="py-10 lg:py-12">
-        <FooterCta />
+        <FooterRoleCta />
 
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-12">
           <div className="lg:w-80 lg:shrink-0">
             <FooterBrand />
           </div>
           <div className="flex-1 min-w-0">
-            <FooterNav sections={footerSections} />
+            <FooterNav sections={sections} />
           </div>
         </div>
 

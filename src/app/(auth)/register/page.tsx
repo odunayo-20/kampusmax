@@ -3,7 +3,7 @@
 import { Suspense, useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, Phone } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, UserRound, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -12,6 +12,28 @@ import { useAuth } from "@/lib/auth-context";
 import { getCampuses } from "@/services/campus";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types";
+import { KAMPMAX_ROLE_PATHS, type KampmaxRoleId } from "@/components/layout/footer/role-paths";
+
+interface RoleChoice {
+  id: KampmaxRoleId;
+  /** Role actually issued by the backend auth contract. */
+  role: UserRole;
+  /** Where to send the member right after account creation. */
+  next: string | null;
+  cta: string;
+}
+
+const ROLE_CHOICES: RoleChoice[] = [
+  { id: "customer", role: "student", next: null, cta: "Continue as Customer" },
+  { id: "vendor", role: "vendor", next: null, cta: "Become a Vendor" },
+  { id: "freelancer", role: "student", next: "/onboarding/freelancer", cta: "Become a Freelancer" },
+  { id: "service_provider", role: "student", next: "/onboarding/service-provider", cta: "Become a Service Provider" },
+  { id: "employer", role: "student", next: "/onboarding/employer", cta: "Hire Talent" },
+];
+
+function choiceById(id: KampmaxRoleId): RoleChoice {
+  return ROLE_CHOICES.find((c) => c.id === id) ?? ROLE_CHOICES[0];
+}
 
 function RegisterForm() {
   const router = useRouter();
@@ -23,7 +45,8 @@ function RegisterForm() {
   const [step, setStep] = useState<"role" | "form">(
     preselectedCampus ? "form" : "role"
   );
-  const [role, setRole] = useState<UserRole>("student");
+  const [choiceId, setChoiceId] = useState<KampmaxRoleId>("customer");
+  const choice = choiceById(choiceId);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,6 +90,13 @@ function RegisterForm() {
     return Object.keys(newErrors).length === 0;
   }
 
+  /** Choose a pathway: profile roles create the base account first, then
+   *  continue into the matching profile onboarding (one account, profiles). */
+  function choose(id: KampmaxRoleId) {
+    setChoiceId(id);
+    setStep("form");
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!validateForm()) return;
@@ -81,12 +111,12 @@ function RegisterForm() {
         phone: phone.trim(),
         password,
         campusId,
-        role,
+        role: choice.role,
         department: department || undefined,
         level: level || undefined,
       });
       if (result.success) {
-        router.push("/home");
+        router.push(choice.next ?? "/home");
       } else {
         setErrors({ general: result.message });
       }
@@ -97,7 +127,7 @@ function RegisterForm() {
     }
   }
 
-  // Step 1: Role selection
+  // Step 1: Role/pathway selection
   if (step === "role") {
     return (
       <div className="space-y-6">
@@ -110,65 +140,56 @@ function RegisterForm() {
             Back
           </Link>
           <h1 className="text-2xl font-bold text-kampmax-text">
-            Join Kampmax
+            Create your Kampmax account
           </h1>
           <p className="text-sm text-kampmax-text-secondary mt-1">
-            How do you want to use Kampmax?
+            Choose how you plan to use Kampmax. You can explore other
+            opportunities after creating your account.
           </p>
         </div>
 
         <div className="space-y-3">
-          <button
-            onClick={() => { setRole("student"); setStep("form"); }}
-            className={cn(
-              "w-full flex items-center gap-4 p-4 rounded-lg border text-left transition-all",
-              "border-kampmax-border hover:border-kampmax-blue/50 bg-white"
-            )}
-          >
-            <div className="w-12 h-12 rounded-xl bg-kampmax-blue/10 flex items-center justify-center flex-shrink-0">
-              <User className="h-6 w-6 text-kampmax-blue" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-kampmax-text">
-                Student
-              </h3>
-              <p className="text-xs text-kampmax-text-secondary mt-0.5">
-                Buy and sell items on your campus
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => { setRole("vendor"); setStep("form"); }}
-            className={cn(
-              "w-full flex items-center gap-4 p-4 rounded-lg border text-left transition-all",
-              "border-kampmax-border hover:border-kampmax-blue/50 bg-white"
-            )}
-          >
-            <div className="w-12 h-12 rounded-xl bg-kampmax-gold/10 flex items-center justify-center flex-shrink-0">
-              <svg
-                className="h-6 w-6 text-kampmax-gold-dark"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
+          {ROLE_CHOICES.map((c) => {
+            const path = KAMPMAX_ROLE_PATHS[c.id];
+            const Icon = path.icon;
+            return (
+              <button
+                key={c.id}
+                onClick={() => choose(c.id)}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-lg border text-left transition-all",
+                  "border-kampmax-border hover:border-kampmax-blue/50 bg-white"
+                )}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.015A3.001 3.001 0 0021 9.349M13.5 21h-3.75"
-                />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-kampmax-text">
-                Vendor
-              </h3>
-              <p className="text-xs text-kampmax-text-secondary mt-0.5">
-                Set up a store and sell to students
-              </p>
-            </div>
-          </button>
+                <div className="w-12 h-12 rounded-xl bg-kampmax-blue/10 flex items-center justify-center flex-shrink-0">
+                  <Icon className="h-6 w-6 text-kampmax-blue" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-kampmax-text">
+                    {path.title}
+                  </h3>
+                  <p className="text-xs text-kampmax-text-secondary mt-0.5">
+                    {path.description}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-kampmax-blue shrink-0">
+                  {c.cta}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="rounded-lg border border-kampmax-border bg-kampmax-muted/30 p-3.5">
+          <p className="text-xs leading-relaxed text-kampmax-text-secondary">
+            <span className="font-semibold text-kampmax-text">
+              One account, many roles.
+            </span>{" "}
+            Your Kampmax account is the starting point — after signing in you
+            can also activate a freelancer, service provider or employer
+            profile on the same account.
+          </p>
         </div>
 
         <p className="text-center text-sm text-kampmax-text-secondary">
@@ -196,10 +217,12 @@ function RegisterForm() {
           Back
         </button>
         <h1 className="text-2xl font-bold text-kampmax-text">
-          {role === "student" ? "Student" : "Vendor"} Registration
+          Create your account{choice.next ? ` as a ${KAMPMAX_ROLE_PATHS[choiceId].title}` : ""}
         </h1>
         <p className="text-sm text-kampmax-text-secondary mt-1">
-          Fill in your details to create your account
+          {choice.next
+            ? "We'll create your Kampmax account first, then start your onboarding in a moment."
+            : "Fill in your details to start using Kampmax."}
         </p>
       </div>
 
@@ -217,7 +240,7 @@ function RegisterForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={errors.name}
-          leftIcon={<User className="h-4 w-4" />}
+          leftIcon={<UserRound className="h-4 w-4" />}
           autoComplete="name"
         />
 
