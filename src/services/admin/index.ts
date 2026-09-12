@@ -424,12 +424,17 @@ import {
   AdminSupportManagementService,
   createMockSupportManagementService,
 } from "./support-management.service";
+import type { SupportCustomerService } from "@/types/admin";
 
 /**
  * /admin/support console (Module 56). Ticket resolution built on a
  * deterministic dataset referencing the real user, order, vendor and
  * job stores. All mutations audit via Module 48 and customer-visible
  * replies dispatch real in-app notifications (Module 26A).
+ *
+ * The SAME store instance backs the customer support portal
+ * (`/support`, Customer Support module): customer-created cases and
+ * replies land here and appear in the admin console immediately.
  */
-export const supportManagementService: AdminSupportManagementService =
-  createMockSupportManagementService();
+export const supportManagementService: AdminSupportManagementService &
+  SupportCustomerService = createMockSupportManagementService();

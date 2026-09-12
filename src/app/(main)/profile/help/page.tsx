@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, HelpCircle, MessageCircle, Phone, Mail,
-  ChevronDown, ChevronUp, ExternalLink, Search,
+  ChevronDown, ChevronUp, ExternalLink, Search, LifeBuoy,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
@@ -143,6 +143,24 @@ export default function HelpSupportPage() {
         )}
       </SettingsGroup>
 
+      {/* Support requests */}
+      <SettingsGroup title="Support Requests">
+        <SettingsRow
+          icon={<LifeBuoy className="h-4 w-4 text-kampmax-blue" />}
+          label="My Support Requests"
+          description="Track and reply to the cases you've opened"
+          action={<ArrowLeft className="h-4 w-4 rotate-180 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/support")}
+        />
+        <SettingsRow
+          icon={<LifeBuoy className="h-4 w-4 text-kampmax-blue" />}
+          label="Open a Support Request"
+          description="Get help from the Kampmax support team"
+          action={<ArrowLeft className="h-4 w-4 rotate-180 text-kampmax-text-secondary" />}
+          onClick={() => router.push("/support/new")}
+        />
+      </SettingsGroup>
+
       {/* Report */}
       <SettingsGroup title="Report a Problem">
         <SettingsRow
@@ -150,21 +168,29 @@ export default function HelpSupportPage() {
           label="Report a Bug"
           description="Found something broken? Let us know"
           action={<ExternalLink className="h-4 w-4 text-kampmax-text-secondary" />}
-          onClick={() => {}}
+          onClick={() =>
+            router.push("/support/new?category=technical&subject=Report a bug")
+          }
         />
         <SettingsRow
           icon={<span className="text-lg">💡</span>}
           label="Feature Request"
           description="Suggest a new feature for Kampmax"
           action={<ExternalLink className="h-4 w-4 text-kampmax-text-secondary" />}
-          onClick={() => {}}
+          onClick={() =>
+            router.push(
+              "/support/new?category=other&subject=Feature request"
+            )
+          }
         />
         <SettingsRow
           icon={<span className="text-lg">🚩</span>}
           label="Report a User"
           description="Flag suspicious or harmful behavior"
           action={<ExternalLink className="h-4 w-4 text-kampmax-text-secondary" />}
-          onClick={() => {}}
+          onClick={() =>
+            router.push("/support/new?category=other&subject=Report a user")
+          }
         />
       </SettingsGroup>
 

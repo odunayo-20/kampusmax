@@ -3,6 +3,7 @@
 import { cn, formatNaira, formatDateTime } from "@/lib/utils";
 import { WalletTransaction } from "@/types";
 import { Copy, Check } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { txConfig, statusConfig } from "./transactionConfig";
 
@@ -119,7 +120,14 @@ export function TransactionDetail({ transaction, onClose }: TransactionDetailPro
         <div className="bg-kampmax-blue/5 border border-kampmax-blue/20 rounded-xl p-4">
           <p className="text-xs text-kampmax-text-secondary leading-relaxed">
             This transaction is being processed. It may take a few minutes to complete.
-            If it doesn't complete within 24 hours, please contact support.
+            If it doesn't complete within 24 hours,{" "}
+            <Link
+              href={`/support/new?transaction=${transaction.id}&subject=Payment%20not%20completing`}
+              className="text-kampmax-blue underline"
+            >
+              please contact support
+            </Link>
+            .
           </p>
         </div>
       )}
@@ -128,7 +136,14 @@ export function TransactionDetail({ transaction, onClose }: TransactionDetailPro
         <div className="bg-kampmax-error/5 border border-kampmax-error/20 rounded-xl p-4">
           <p className="text-xs text-kampmax-error leading-relaxed">
             This transaction failed. The amount has not been deducted from your account.
-            Please try again or contact support.
+            Please try again or{" "}
+            <Link
+              href={`/support/new?transaction=${transaction.id}&subject=Failed%20payment`}
+              className="underline"
+            >
+              contact support
+            </Link>
+            .
           </p>
         </div>
       )}

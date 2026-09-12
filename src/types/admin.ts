@@ -4372,3 +4372,53 @@ export interface SupportEscalateInput {
 export interface SupportMutationResult {
   detail: SupportTicketDetail | null;
 }
+
+// ------------------------------------------------------------
+// CUSTOMER-FACING SUPPORT SURFACE (CUSTOMER SUPPORT PORTAL)
+//
+// Two sides of the same Module 56 record: the customer portal submits and
+// tracks its OWN cases here, the admin console operates them. Inputs are
+// deliberately least-privilege — a customer can never set status, priority
+// (always "normal" server-side), assignment, escalation or internal notes.
+// ------------------------------------------------------------
+
+/** Kind of related Kampmax resource a customer may associate with a case. */
+export type SupportCustomerRelatedKind = "order" | "transaction";
+
+export interface SupportCustomerRelatedInput {
+  kind: SupportCustomerRelatedKind;
+  id: string;
+}
+
+export interface SupportCustomerCreateInput {
+  category: SupportTicketCategory;
+  subject: string;
+  description: string;
+  related?: SupportCustomerRelatedInput | null;
+  attachments?: SupportAttachment[];
+}
+
+export interface SupportCustomerReplyInput {
+  body: string;
+  attachments?: SupportAttachment[];
+}
+
+/**
+ * Customer-scoped operations on the SAME support store used by the admin
+ * console. Every method enforces ownership (the caller must be the ticket's
+ * customer) — mirroring what the future NestJS endpoints must do. Internal
+ * notes and moderation metadata never appear in these responses.
+ */
+export interface SupportCustomerService {
+  listMine(userId: string): Promise<SupportTicket[]>;
+  getMine(userId: string, id: string): Promise<SupportTicketDetail | null>;
+  createForCustomer(
+    userId: string,
+    input: SupportCustomerCreateInput
+  ): Promise<SupportTicketDetail>;
+  replyForCustomer(
+    userId: string,
+    id: string,
+    input: SupportCustomerReplyInput
+  ): Promise<SupportTicketDetail | null>;
+}

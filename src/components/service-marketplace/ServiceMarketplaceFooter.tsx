@@ -16,12 +16,20 @@ export function ServiceMarketplaceFooter() {
         <p className="text-xs text-kampmax-text-secondary text-center">
           Find trusted services from verified providers around campus.
         </p>
-        <Link
-          href="/services"
-          className="text-xs font-medium text-primary-600 hover:underline"
-        >
-          Browse services
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/services"
+            className="text-xs font-medium text-primary-600 hover:underline"
+          >
+            Browse services
+          </Link>
+          <Link
+            href="/support"
+            className="text-xs font-medium text-primary-600 hover:underline"
+          >
+            Support
+          </Link>
+        </div>
       </div>
       <div className="max-w-[1280px] mx-auto px-4 pb-5">
         <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-kampmax-border pt-4">

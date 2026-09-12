@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
   MapPin,
@@ -12,6 +13,7 @@ import {
   MapPinned,
   MessageCircle,
   AlertTriangle,
+  LifeBuoy,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/layout/Breadcrumbs";
@@ -138,6 +140,13 @@ export default function OrderDetailPage({
               Placed {formatDate(new Date(order.createdAt))}
             </p>
           </div>
+          <Link
+            href={`/support/new?order=${order.id}&category=marketplace&subject=Help%20with%20order%20${order.id}`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-kampmax-blue hover:underline shrink-0"
+          >
+            <LifeBuoy className="h-3.5 w-3.5" />
+            Need help with this order?
+          </Link>
         </div>
 
         {/* Timeline */}

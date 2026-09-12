@@ -12,6 +12,7 @@ import {
   User,
   Settings,
   Users,
+  LifeBuoy,
 } from "lucide-react";
 
 export interface AccountNavItem {
@@ -59,6 +60,7 @@ export const ACCOUNT_NAV_GROUPS: AccountNavGroup[] = [
     items: [
       { label: "Profile", href: "/profile/edit", icon: User },
       { label: "Settings", href: "/profile/settings", icon: Settings },
+      { label: "Help & Support", href: "/support", icon: LifeBuoy },
     ],
   },
 ];

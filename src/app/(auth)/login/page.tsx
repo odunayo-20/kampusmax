@@ -20,9 +20,15 @@ function safeReturnTo(raw: string | null): string {
   if (raw.startsWith("/store/")) return raw;
   if (raw.startsWith("/services/")) return raw;
   if (
-    ["/home", "/marketplace", "/cart", "/orders", "/notifications", "/services"].some(
-      (p) => raw === p || raw.startsWith(`${p}/`)
-    )
+    [
+      "/home",
+      "/marketplace",
+      "/cart",
+      "/orders",
+      "/notifications",
+      "/services",
+      "/support",
+    ].some((p) => raw === p || raw.startsWith(`${p}/`))
   ) {
     return raw;
   }

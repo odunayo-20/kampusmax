@@ -8,13 +8,21 @@ import {
   Paginated,
   SupportAssignInput,
   SupportAssignee,
+  SupportAttachment,
+  SupportCustomerCreateInput,
+  SupportCustomerRelatedInput,
+  SupportCustomerReplyInput,
+  SupportCustomerService,
+  SupportCustomerRef,
   SupportEscalateInput,
   SupportMessage,
   SupportMessageVisibility,
+  SupportRelatedResource,
   SupportRespondInput,
   SupportSetPriorityInput,
   SupportSetStatusInput,
   SupportTicket,
+  SupportTicketCategory,
   SupportTicketDetail,
   SupportTicketListQuery,
   SupportTicketMetrics,
@@ -28,6 +36,10 @@ import {
 } from "@/data/admin/support-management";
 import { recordAdminAuditEvent } from "@/data/admin/audit-trail";
 import { pushNotificationRecord } from "@/data/notifications";
+import { getOrderById } from "@/services/orders";
+import { getWallet, getWalletTransactions } from "@/services/wallet";
+import { getUserById } from "@/services/users";
+import { getCampusById } from "@/services/campus";
 
 // ------------------------------------------------------------
 // CONTRACT (future NestJS resource: /admin/support/tickets)
@@ -128,7 +140,8 @@ function assertCanManage(actor: AdminProfile): void {
   }
 }
 
-export function createMockSupportManagementService(): AdminSupportManagementService {
+export function createMockSupportManagementService(): AdminSupportManagementService &
+  SupportCustomerService {
   const dataset = buildSupportDataset();
   const tickets = dataset.tickets.map((t) => ({ ...t }));
   const descriptions = new Map<string, string>(dataset.descriptions);
@@ -276,7 +289,7 @@ export function createMockSupportManagementService(): AdminSupportManagementServ
         category: "account",
         title: "Kampmax support updated your ticket",
         message: `"${ticket.subject}" — ${ctx.actor.name} replied.`,
-        actionUrl: `/admin/support/${ticket.id}`,
+        actionUrl: `/support/${ticket.id}`,
       });
     }
     recordAdminAuditEvent({
@@ -289,6 +302,133 @@ export function createMockSupportManagementService(): AdminSupportManagementServ
       metadata: { reason: input.body.trim().slice(0, 120) },
     });
     return touch(ticket, now);
+  }
+
+  // ------------------------------------------------------------
+  // CUSTOMER-FACING OPERATIONS (same store, ownership enforced)
+  // ------------------------------------------------------------
+
+  let ticketSerialSeed = tickets.length;
+
+  function nextTicketId(): string {
+    let id = "";
+    do {
+      ticketSerialSeed += 1;
+      id = `tkt-${String(ticketSerialSeed).padStart(3, "0")}`;
+    } while (tickets.some((t) => t.id === id));
+    return id;
+  }
+
+  /**
+   * Resolves the least-privilege customer reference server-side from the
+   * user store. The client never supplies name/email/campus — the session
+   * does. (Mirrors the future NestJS `@User()` session resolution.)
+   */
+  function customerOf(userId: string): SupportCustomerRef {
+    const u = getUserById(userId);
+    if (u) {
+      return {
+        id: u.id,
+        name: u.name,
+        role: "customer",
+        campusId: u.campusId,
+        campusName: getCampusById(u.campusId)?.name ?? null,
+        joinedAt: u.joinedDate,
+        isVerified: u.isVerified ?? false,
+      };
+    }
+    return {
+      id: userId,
+      name: "Kampmax customer",
+      role: "customer",
+      campusId: null,
+      campusName: null,
+      joinedAt: new Date().toISOString(),
+      isVerified: false,
+    };
+  }
+
+  /** Customer replies are allowed while the case is live, not after
+   *  resolution/closure (reopening is an admin decision). */
+  function customerCanReply(ticket: SupportTicket): boolean {
+    return (
+      ticket.status !== "resolved" && ticket.status !== "closed"
+    );
+  }
+
+  /**
+   * Ownership check for a related resource. The customer can only attach an
+   * order/transaction that actually belongs to them — the store (the "backend")
+   * verifies, never the browser.
+   */
+  function resolveCustomerRelated(
+    userId: string,
+    related: SupportCustomerRelatedInput | null | undefined
+  ): SupportRelatedResource | null {
+    if (!related || !related.id) return null;
+    if (related.kind === "order") {
+      const order = getOrderById(related.id);
+      if (!order || order.buyerId !== userId) {
+        throw new Error(
+          "We couldn't verify this order belongs to your account. Remove it and submit your request, then mention the order number in the description."
+        );
+      }
+      return { type: "order", id: order.id, label: `Order ${order.id}`, href: `/admin/orders/${order.id}` };
+    }
+    if (related.kind === "transaction") {
+      const wallet = getWallet(userId);
+      const tx =
+        wallet &&
+        getWalletTransactions(wallet.id).find((t) => t.id === related.id);
+      if (!tx) {
+        throw new Error(
+          "We couldn't verify this transaction belongs to your account. Remove it and submit your request."
+        );
+      }
+      return { type: "transaction", id: tx.id, label: `Transaction ${tx.id}`, href: `/admin/transactions/${tx.id}` };
+    }
+    return null;
+  }
+
+  function sanitizeAttachments(
+    attachments: SupportAttachment[] | undefined
+  ): SupportAttachment[] {
+    if (!attachments || attachments.length === 0) return [];
+    return attachments
+      .filter((a) => a && a.name && typeof a.sizeBytes === "number")
+      .slice(0, 4)
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        sizeBytes: a.sizeBytes,
+        mimeType: a.mimeType,
+        kind: a.kind,
+        uploadedBy: "customer" as const,
+      }));
+  }
+
+  /** Customer-scoped detail: internal notes and escalation metadata never leak. */
+  function customerDetailOf(ticket: SupportTicket): SupportTicketDetail {
+    return {
+      ticket: { ...ticket, escalated: false, escalation: null },
+      description: descriptions.get(ticket.id) ?? "",
+      messages: (messages.get(ticket.id) ?? [])
+        .filter((m) => m.visibility === "customer")
+        .map((m) => ({ ...m })),
+      timeline: [],
+      assignees: [],
+    };
+  }
+
+  function requireCustomerTicket(
+    userId: string,
+    id: string
+  ): SupportTicket {
+    const row = tickets.find(
+      (t) => t.id === id && t.customer.id === userId
+    );
+    if (!row) throw new Error("Support request not found.");
+    return row;
   }
 
   return {
@@ -474,6 +614,25 @@ export function createMockSupportManagementService(): AdminSupportManagementServ
       if (input.status === "resolved" || input.status === "closed") {
         ticket.escalated = false;
       }
+      // Customer-visible status change → real in-app notification (26A store).
+      if (previousStatus !== input.status) {
+        const statusNotice: Partial<Record<SupportTicketStatus, string>> = {
+          waiting_on_customer: "We need additional information from you.",
+          resolved: "Your support request has been resolved",
+          closed: "Your support request has been closed",
+        };
+        pushNotificationRecord({
+          userId: ticket.customer.id,
+          type: "system",
+          category: "account",
+          title: "Your support request was updated",
+          message: `"${ticket.subject}" — ${
+            statusNotice[input.status] ??
+            `Status changed to ${input.status.replace(/_/g, " ")}`
+          }.`,
+          actionUrl: `/support/${ticket.id}`,
+        });
+      }
       if (input.status === "open" && previousStatus === "closed") {
         ticket.reopenedAt = now;
         pushTimeline(ticket.id, {
@@ -569,6 +728,124 @@ export function createMockSupportManagementService(): AdminSupportManagementServ
         },
       });
       return touch(ticket, now);
+    },
+
+    async createForCustomer(userId, input) {
+      await apiDelay(200);
+      if (!input || !input.subject || !input.description) {
+        throw new Error("Please fill in the subject and description.");
+      }
+      if (!CATEGORIES.includes(input.category)) {
+        throw new Error("Please choose a valid category.");
+      }
+      const subject = input.subject.trim();
+      const description = input.description.trim();
+      if (!subject) {
+        throw new Error("Please add a short subject for your request.");
+      }
+      if (subject.length > 120) {
+        throw new Error("The subject is too long (max 120 characters).");
+      }
+      if (description.length < 10) {
+        throw new Error(
+          "Please describe your problem in a little more detail."
+        );
+      }
+      const related = resolveCustomerRelated(userId, input.related);
+      const now = new Date().toISOString();
+      const customer = customerOf(userId);
+      const id = nextTicketId();
+
+      const ticket: SupportTicket = {
+        id,
+        subject,
+        status: "open",
+        priority: "normal",
+        category: input.category,
+        customer,
+        assigneeId: null,
+        assigneeName: null,
+        relatedResource: related,
+        escalated: false,
+        escalation: null,
+        createdAt: now,
+        updatedAt: now,
+        lastResponseAt: null,
+        reopenedAt: null,
+      };
+      tickets.push(ticket);
+      descriptions.set(id, description);
+      pushMessage(id, {
+        postedBy: "customer",
+        authorName: customer.name,
+        visibility: "customer",
+        body: description,
+        attachments: sanitizeAttachments(input.attachments),
+        at: now,
+      });
+      pushTimeline(id, {
+        kind: "created",
+        label: "Ticket created",
+        detail: `Opened by ${customer.name} (${input.category})`,
+        actorName: customer.name,
+        at: now,
+      });
+      return customerDetailOf(ticket);
+    },
+
+    async replyForCustomer(userId, id, input) {
+      await apiDelay(150);
+      if (!input?.body?.trim()) {
+        throw new Error("Write a message before replying.");
+      }
+      const ticket = tickets.find(
+        (t) => t.id === id && t.customer.id === userId
+      );
+      if (!ticket) return null;
+      if (!customerCanReply(ticket)) {
+        throw new Error(
+          "This support case is closed and can no longer be replied to. Create a new request if you still need help."
+        );
+      }
+      const now = new Date().toISOString();
+      pushMessage(id, {
+        postedBy: "customer",
+        authorName: ticket.customer.name,
+        visibility: "customer",
+        body: input.body.trim(),
+        attachments: sanitizeAttachments(input.attachments),
+        at: now,
+      });
+      if (ticket.status === "waiting_on_customer") {
+        ticket.status = "open";
+        pushTimeline(id, {
+          kind: "status_changed",
+          label: "Ticket reopened for support",
+          detail: "Information provided by customer",
+          actorName: ticket.customer.name,
+          at: now,
+        });
+      }
+      return customerDetailOf(touch(ticket, now));
+    },
+
+    async listMine(userId) {
+      await apiDelay(120);
+      return tickets
+        .filter((t) => t.customer.id === userId)
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        )
+        .map((t) => ({ ...t }));
+    },
+
+    async getMine(userId, id) {
+      await apiDelay(140);
+      const ticket = tickets.find(
+        (t) => t.id === id && t.customer.id === userId
+      );
+      return ticket ? customerDetailOf(ticket) : null;
     },
   };
 }

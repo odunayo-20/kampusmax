@@ -50,6 +50,20 @@ export const messageKeys = {
 };
 
 /**
+ * Customer support portal key factory (Module 26A, customer side of Module
+ * 56). Keys are scoped per user so one customer's cases can never leak into
+ * another session's cache. Mutations invalidate the whole `support` tree so
+ * the list, detail and any fresh resource reads stay consistent after a
+ * request is created or a reply is posted.
+ */
+export const supportKeys = {
+  all: ["support"] as const,
+  list: (userId: string) => ["support", "list", userId] as const,
+  detail: (userId: string, id: string) =>
+    ["support", "detail", userId, id] as const,
+};
+
+/**
  * Jobs key factory (Module 27).
  *
  * The public marketplace list/detail are NOT user-scoped (only OPEN,

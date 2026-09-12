@@ -80,9 +80,10 @@ export const footerSections: FooterSection[] = [
     id: "support",
     title: "Support",
     links: [
+      { label: "Support Requests", href: "/support" },
+      { label: "Open a Request", href: "/support/new" },
       { label: "Help Center", href: "/profile/help" },
       { label: "Contact Support", href: "/profile/help" },
-      { label: "Report a Problem", href: "/profile/help" },
     ],
   },
   {
